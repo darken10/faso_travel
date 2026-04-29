@@ -52,14 +52,14 @@ class TicketService
     public function createTicket(array $data): Ticket
     {
         // Vérifier que l'instance de voyage existe
-        $voyageInstance = VoyageInstance::findOrFail($data['voyage_instance_id']);
+        $voyageInstance = VoyageInstance::with('care')->findOrFail($data['voyage_instance_id']);
         
         // Vérifier la disponibilité des places
         $placesOccupees = Ticket::where('voyage_instance_id', $voyageInstance->id)
             ->where('statut', '!=', StatutTicket::Annuler)
             ->count();
             
-        if ($placesOccupees >= $voyageInstance->voyage->bus->nombre_place) {
+        if ($placesOccupees >= ($voyageInstance->care?->number_place ?? 50)) {
             throw new \Exception('Plus de places disponibles pour ce voyage');
         }
         
@@ -210,8 +210,8 @@ class TicketService
             ->pluck('numero_place')
             ->toArray();
             
-        $voyageInstance = VoyageInstance::with('voyage.bus')->findOrFail($voyageInstanceId);
-        $nombrePlaces = $voyageInstance->voyage->bus->nombre_place;
+        $voyageInstance = VoyageInstance::with('care')->findOrFail($voyageInstanceId);
+        $nombrePlaces = $voyageInstance->care?->number_place ?? 50;
         
         for ($i = 1; $i <= $nombrePlaces; $i++) {
             if (!in_array($i, $placesOccupees)) {

@@ -67,8 +67,8 @@ class VoyageService
 
         // Filter by minimum seats if needed
         if (isset($filters['passengers']) && is_numeric($filters['passengers'])) {
-            $query->whereHas('voyage.bus', function($q) use ($filters) {
-                $q->where('nombre_place', '>=', $filters['passengers']);
+            $query->whereHas('care', function($q) use ($filters) {
+                $q->where('number_place', '>=', $filters['passengers']);
             });
         }
 
@@ -108,14 +108,8 @@ class VoyageService
      */
     public function getTripSeats(string $tripId): array
     {
-        $instance = VoyageInstance::with('voyage.bus')->findOrFail($tripId);
-        $totalSeats = $instance->voyage->bus->nombre_place ?? 50;
-        
-        $voyage = $instance->voyage;
-        $bus = $voyage->bus;
-        
-        // Calculate available seats
-        $totalSeats = $bus->nombre_place ?? 50;
+        $instance = VoyageInstance::with('care')->findOrFail($tripId);
+        $totalSeats = $instance->care?->number_place ?? 50;
         $occupiedSeats = Ticket::where('voyage_instance_id', $tripId)
             ->where('statut', '!=', 'annuler')
             ->get();

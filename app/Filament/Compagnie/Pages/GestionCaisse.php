@@ -99,11 +99,21 @@ class GestionCaisse extends Page implements HasForms
             return;
         }
 
+        $compagnieId = Auth::user()->compagnie_id;
+        if (!$compagnieId) {
+            Notification::make()
+                ->title('Compte non lié à une compagnie')
+                ->body('Votre compte n\'est pas associé à une compagnie. Contactez un administrateur.')
+                ->danger()
+                ->send();
+            return;
+        }
+
         $data = $this->ouvertureForm->getState();
 
         Caisse::create([
             'user_id' => Auth::id(),
-            'compagnie_id' => Auth::user()->compagnie_id,
+            'compagnie_id' => $compagnieId,
             'montant_ouverture' => (int) ($data['montant_ouverture'] ?? 0),
             'statut' => StatutCaisse::Ouverte->value,
             'opened_at' => now(),
