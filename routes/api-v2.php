@@ -66,6 +66,7 @@ Route::prefix('v2')->group(function () {
         Route::patch('/{ticketId}/cancel', 'cancelTicket')->name('cancel');
         Route::patch('/{ticketId}/transfer', 'transferTicket')->name('transfer');
         Route::patch('/{ticketId}/pause', 'pauseTicket')->name('pause');
+        Route::patch('/{ticketId}/activate', 'activateTicket')->name('activate');
         Route::get('/{ticketId}/qr-code', 'getTicketQrCode')->name('qr-code');
     });
     

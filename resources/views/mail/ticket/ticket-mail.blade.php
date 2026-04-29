@@ -58,7 +58,7 @@
         <h2>Confirmation d'Achat - Ticket de Voyage</h2>
     </div>
     <div class="content">
-        <p>Bonjour <strong>{{$ticket->is_my_ticket ? $ticket->user->name : $ticket->autre_personne->name}}</strong>,</p>
+        <p>Bonjour <strong>{{$ticket->is_my_ticket ? ($ticket->user?->name ?? 'Client') : ($ticket->autre_personne?->name ?? $ticket->user?->name ?? 'Client')}}</strong>,</p>
         <p>Nous avons le plaisir de vous confirmer que votre achat de ticket a été effectué avec succès. Vous trouverez ci-dessous les détails de votre voyage :</p>
         <p><strong>Détails du Voyage :</strong></p>
         <ul>

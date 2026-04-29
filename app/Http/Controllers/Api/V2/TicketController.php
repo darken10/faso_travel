@@ -175,7 +175,7 @@ class TicketController extends Controller
 
         try {
             $this->ticketCommandService->pause($ticket);
-        } catch (\DomainException $e) {
+        } catch (\DomainException|\InvalidArgumentException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
@@ -186,6 +186,22 @@ class TicketController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Ticket mis en pause avec succès.']);
+    }
+
+    /**
+     * Reactivate a paused ticket (Pause → Payé).
+     */
+    public function activateTicket(string $ticketId): JsonResponse
+    {
+        $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
+
+        try {
+            $this->ticketCommandService->activate($ticket);
+        } catch (\DomainException|\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Ticket réactivé avec succès.']);
     }
 
     /**

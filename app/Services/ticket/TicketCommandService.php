@@ -110,11 +110,11 @@ class TicketCommandService
             );
         }
 
-        return DB::transaction(function () use ($ticket, $newStatus) {
+        return DB::transaction(function () use ($ticket, $newStatus, $currentValue) {
             $ticket->statut = $newStatus;
             $ticket->save();
 
-            Log::info("Ticket #{$ticket->numero_ticket} : statut changé de {$ticket->getOriginal('statut')} → {$newStatus->value}");
+            Log::info("Ticket #{$ticket->numero_ticket} : statut changé de {$currentValue} → {$newStatus->value}");
 
             return $ticket;
         });
@@ -142,6 +142,19 @@ class TicketCommandService
         }
 
         return $this->changeStatus($ticket, StatutTicket::Pause);
+    }
+
+    // ─── Activation (dépause) ───────────────────────────────────────────
+
+    public function activate(Ticket $ticket): Ticket
+    {
+        $this->assertTicketOwnership($ticket);
+
+        if ($ticket->statut !== StatutTicket::Pause) {
+            throw new \DomainException('Seul un ticket en pause peut être réactivé.');
+        }
+
+        return $this->changeStatus($ticket, StatutTicket::Payer);
     }
 
     // ─── Transfert ───────────────────────────────────────────────────────
