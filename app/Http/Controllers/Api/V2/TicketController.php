@@ -12,9 +12,12 @@ use App\Models\User;
 use App\Models\Voyage\VoyageInstance;
 use App\Enums\StatutTicket;
 use App\Enums\TypeNotification;
+use App\Enums\TypeTicket;
+use App\Events\PayementEffectuerEvent;
 use App\Events\SendClientTicketByMailEvent;
 use App\Events\TranfererTicketToOtherUserEvent;
 use App\Helper\TicketHelpers;
+use App\Models\Ticket\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -189,19 +192,81 @@ class TicketController extends Controller
     }
 
     /**
-     * Reactivate a paused ticket (Pause → Payé).
+     * List future trips equivalent to a paused ticket (same compagnie + same trajet).
      */
-    public function activateTicket(string $ticketId): JsonResponse
+    public function getEquivalentTrips(string $ticketId): JsonResponse
     {
         $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
 
+        $trajetId    = $ticket->voyageInstance->voyage->trajet_id;
+        $compagnieId = $ticket->voyageInstance->voyage->compagnie_id;
+
+        $instances = VoyageInstance::with(['voyage', 'care'])
+            ->whereHas('voyage', fn($q) => $q->where('trajet_id', $trajetId)->where('compagnie_id', $compagnieId))
+            ->where('id', '!=', $ticket->voyage_instance_id)
+            ->avenir()
+            ->orderBy('date')
+            ->get();
+
+        $result = $instances->map(function (VoyageInstance $instance) {
+            $occupied     = Ticket::where('voyage_instance_id', $instance->id)
+                ->where('statut', '!=', StatutTicket::Annuler)
+                ->count();
+            $total        = $instance->nb_place ?: ($instance->care?->number_place ?? 50);
+            $available    = max(0, $total - $occupied);
+
+            return [
+                'id'              => $instance->id,
+                'date'            => $instance->date?->format('Y-m-d'),
+                'heure'           => $instance->heure?->format('H:i'),
+                'available_seats' => $available,
+                'price'           => $instance->getPrix(TypeTicket::AllerSimple),
+            ];
+        })->filter(fn($i) => $i['available_seats'] > 0)->values();
+
+        return response()->json($result);
+    }
+
+    /**
+     * Reactivate a paused ticket on a new equivalent voyage instance.
+     */
+    public function activateTicket(Request $request, string $ticketId): JsonResponse
+    {
+        $validated = $request->validate([
+            'voyage_instance_id' => 'required|exists:voyage_instances,id',
+            'numero_chaise'      => 'required|integer|min:1',
+        ]);
+
+        $ticket      = $this->ticketQueryService->getUserTicketById($ticketId);
+        $newInstance = VoyageInstance::with('voyage')->findOrFail($validated['voyage_instance_id']);
+
         try {
-            $this->ticketCommandService->activate($ticket);
+            $this->ticketCommandService->activate($ticket, $newInstance, (int) $validated['numero_chaise']);
         } catch (\DomainException|\InvalidArgumentException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
         return response()->json(['success' => true, 'message' => 'Ticket réactivé avec succès.']);
+    }
+
+    /**
+     * Regenerate QR code, SMS code and PDF for a ticket.
+     */
+    public function regenerateTicket(string $ticketId): JsonResponse
+    {
+        $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
+
+        if (!TicketHelpers::regenerateTicket($ticket)) {
+            return response()->json(['success' => false, 'message' => 'Erreur lors de la régénération.'], 500);
+        }
+
+        try {
+            PayementEffectuerEvent::dispatch($ticket->fresh());
+        } catch (\Throwable $e) {
+            Log::warning('[TicketV2] Regenerate PDF failed for ticket ' . $ticketId . ': ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true, 'message' => 'Ticket régénéré avec succès.']);
     }
 
     /**

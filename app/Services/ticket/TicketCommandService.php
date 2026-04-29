@@ -146,7 +146,7 @@ class TicketCommandService
 
     // ─── Activation (dépause) ───────────────────────────────────────────
 
-    public function activate(Ticket $ticket): Ticket
+    public function activate(Ticket $ticket, VoyageInstance $newInstance, int $seatNumber): Ticket
     {
         $this->assertTicketOwnership($ticket);
 
@@ -154,7 +154,31 @@ class TicketCommandService
             throw new \DomainException('Seul un ticket en pause peut être réactivé.');
         }
 
-        return $this->changeStatus($ticket, StatutTicket::Payer);
+        $originalCompagnieId = $ticket->voyageInstance->voyage->compagnie_id;
+        $newCompagnieId      = $newInstance->voyage->compagnie_id;
+
+        if ($originalCompagnieId !== $newCompagnieId) {
+            throw new \DomainException('Le nouveau voyage doit appartenir à la même compagnie.');
+        }
+
+        $seatTaken = Ticket::where('voyage_instance_id', $newInstance->id)
+            ->where('numero_chaise', $seatNumber)
+            ->where('statut', '!=', StatutTicket::Annuler)
+            ->exists();
+
+        if ($seatTaken) {
+            throw new \DomainException('Ce siège n\'est plus disponible.');
+        }
+
+        return DB::transaction(function () use ($ticket, $newInstance, $seatNumber) {
+            $ticket->voyage_instance_id = $newInstance->id;
+            $ticket->voyage_id          = $newInstance->voyage_id;
+            $ticket->date               = $newInstance->date;
+            $ticket->numero_chaise      = $seatNumber;
+            $ticket->save();
+
+            return $this->changeStatus($ticket->fresh(), StatutTicket::Payer);
+        });
     }
 
     // ─── Transfert ───────────────────────────────────────────────────────
