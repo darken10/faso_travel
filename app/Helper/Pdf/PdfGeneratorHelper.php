@@ -20,10 +20,27 @@ class PdfGeneratorHelper{
         $name = Str::random(10).'-'.uniqid().date('Y').date('m').date('d').date('h').date('i').date('s');
         $uri = "tickets/pdf/$name.pdf";
         $path = storage_path("app/public/tickets/pdf/$name.pdf");
+
+        // Convert QR code to base64 data URI so DomPDF renders it reliably
+        // regardless of filesystem path resolution.
+        $qrDataUri = null;
+        if ($qrCodePath && file_exists($qrCodePath)) {
+            $mime     = mime_content_type($qrCodePath) ?: 'image/png';
+            $qrDataUri = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($qrCodePath));
+        }
+
         $pdf = Pdf::loadView('ticket.ticket.pdf.ticket',[
-            'qrCodePath' => $qrCodePath,
-            'ticket' => $ticket,
-        ])->setPaper('a4', 'landscape');
+            'qrCodePath' => $qrDataUri ?? $qrCodePath,
+            'ticket'     => $ticket,
+        ])
+        ->setPaper('a4', 'landscape')
+        ->setOptions([
+            'dpi'                       => 150,
+            'defaultFont'               => 'DejaVu Sans',
+            'isRemoteEnabled'           => false,
+            'isHtml5ParserEnabled'      => true,
+            'isFontSubsettingEnabled'   => true,
+        ]);
         $pdf->save($path);
         if(file_exists($path)){
             return $uri;
