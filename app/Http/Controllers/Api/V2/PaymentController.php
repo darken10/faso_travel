@@ -1,0 +1,161 @@
+<?php
+
+namespace App\Http\Controllers\Api\V2;
+
+use Exception;
+use App\Enums\TypeTicket;
+use App\Enums\MoyenPayment;
+use App\Enums\StatutTicket;
+use App\Enums\StatutPayement;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use App\Models\Ticket\Ticket;
+use App\Models\Ticket\Payement;
+use App\Models\Voyage\VoyageInstance;
+use App\Helper\Payement\OrangePayementHelper;
+use App\Http\Controllers\Controller;
+use App\Services\V2\TicketService;
+
+class PaymentController extends Controller
+{
+    public function __construct(private TicketService $ticketService) {}
+
+    /**
+     * Process an Orange Money payment and create a ticket in a single atomic operation.
+     *
+     * POST /api/v2/payement/orange-money
+     *
+     * Body:
+     *  - phone_number   : string (required) — numéro Orange Money
+     *  - otp            : string (required, 6 chars) — code OTP reçu par SMS
+     *  - trip_id        : string (required) — id de l'instance de voyage
+     *  - trip_type      : 'one-way'|'round-trip' (required)
+     *  - is_for_self    : bool (required) — true = ticket pour soi-même
+     *  - passenger_name : string (required_if is_for_self=false)
+     *  - passenger_phone: string (required_if is_for_self=false)
+     *  - passenger_email: string (required_if is_for_self=false)
+     *  - relation       : string (optional)
+     */
+    public function orangeMoney(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone_number'    => 'required|string|min:8|max:15',
+            'otp'             => 'required|string|size:6',
+            'trip_id'         => 'required|string|exists:voyage_instances,id',
+            'trip_type'       => 'required|in:one-way,round-trip',
+            'is_for_self'     => 'required|boolean',
+            'passenger_name'  => 'required_if:is_for_self,false|nullable|string|max:255',
+            'passenger_phone' => 'required_if:is_for_self,false|nullable|string|max:30',
+            'passenger_email' => 'nullable|email|max:255',
+            'relation'        => 'nullable|string|max:100',
+        ]);
+
+        $voyageInstance = VoyageInstance::with(['care', 'voyage'])->findOrFail($validated['trip_id']);
+        $tripType = $validated['trip_type'] === 'round-trip' ? TypeTicket::AllerRetour : TypeTicket::AllerSimple;
+        $amount   = (int) $voyageInstance->getPrix($tripType);
+
+        // ── Étape 1 : Valider le paiement Orange Money ──────────────────────────
+        $orangeHelper = new OrangePayementHelper(
+            $validated['phone_number'],
+            $validated['otp'],
+            $amount
+        );
+
+        $transactionData = $orangeHelper->payement();
+
+        if (!$transactionData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Code OTP invalide ou numéro Orange Money incorrect. Veuillez réessayer.',
+            ], 422);
+        }
+
+        // ── Étape 2 : Créer le ticket + enregistrer le paiement (atomique) ──────
+        DB::beginTransaction();
+        try {
+            // Vérifier la disponibilité (ré-vérification en contexte transactionnel)
+            $placesOccupees = Ticket::where('voyage_instance_id', $voyageInstance->id)
+                ->where('statut', '!=', StatutTicket::Annuler)
+                ->count();
+
+            $totalSeats = $voyageInstance->nb_place ?: ($voyageInstance->care?->number_place ?? 50);
+
+            if ($placesOccupees >= $totalSeats) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Désolé, ce voyage n\'a plus de places disponibles.',
+                ], 409);
+            }
+
+            // Créer le ticket
+            $ticketData = [
+                'voyage_instance_id' => $voyageInstance->id,
+                'type'               => $tripType->value,
+                'is_for_self'        => $validated['is_for_self'],
+            ];
+
+            if (!$validated['is_for_self'] && !empty($validated['passenger_name'])) {
+                [$nom, $prenom] = array_pad(explode(' ', $validated['passenger_name'], 2), 2, '');
+                $ticketData['autre_personne']          = true;
+                $ticketData['nom_autre_personne']       = $nom;
+                $ticketData['prenom_autre_personne']    = $prenom;
+                $ticketData['telephone_autre_personne'] = $validated['passenger_phone'] ?? '';
+            }
+
+            $ticket = $this->ticketService->createTicket($ticketData);
+
+            // Enregistrer le paiement
+            Payement::create([
+                'ticket_id'      => $ticket->id,
+                'numero_payment' => $validated['phone_number'],
+                'montant'        => $amount,
+                'trans_id'       => $transactionData['transaction_id'],
+                'token'          => $transactionData['token'],
+                'code_otp'       => $validated['otp'],
+                'statut'         => $orangeHelper->payementStatut(),
+                'moyen_payment'  => MoyenPayment::ORANGE_MONEY,
+            ]);
+
+            DB::commit();
+
+            // Reload ticket with relations for response
+            $ticket->load([
+                'voyageInstance.voyage.trajet.depart',
+                'voyageInstance.voyage.trajet.arriver',
+                'autre_personne',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Paiement effectué avec succès !',
+                'data'    => [
+                    'ticket_id'          => $ticket->id,
+                    'code_qr'            => $ticket->code_qr,
+                    'numero_chaise'      => $ticket->numero_chaise,
+                    'statut'             => $ticket->statut->value ?? $ticket->statut,
+                    'montant'            => $amount,
+                    'moyen_payment'      => MoyenPayment::ORANGE_MONEY->value,
+                    'transaction_id'     => $transactionData['transaction_id'],
+                    'depart'             => $voyageInstance->voyage?->trajet?->depart?->name ?? '',
+                    'arrivee'            => $voyageInstance->voyage?->trajet?->arriver?->name ?? '',
+                    'date_depart'        => $voyageInstance->date,
+                    'heure_depart'       => $voyageInstance->heure,
+                    'passager'           => $validated['is_for_self']
+                        ? Auth::user()?->name
+                        : ($validated['passenger_name'] ?? ''),
+                ],
+            ], 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de l\'enregistrement. Veuillez contacter le support.',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+}

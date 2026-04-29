@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V2\VoyageController as VoyageControllerV2;
 use App\Http\Controllers\Api\V2\ArticleController as ArticleControllerV2;
 use App\Http\Controllers\Api\V2\BuyVoyageController as BuyVoyageControllerV2;
 use App\Http\Controllers\Api\V2\NotificationController as NotificationControllerV2;
+use App\Http\Controllers\Api\V2\PaymentController as PaymentControllerV2;
 
  // API V2 - Nouvelle version avec rétrocompatibilité
 Route::prefix('v2')->group(function () {
@@ -81,6 +82,11 @@ Route::prefix('v2')->group(function () {
     });
 
     Route::get('/payement/mode-list', [VoyageControllerV2::class, 'getPaymentModesList'])->name('api.v2.payment.modes.list');
+
+    // Routes paiements V2
+    Route::prefix('/payement')->middleware('auth:sanctum')->controller(PaymentControllerV2::class)->name('api.v2.payement.')->group(function () {
+        Route::post('/orange-money', 'orangeMoney')->name('orange-money');
+    });
 });
 
 

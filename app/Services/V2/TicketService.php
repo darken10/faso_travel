@@ -8,6 +8,7 @@ use App\Models\Ticket\AutrePersonne;
 use App\Models\Voyage\VoyageInstance;
 use App\Enums\StatutTicket;
 use App\Enums\TypeTicket;
+use App\Helper\TicketHelpers;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -66,11 +67,15 @@ class TicketService
         // Créer le ticket
         $ticket = new Ticket();
         $ticket->voyage_instance_id = $data['voyage_instance_id'];
-        $ticket->user_id = Auth::id();
-        $ticket->type = $data['type'] ?? TypeTicket::AllerSimple;
-        $ticket->statut = StatutTicket::Payer; // Supposons que le paiement est déjà effectué
-        $ticket->code_qr = Str::uuid()->toString();
-        $ticket->numero_chaise = $this->attribuerNumeroPlace($voyageInstance->id);
+        $ticket->voyage_id          = $voyageInstance->voyage_id;
+        $ticket->user_id            = Auth::id();
+        $ticket->date               = $voyageInstance->date;
+        $ticket->type               = $data['type'] ?? TypeTicket::AllerSimple;
+        $ticket->statut             = StatutTicket::Payer;
+        $ticket->code_qr            = Str::uuid()->toString();
+        $ticket->numero_ticket      = TicketHelpers::generateTicketNumber();
+        $ticket->code_sms           = TicketHelpers::generateTicketCodeSms();
+        $ticket->numero_chaise      = $this->attribuerNumeroPlace($voyageInstance->id);
         
         // Si le ticket est pour une autre personne
         if (isset($data['autre_personne']) && $data['autre_personne']) {
