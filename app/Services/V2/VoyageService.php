@@ -4,6 +4,7 @@ namespace App\Services\V2;
 
 use Carbon\Carbon;
 use App\Enums\TypeTicket;
+use App\Enums\StatutTicket;
 use App\Models\Ville;
 use App\Models\Compagnie;
 use App\Models\Ticket\Ticket;
@@ -110,16 +111,16 @@ class VoyageService
     public function getTripSeats(string $tripId): array
     {
         $instance = VoyageInstance::with('care')->findOrFail($tripId);
-        $totalSeats = $instance->care?->number_place ?? 50;
+        $totalSeats = $instance->nb_place ?: ($instance->care?->number_place ?? 50);
         $occupiedSeats = Ticket::where('voyage_instance_id', $tripId)
-            ->where('statut', '!=', 'annuler')
+            ->where('statut', '!=', StatutTicket::Annuler)
             ->get();
         $availableSeats = $totalSeats - $occupiedSeats->count();
         
         // Generate seats information
         $seats = [];
         for ($i = 1; $i <= $totalSeats; $i++) {
-            $occupiedSeat = $occupiedSeats->firstWhere('numero_place', $i);
+            $occupiedSeat = $occupiedSeats->firstWhere('numero_chaise', $i);
             $status = $occupiedSeat ? 'occupied' : 'available';
 
             $seats[] = [

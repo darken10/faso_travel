@@ -70,8 +70,26 @@ class VoyageController extends Controller
      */
     public function getTripSeats(string $id)
     {
-        $seats = $this->voyageService->getTripSeats($id);
-        return response()->json($seats);
+        try {
+            $seats = $this->voyageService->getTripSeats($id);
+            return response()->json($seats);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'total_seats' => 0,
+                'available_seats' => 0,
+                'occupied_seats' => 0,
+                'seats' => [],
+                'message' => 'Voyage introuvable'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'total_seats' => 0,
+                'available_seats' => 0,
+                'occupied_seats' => 0,
+                'seats' => [],
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

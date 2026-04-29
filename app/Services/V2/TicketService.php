@@ -59,7 +59,7 @@ class TicketService
             ->where('statut', '!=', StatutTicket::Annuler)
             ->count();
             
-        if ($placesOccupees >= ($voyageInstance->care?->number_place ?? 50)) {
+        if ($placesOccupees >= ($voyageInstance->nb_place ?: ($voyageInstance->care?->number_place ?? 50))) {
             throw new \Exception('Plus de places disponibles pour ce voyage');
         }
         
@@ -67,10 +67,10 @@ class TicketService
         $ticket = new Ticket();
         $ticket->voyage_instance_id = $data['voyage_instance_id'];
         $ticket->user_id = Auth::id();
-        $ticket->type = $data['type'] ?? TypeTicket::Normal;
+        $ticket->type = $data['type'] ?? TypeTicket::AllerSimple;
         $ticket->statut = StatutTicket::Payer; // Supposons que le paiement est déjà effectué
         $ticket->code_qr = Str::uuid()->toString();
-        $ticket->numero_place = $this->attribuerNumeroPlace($voyageInstance->id);
+        $ticket->numero_chaise = $this->attribuerNumeroPlace($voyageInstance->id);
         
         // Si le ticket est pour une autre personne
         if (isset($data['autre_personne']) && $data['autre_personne']) {
@@ -207,11 +207,11 @@ class TicketService
     {
         $placesOccupees = Ticket::where('voyage_instance_id', $voyageInstanceId)
             ->where('statut', '!=', StatutTicket::Annuler)
-            ->pluck('numero_place')
+            ->pluck('numero_chaise')
             ->toArray();
             
         $voyageInstance = VoyageInstance::with('care')->findOrFail($voyageInstanceId);
-        $nombrePlaces = $voyageInstance->care?->number_place ?? 50;
+        $nombrePlaces = $voyageInstance->nb_place ?: ($voyageInstance->care?->number_place ?? 50);
         
         for ($i = 1; $i <= $nombrePlaces; $i++) {
             if (!in_array($i, $placesOccupees)) {
