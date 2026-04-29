@@ -137,6 +137,29 @@ class ArticleService
     }
     
     /**
+     * Get similar articles (same category or shared tags)
+     *
+     * @param int $articleId
+     * @param int $limit
+     * @return Collection
+     */
+    public function getSimilarArticles(int $articleId, int $limit = 4): Collection
+    {
+        $article = Post::with(['category', 'tags'])->findOrFail($articleId);
+        $tagIds  = $article->tags->pluck('id');
+
+        return Post::with(['user', 'category', 'likes', 'comments', 'tags'])
+            ->where('id', '!=', $articleId)
+            ->where(function ($q) use ($article, $tagIds) {
+                $q->where('category_id', $article->category_id)
+                  ->orWhereHas('tags', fn($tq) => $tq->whereIn('tags.id', $tagIds));
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * Get all article categories
      *
      * @return Collection

@@ -264,6 +264,26 @@ class ArticleController extends Controller
     }
 
     /**
+     * Get similar articles for a given article ID
+     *
+     * @param int $id
+     */
+    public function similar(int $id)
+    {
+        try {
+            $articles = $this->articleService->getSimilarArticles($id);
+
+            return PostListResource::collection($articles);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => true,
+                'message' => $e->getMessage(),
+                'status'  => 404,
+            ], 404);
+        }
+    }
+
+    /**
      * Get all article categories
      *
      */

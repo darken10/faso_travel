@@ -37,6 +37,7 @@ Route::prefix('v2')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/categories', 'getCategories')->name('categories');
         Route::get('/{id}', 'show')->name('show');
+        Route::get('/{id}/similar', 'similar')->name('similar');
         
         // Routes protégées par authentification
         Route::middleware('auth:sanctum')->group(function () {
