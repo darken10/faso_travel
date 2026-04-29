@@ -3,6 +3,7 @@
 namespace App\Services\V2;
 
 use Carbon\Carbon;
+use App\Enums\TypeTicket;
 use App\Models\Ville;
 use App\Models\Compagnie;
 use App\Models\Ticket\Ticket;
@@ -122,7 +123,7 @@ class VoyageService
             $status = $occupiedSeat ? 'occupied' : 'available';
 
             $seats[] = [
-                'id' => $i,
+                'id' => (string) $i,
                 'name' => (string) $i,
                 'status' => $status,
                 'price' => $instance->getPrix(TypeTicket::AllerSimple),
