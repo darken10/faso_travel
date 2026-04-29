@@ -7,9 +7,20 @@ use App\Services\Ticket\TicketQueryService;
 use App\Services\Ticket\TicketCommandService;
 use App\DTOs\Ticket\CreateTicketDTO;
 use App\DTOs\Ticket\TransferTicketDTO;
+use App\Models\Ticket\AutrePersonne;
+use App\Models\User;
 use App\Models\Voyage\VoyageInstance;
+use App\Enums\StatutTicket;
+use App\Enums\TypeNotification;
+use App\Events\SendClientTicketByMailEvent;
+use App\Events\TranfererTicketToOtherUserEvent;
+use App\Helper\TicketHelpers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class TicketController extends Controller
 {
@@ -71,28 +82,110 @@ class TicketController extends Controller
     }
 
     /**
-     * Transfer a ticket to another user
+     * Transfer a ticket to another user (registered or not).
+     * Requires the owner's password for security — mirrors the web flow.
      */
     public function transferTicket(Request $request, string $ticketId): JsonResponse
     {
         $validated = $request->validate([
-            'nom' => 'required|string|max:255',
-            'prenom' => 'required|string|max:255',
-            'telephone' => 'required|string|max:20',
+            'recipient_phone' => 'required|string|max:30',
+            'recipient_name'  => 'required|string|max:255',
+            'password'        => 'required|string',
         ]);
 
         $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
-        // For V2 API transfer, create AutrePersonne and update ticket
-        $autrePersonne = \App\Models\Ticket\AutrePersonne::create([
-            'nom' => $validated['nom'],
-            'prenom' => $validated['prenom'],
-            'contact' => $validated['telephone'],
+
+        // Ownership check
+        if (!$ticket->is_my_ticket && $ticket->transferer_a_user_id !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ce ticket n\'est plus en votre possession.',
+            ], 422);
+        }
+
+        if (!in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Pause])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seul un ticket payé ou en pause peut être transféré.',
+            ], 422);
+        }
+
+        // Verify current user's password
+        if (!Hash::check($validated['password'], Auth::user()->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mot de passe incorrect.',
+            ], 422);
+        }
+
+        // Determine recipient: registered user (by phone) or new AutrePersonne
+        $recipient = User::where('numero', $validated['recipient_phone'])->first();
+
+        DB::beginTransaction();
+        try {
+            if ($recipient) {
+                $ticket->is_my_ticket         = false;
+                $ticket->transferer_at        = now();
+                $ticket->transferer_a_user_id = $recipient->id;
+                $ticket->save();
+            } else {
+                $nameParts    = array_pad(explode(' ', trim($validated['recipient_name']), 2), 2, '');
+                $autrePersonne = AutrePersonne::create([
+                    'nom'     => $nameParts[0],
+                    'prenom'  => $nameParts[1],
+                    'contact' => $validated['recipient_phone'],
+                ]);
+                $ticket->autre_personne_id    = $autrePersonne->id;
+                $ticket->is_my_ticket         = false;
+                $ticket->transferer_at        = now();
+                $ticket->save();
+            }
+
+            TicketHelpers::regenerateTicket($ticket);
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[TicketV2] Transfer failed for ticket ' . $ticketId . ': ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors du transfert.',
+            ], 500);
+        }
+
+        try {
+            TranfererTicketToOtherUserEvent::dispatch($ticket->fresh());
+        } catch (\Throwable $e) {
+            Log::warning('[TicketV2] Transfer event failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success'             => true,
+            'message'             => 'Ticket transféré avec succès.',
+            'recipient_registered'=> $recipient !== null,
         ]);
+    }
 
-        $ticket->autre_personne_id = $autrePersonne->id;
-        $ticket->save();
+    /**
+     * Put a ticket on pause (Payé → Pause).
+     * Sends a notification email to the owner.
+     */
+    public function pauseTicket(string $ticketId): JsonResponse
+    {
+        $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
 
-        return response()->json($ticket->fresh());
+        try {
+            $this->ticketCommandService->pause($ticket);
+        } catch (\DomainException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        try {
+            SendClientTicketByMailEvent::dispatch($ticket->fresh(), TypeNotification::TICKET_MISE_PAUSE);
+        } catch (\Throwable $e) {
+            Log::warning('[TicketV2] Pause email failed for ticket ' . $ticketId . ': ' . $e->getMessage());
+        }
+
+        return response()->json(['success' => true, 'message' => 'Ticket mis en pause avec succès.']);
     }
 
     /**

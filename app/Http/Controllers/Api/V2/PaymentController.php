@@ -18,6 +18,10 @@ use App\Models\Voyage\VoyageInstance;
 use App\Helper\Payement\OrangePayementHelper;
 use App\Http\Controllers\Controller;
 use App\Services\V2\TicketService;
+use App\Events\PayementEffectuerEvent;
+use App\Events\SendClientTicketByMailEvent;
+use App\Enums\TypeNotification;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -122,16 +126,27 @@ class PaymentController extends Controller
 
             DB::commit();
 
-            // Reload ticket with relations for response
+            // Reload full relations needed for PDF generation and email
             $ticket->load([
                 'voyageInstance.voyage.trajet.depart',
                 'voyageInstance.voyage.trajet.arriver',
+                'voyageInstance.voyage.compagnie',
+                'voyageInstance.care',
+                'user',
                 'autre_personne',
             ]);
 
+            // Generate QR code image → PDF (synchronous listeners), then send by email
+            try {
+                PayementEffectuerEvent::dispatch($ticket);
+                SendClientTicketByMailEvent::dispatch($ticket, TypeNotification::TICKET_PAYER);
+            } catch (\Throwable $e) {
+                Log::error('[PaymentV2] PDF/email failed for ticket ' . $ticket->id . ': ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Paiement effectué avec succès !',
+                'message' => 'Paiement effectué avec succès ! Votre ticket a été envoyé par email.',
                 'data'    => [
                     'ticket_id'          => $ticket->id,
                     'code_qr'            => $ticket->code_qr,
