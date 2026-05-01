@@ -118,3 +118,45 @@ Route::get('politique-de-confidentialite', [ConditionConfidentialiteController::
 Route::get('termes-et-conditions', [ConditionConfidentialiteController::class, 'condition'])->name('divers.termes-et-conditions');
 Route::get('about-us', [ConditionConfidentialiteController::class, 'about'])->name('divers.about-us');
 Route::get('contact', [ConditionConfidentialiteController::class, 'contact'])->name('divers.contact');
+
+// ─── Panel Admin ──────────────────────────────────────────────────────────────
+Route::prefix('/admin')->name('panel.admin.')->middleware(['auth', 'verified', 'panel.admin'])->group(function () {
+    Route::get('/', \App\Livewire\Admin\Dashboard::class)->name('dashboard');
+    Route::get('/pays', \App\Livewire\Admin\PaysManager::class)->name('pays');
+    Route::get('/regions', \App\Livewire\Admin\RegionManager::class)->name('regions');
+    Route::get('/villes', \App\Livewire\Admin\VilleManager::class)->name('villes');
+    Route::get('/compagnies', \App\Livewire\Admin\CompagnieManager::class)->name('compagnies');
+    Route::get('/settings', \App\Livewire\Admin\SettingsManager::class)->name('settings');
+});
+
+// ─── Panel Compagnie ──────────────────────────────────────────────────────────
+Route::prefix('/compagnie')->name('panel.compagnie.')->middleware(['auth', 'verified', 'panel.compagnie'])->group(function () {
+    Route::get('/', \App\Livewire\Compagnie\Dashboard::class)->name('dashboard');
+
+    // Voyage
+    Route::get('/trajets', \App\Livewire\Compagnie\Voyage\TrajetManager::class)->name('trajets');
+    Route::get('/voyages', \App\Livewire\Compagnie\Voyage\VoyageManager::class)->name('voyages');
+    Route::get('/classes', \App\Livewire\Compagnie\Voyage\ClasseManager::class)->name('classes');
+    Route::get('/instances', \App\Livewire\Compagnie\Voyage\VoyageInstanceManager::class)->name('instances');
+
+    // Guichet
+    Route::get('/vente-ticket', \App\Livewire\Compagnie\Ticket\VenteTicket::class)->name('vente-ticket');
+    Route::get('/tickets', \App\Livewire\Compagnie\Ticket\TicketManager::class)->name('tickets');
+    Route::get('/caisse', \App\Livewire\Compagnie\Caisse\GestionCaisse::class)->name('caisse');
+    Route::get('/caisse/{caisse}', \App\Livewire\Compagnie\Caisse\DetailCaisse::class)->name('caisse.detail');
+    Route::get('/caisses-historique', \App\Livewire\Compagnie\Caisse\HistoriqueCaisses::class)->name('caisses-historique');
+
+    // Compagnie
+    Route::get('/gares', \App\Livewire\Compagnie\Compagnie\GareManager::class)->name('gares');
+    Route::get('/cares', \App\Livewire\Compagnie\Compagnie\CareManager::class)->name('cares');
+    Route::get('/users', \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users');
+
+    // Publications
+    Route::get('/posts', \App\Livewire\Compagnie\Post\PostManager::class)->name('posts');
+
+    // Comptabilité
+    Route::get('/bilan', \App\Livewire\Compagnie\Finance\BilanFinancier::class)->name('bilan');
+    Route::get('/depenses', \App\Livewire\Compagnie\Finance\DepenseManager::class)->name('depenses');
+    Route::get('/recettes', \App\Livewire\Compagnie\Finance\RecetteManager::class)->name('recettes');
+    Route::get('/categories', \App\Livewire\Compagnie\Finance\CategorieManager::class)->name('categories');
+});

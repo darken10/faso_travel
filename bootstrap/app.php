@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role'               => \App\Http\Middleware\Role::class,
             'requires.compagnie' => \App\Http\Middleware\RequiresCompagnie::class,
+            'panel.admin'        => \App\Http\Middleware\EnsureIsAdmin::class,
+            'panel.compagnie'    => \App\Http\Middleware\EnsureHasWebCompagnie::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

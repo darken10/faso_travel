@@ -13,8 +13,6 @@ use App\Models\Post\Post;
 use App\Models\Post\Comment;
 use App\Models\Ticket\Ticket;
 use App\Models\Role;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Authenticatable implements MustVerifyEmail, FilamentUser
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
     use HasFactory;
@@ -160,22 +158,4 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
         return $this->morphMany(Ticket::class,'autre_personne');
     }
 
-    public function canAccessPanel(Panel $panel): bool
-    {
-        // Admin panel: only Root and Admin roles
-        if ($panel->getId() === 'admin') {
-            return $this->role === UserRole::Root || $this->role === UserRole::Admin;
-        }
-
-        // Compagnie panel: CompagnieBosse, Admin, and Root roles
-        if ($panel->getId() === 'compagnie') {
-            return in_array($this->role, [
-                UserRole::CompagnieBosse,
-                UserRole::Admin,
-                UserRole::Root,
-            ]);
-        }
-
-        return false;
-    }
 }
