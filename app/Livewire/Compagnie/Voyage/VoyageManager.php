@@ -45,17 +45,17 @@ class VoyageManager extends Component
 
     public function getGaresDepart(): \Illuminate\Database\Eloquent\Collection
     {
-        if (!$this->trajet_id) return collect();
+        if (!$this->trajet_id) return new \Illuminate\Database\Eloquent\Collection();
         $trajet = Trajet::with('depart')->find($this->trajet_id);
-        if (!$trajet) return collect();
+        if (!$trajet) return new \Illuminate\Database\Eloquent\Collection();
         return Gare::where('ville_id', $trajet->depart_id)->orWhere('is_default', true)->get();
     }
 
     public function getGaresArrive(): \Illuminate\Database\Eloquent\Collection
     {
-        if (!$this->trajet_id) return collect();
+        if (!$this->trajet_id) return new \Illuminate\Database\Eloquent\Collection();
         $trajet = Trajet::with('arriver')->find($this->trajet_id);
-        if (!$trajet) return collect();
+        if (!$trajet) return new \Illuminate\Database\Eloquent\Collection();
         return Gare::where('ville_id', $trajet->arriver_id)->orWhere('is_default', true)->get();
     }
 
