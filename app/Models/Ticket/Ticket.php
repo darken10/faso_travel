@@ -171,4 +171,52 @@ class Ticket extends Model
     {
         return $this->belongsTo(\App\Models\Finance\Caisse::class);
     }
+
+    // ── Query Scopes ──────────────────────────────────────────────────────────
+
+    public function scopeForUser(Builder $builder, int $userId): Builder
+    {
+        return $builder->where('user_id', $userId);
+    }
+
+    public function scopeByStatut(Builder $builder, StatutTicket $statut): Builder
+    {
+        return $builder->where('statut', $statut);
+    }
+
+    public function scopePaid(Builder $builder): Builder
+    {
+        return $builder->where('statut', StatutTicket::Payer);
+    }
+
+    public function scopeActive(Builder $builder): Builder
+    {
+        return $builder->where('statut', StatutTicket::Actif);
+    }
+
+    public function scopeValidated(Builder $builder): Builder
+    {
+        return $builder->where('statut', StatutTicket::Valider);
+    }
+
+    public function scopeForCompagnie(Builder $builder, int $compagnieId): Builder
+    {
+        return $builder->whereHas('voyageInstance.voyage', fn ($q) => $q->where('compagnie_id', $compagnieId));
+    }
+
+    public function scopeForDate(Builder $builder, string $date): Builder
+    {
+        return $builder->whereDate('date', $date);
+    }
+
+    public function scopeSearch(Builder $builder, string $term): Builder
+    {
+        return $builder->where(function ($q) use ($term) {
+            $q->where('numero_ticket', 'like', "%{$term}%")
+              ->orWhere('code_sms', 'like', "%{$term}%")
+              ->orWhereHas('user', fn ($u) => $u->where('first_name', 'like', "%{$term}%")
+                                                 ->orWhere('last_name', 'like', "%{$term}%")
+                                                 ->orWhere('phone', 'like', "%{$term}%"));
+        });
+    }
 }

@@ -10,7 +10,7 @@ use App\Http\Controllers\Ticket\Payement\PaymentController2;
 use App\Http\Controllers\Api\Admin\Ticket\TicketApiController;
 
 // ─── Authentification V1 ──────────────────────────────────────────────────────
-Route::prefix('/auth')->name('api.auth.')->group(function () {
+Route::prefix('/auth')->name('api.auth.')->middleware('throttle:api-auth')->group(function () {
     Route::post('/register', [UserController::class, 'register'])->name('register');
     Route::post('/login', [UserController::class, 'login'])->name('login');
 
@@ -85,7 +85,7 @@ Route::middleware('auth:sanctum')->prefix('posts')->name('api.posts.')->group(fu
 Route::get('/user', fn(Request $request) => $request->user())->middleware('auth:sanctum');
 
 // ─── Paiement (protégé) ──────────────────────────────────────────────────────
-Route::middleware('auth:sanctum')->post('/process-payment/{provider}', [PaymentController2::class, 'processPayment'])
+Route::middleware(['auth:sanctum', 'throttle:api-payment'])->post('/process-payment/{provider}', [PaymentController2::class, 'processPayment'])
     ->name('api.payment.process');
 
 require __DIR__ . '/api-v2.php';

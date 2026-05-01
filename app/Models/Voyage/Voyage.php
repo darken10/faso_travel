@@ -173,4 +173,32 @@ class Voyage extends Model
         return $this->hasMany(VoyageInstance::class);
     }
 
+    // ── Query Scopes ──────────────────────────────────────────────────────────
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeForCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->where('compagnie_id', $compagnieId);
+    }
+
+    public function scopeSearch(Builder $query, ?string $depart, ?string $arriver): Builder
+    {
+        return $query->when($depart, fn ($q) => $q->whereHas('trajet.depart', fn ($t) => $t->where('nom', 'like', "%{$depart}%")))
+                     ->when($arriver, fn ($q) => $q->whereHas('trajet.arriver', fn ($t) => $t->where('nom', 'like', "%{$arriver}%")));
+    }
+
+    public function scopeHasAvailableSeats(Builder $query): Builder
+    {
+        return $query->whereHas('voyage_instances', fn ($q) => $q->where('nb_places_disponibles', '>', 0));
+    }
+
+    public function scopeOrderByDeparture(Builder $query): Builder
+    {
+        return $query->orderBy('heure');
+    }
+
 }

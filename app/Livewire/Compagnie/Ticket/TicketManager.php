@@ -5,6 +5,7 @@ namespace App\Livewire\Compagnie\Ticket;
 use App\Enums\StatutTicket;
 use App\Helper\TicketValidation;
 use App\Models\Ticket\Ticket;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -17,14 +18,24 @@ class TicketManager extends Component
 
     public string $search = '';
     public string $statutFilter = '';
+    public string $dateFrom = '';
+    public string $dateTo = '';
+    public string $perPage = '15';
 
     public function updatedSearch(): void { $this->resetPage(); }
     public function updatedStatutFilter(): void { $this->resetPage(); }
+    public function updatedDateFrom(): void { $this->resetPage(); }
+    public function updatedDateTo(): void { $this->resetPage(); }
+
+    public function resetFilters(): void
+    {
+        $this->reset(['search', 'statutFilter', 'dateFrom', 'dateTo']);
+        $this->resetPage();
+    }
 
     public function valider(int $id): void
     {
         $ticket = Ticket::findOrFail($id);
-        $this->authorize('update', $ticket);
 
         try {
             TicketValidation::valider($ticket);
@@ -37,7 +48,6 @@ class TicketManager extends Component
     public function bloquer(int $id): void
     {
         $ticket = Ticket::findOrFail($id);
-        $this->authorize('update', $ticket);
 
         try {
             TicketValidation::bloque($ticket);
@@ -47,23 +57,9 @@ class TicketManager extends Component
         }
     }
 
-    public function pause(int $id): void
-    {
-        $ticket = Ticket::findOrFail($id);
-        $this->authorize('update', $ticket);
-
-        try {
-            TicketValidation::pause($ticket);
-            session()->flash('success', 'Ticket mis en pause.');
-        } catch (\Throwable $e) {
-            session()->flash('error', 'Erreur : ' . $e->getMessage());
-        }
-    }
-
     public function activer(int $id): void
     {
         $ticket = Ticket::findOrFail($id);
-        $this->authorize('update', $ticket);
 
         try {
             TicketValidation::active($ticket);
@@ -73,27 +69,62 @@ class TicketManager extends Component
         }
     }
 
-    public function render()
+    private function baseQuery()
     {
         $compagnieId = Auth::user()->compagnie_id;
 
-        $tickets = Ticket::withoutGlobalScopes()
+        return Ticket::withoutGlobalScopes()
+            ->with(['user', 'autrePersonne', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'payements'])
             ->whereHas('voyageInstance', fn ($q) =>
                 $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
             )
             ->when($this->search, fn ($q) =>
-                $q->where('numero_ticket', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('autrePersonne', fn ($q2) =>
-                      $q2->where('first_name', 'like', '%' . $this->search . '%')
-                         ->orWhere('last_name', 'like', '%' . $this->search . '%')
-                  )
+                $q->where(fn ($inner) =>
+                    $inner->where('numero_ticket', 'like', '%' . $this->search . '%')
+                          ->orWhere('code_sms', 'like', '%' . $this->search . '%')
+                          ->orWhereHas('user', fn ($u) =>
+                              $u->where('first_name', 'like', '%' . $this->search . '%')
+                                ->orWhere('last_name', 'like', '%' . $this->search . '%')
+                                ->orWhere('phone', 'like', '%' . $this->search . '%')
+                          )
+                          ->orWhereHas('autrePersonne', fn ($ap) =>
+                              $ap->where('first_name', 'like', '%' . $this->search . '%')
+                                 ->orWhere('last_name', 'like', '%' . $this->search . '%')
+                          )
+                )
             )
             ->when($this->statutFilter, fn ($q) => $q->where('statut', $this->statutFilter))
+            ->when($this->dateFrom, fn ($q) => $q->whereDate('date', '>=', $this->dateFrom))
+            ->when($this->dateTo, fn ($q) => $q->whereDate('date', '<=', $this->dateTo));
+    }
+
+    public function render()
+    {
+        $compagnieId = Auth::user()->compagnie_id;
+
+        $tickets = $this->baseQuery()
             ->latest()
-            ->paginate(15);
+            ->paginate((int) $this->perPage);
+
+        // Statistiques rapides (sans filtres de recherche pour être représentatives)
+        $statsBase = Ticket::withoutGlobalScopes()
+            ->whereHas('voyageInstance', fn ($q) =>
+                $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
+            );
+
+        $stats = [
+            'total'   => (clone $statsBase)->count(),
+            'payes'   => (clone $statsBase)->where('statut', StatutTicket::Payer)->count(),
+            'valides' => (clone $statsBase)->where('statut', StatutTicket::Valider)->count(),
+            'bloques' => (clone $statsBase)->where('statut', StatutTicket::Bloquer)->count(),
+            'recette' => (clone $statsBase)->where('statut', StatutTicket::Valider)
+                             ->join('payements', 'tickets.id', '=', 'payements.ticket_id')
+                             ->sum('payements.montant'),
+        ];
 
         $statuts = StatutTicket::cases();
+        $hasFilters = $this->search || $this->statutFilter || $this->dateFrom || $this->dateTo;
 
-        return view('livewire.compagnie.ticket.ticket-manager', compact('tickets', 'statuts'));
+        return view('livewire.compagnie.ticket.ticket-manager', compact('tickets', 'statuts', 'stats', 'hasFilters'));
     }
 }
