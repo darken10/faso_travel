@@ -14,33 +14,35 @@ use App\DTOs\Auth\ResetPasswordDTO;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Exceptions\AuthenticationException;
+use App\Mail\Auth\OtpMail;
+use Twilio\Rest\Client as TwilioClient;
 
 class AuthService
 {
+    private const OTP_TTL_MINUTES = 10;
+
     public function register(RegisterDTO $dto): array
     {
         $user = User::create([
-            'name' => $dto->name,
-            'email' => $dto->email,
-            'password' => Hash::make($dto->password),
-            'first_name' => $dto->first_name ?? $dto->name,
-            'last_name' => $dto->last_name ?? '',
-            'sexe' => $dto->sexe ?? SexeUser::Homme,
-            'numero' => $dto->numero,
+            'name'               => $dto->name,
+            'email'              => $dto->email,
+            'password'           => Hash::make($dto->password),
+            'first_name'         => $dto->first_name ?? $dto->name,
+            'last_name'          => $dto->last_name ?? '',
+            'sexe'               => $dto->sexe ?? SexeUser::Homme,
+            'numero'             => $dto->numero,
             'numero_identifiant' => $dto->numero_identifiant ?? '+226',
-            'role' => $dto->role ?? UserRole::User,
-            'compagnie_id' => $dto->compagnie_id,
+            'role'               => $dto->role ?? UserRole::User,
+            'compagnie_id'       => $dto->compagnie_id,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return [
-            'user' => $user,
-            'token' => $token,
-        ];
+        return ['user' => $user, 'token' => $token];
     }
 
     public function login(LoginDTO $dto): array
@@ -50,12 +52,12 @@ class AuthService
         }
 
         $user = User::where('email', $dto->email)->firstOrFail();
+
+        // Révoquer les anciens tokens pour éviter l'accumulation
+        $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return [
-            'user' => $user,
-            'token' => $token,
-        ];
+        return ['user' => $user, 'token' => $token];
     }
 
     public function logout(): bool
@@ -69,9 +71,8 @@ class AuthService
 
     public function sendOtp(string $phoneOrEmail): bool
     {
-        $field = filter_var($phoneOrEmail, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
-
-        $user = User::where($field, $phoneOrEmail)->first();
+        $field = filter_var($phoneOrEmail, FILTER_VALIDATE_EMAIL) ? 'email' : 'numero';
+        $user  = User::where($field, $phoneOrEmail)->first();
 
         if (!$user) {
             throw AuthenticationException::userNotFound();
@@ -79,24 +80,57 @@ class AuthService
 
         $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        Cache::put('otp_' . $user->id, $otp, Carbon::now()->addMinutes(10));
+        Cache::put($this->otpCacheKey($user->id), $otp, Carbon::now()->addMinutes(self::OTP_TTL_MINUTES));
 
-        // TODO: Send OTP via email or SMS
+        if ($field === 'email') {
+            Mail::to($user->email)->send(new OtpMail($otp));
+        } else {
+            $this->sendSmsTwilio($user->numero, $otp);
+        }
 
         return true;
     }
 
+    private function sendSmsTwilio(string $phoneNumber, string $otp): void
+    {
+        $sid   = config('sms.twillo.twilio_sid');
+        $token = config('sms.twillo.twilio_token');
+        $from  = config('sms.twillo.twilio_phone_number');
+
+        if (!$sid || !$token || !$from) {
+            throw new \RuntimeException('Configuration SMS Twilio manquante. Définissez TWILIO_SID, TWILIO_TOKEN, TWILIO_PHONE_NUMBER dans .env');
+        }
+
+        $client = new TwilioClient($sid, $token);
+        $client->messages->create($phoneNumber, [
+            'from' => $from,
+            'body' => "Votre code LIPTRA : {$otp}. Valable 10 minutes.",
+        ]);
+    }
+
     public function verifyOtp(VerifyOtpDTO $dto): bool
     {
-        $storedOtp = Cache::get("otp_{$dto->phone_or_email}");
+        $field = filter_var($dto->phone_or_email, FILTER_VALIDATE_EMAIL) ? 'email' : 'numero';
+        $user  = User::where($field, $dto->phone_or_email)->first();
+
+        if (!$user) {
+            return false;
+        }
+
+        $storedOtp = Cache::get($this->otpCacheKey($user->id));
 
         if (!$storedOtp || !hash_equals($storedOtp, $dto->otp)) {
             return false;
         }
 
-        Cache::forget("otp_{$dto->phone_or_email}");
+        Cache::forget($this->otpCacheKey($user->id));
 
         return true;
+    }
+
+    private function otpCacheKey(int $userId): string
+    {
+        return 'otp_user_' . $userId;
     }
 
     public function forgotPassword(string $email): bool

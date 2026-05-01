@@ -2,106 +2,94 @@
 
 namespace App\Http\Controllers\Ticket\Payement;
 
-use Exception;
-use App\Enums\TypeTicket;
 use App\Enums\MoyenPayment;
-use App\Enums\StatutTicket;
-use Illuminate\Support\Str;
-use Illuminate\Http\Request;
 use App\Enums\StatutPayement;
-use App\Helper\TicketHelpers;
-use App\Models\Ticket\Ticket;
+use App\Enums\StatutTicket;
 use App\Enums\TypeNotification;
-use App\Mail\Ticket\TicketMail;
-use App\Models\Ticket\Payement;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Mail;
 use App\Events\PayementEffectuerEvent;
-use App\Helper\Pdf\PdfGeneratorHelper;
-use Illuminate\Support\Facades\Storage;
 use App\Events\SendClientTicketByMailEvent;
-use App\Helper\QrCode\QrCodeGeneratorHelper;
 use App\Helper\Payement\OrangePayementHelper;
-use App\Notifications\Ticket\TicketNotification;
+use App\Helper\TicketHelpers;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Ticket\Payement\OrangePayementRequest;
+use App\Models\Ticket\Payement;
+use App\Models\Ticket\Ticket;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class OrangePayementController extends Controller
 {
-
-    public string $storage_public_dir = 'app/public/';
-
-    function paymentPage (Ticket $ticket){
-        return view('ticket.ticket.payement.orange',[
-            'ticket' => $ticket,
-        ]);
+    public function paymentPage(Ticket $ticket)
+    {
+        return view('ticket.ticket.payement.orange', ['ticket' => $ticket]);
     }
 
-
-    /**
-     * @throws \Throwable
-     */
-    function payer(OrangePayementRequest $request, Ticket $ticket){
-
-        $data = $request->validated();
-        $prix = $ticket->voyageInstance->getPrix($ticket->type);
+    public function payer(OrangePayementRequest $request, Ticket $ticket)
+    {
+        $data          = $request->validated();
+        $prix          = $ticket->voyageInstance->getPrix($ticket->type);
         $orangePayement = new OrangePayementHelper($data['numero'], $data['otp'], $prix);
 
-        if($orangePayement->payement()){
-            $data = [
-                'ticket_id' => $ticket->id,
-                'numero_payment' => $data['numero'],
-                'montant' => $orangePayement->montant,
-                "trans_id" =>$orangePayement->transaction_id,
-                "token" => $orangePayement->token,
-                'code_otp' => $data['otp'],
-                'statut' => $orangePayement->payementStatut(),
-                'moyen_payment' => MoyenPayment::ORANGE_MONEY,
-                'code_ticket' => Str::random(12),
-            ];
+        if (!$orangePayement->payement()) {
+            return back()->with('error', 'Code OTP invalide ou numéro Orange Money incorrect.');
+        }
 
-            try{
-                DB::beginTransaction();
-                $ticket->statut = StatutTicket::Payer;
+        $payementData = [
+            'ticket_id'      => $ticket->id,
+            'numero_payment' => $data['numero'],
+            'montant'        => $orangePayement->montant,
+            'trans_id'       => $orangePayement->transaction_id,
+            'token'          => $orangePayement->token,
+            'code_otp'       => $data['otp'],
+            'statut'         => $orangePayement->payementStatut(),
+            'moyen_payment'  => MoyenPayment::ORANGE_MONEY,
+            'code_ticket'    => Str::random(12),
+        ];
 
-                $oldpayements = Payement::query()->whereBelongsTo($ticket)->where('statut',StatutPayement::Complete)->get();
-                if($oldpayements->count() > 0){
-                    $payement = $oldpayements->last();
-                }
-                else{
-                    $payement = Payement::create($data);
-                }
+        try {
+            DB::beginTransaction();
 
-                $TkAvecLeMemeNumeroChaise = Ticket::query()
-                    ->whereBelongsTo($ticket->voyageInstance)
-                    ->where('numero_chaise',$ticket->numero_chaise)
-                    ->where('statut',StatutTicket::Payer)
-                    ->get();
-                if ($TkAvecLeMemeNumeroChaise->count()>=1){
-                    $ticket->numero_chaise = TicketHelpers::getNumeroChaise($ticket->voyageInstance);
-                }
-                $ticket->save();
+            $ticket->statut = StatutTicket::Payer;
 
+            // Éviter de créer un doublon de paiement si déjà payé
+            $existingPayement = Payement::whereBelongsTo($ticket)
+                ->where('statut', StatutPayement::Complete)
+                ->first();
+
+            if (!$existingPayement) {
+                Payement::create($payementData);
+            }
+
+            // Réassigner le siège si collision détectée
+            $seatConflict = Ticket::where('voyage_instance_id', $ticket->voyage_instance_id)
+                ->where('numero_chaise', $ticket->numero_chaise)
+                ->where('statut', StatutTicket::Payer)
+                ->where('id', '!=', $ticket->id)
+                ->exists();
+
+            if ($seatConflict) {
+                $ticket->numero_chaise = TicketHelpers::getNumeroChaise($ticket->voyageInstance);
+            }
+
+            $ticket->save();
+            DB::commit();
+
+            // Envoyer QR + PDF + email en dehors de la transaction
+            try {
                 PayementEffectuerEvent::dispatch($ticket);
-                SendClientTicketByMailEvent::dispatch($ticket,TypeNotification::TICKET_PAYER);
-
-                DB::commit();
-                return redirect()->route('ticket.show-ticket',['ticket'=>$ticket])->with('success',"Le paiement de votre ticket a été effectué avec succès");
-            }
-            catch(Exception $e){
-                DB::rollBack();
-
-                throw new Exception($e->getMessage());
-                return back()->with('error',"Une erreur est survenue lors de l'enregistrement du paiement");
+                SendClientTicketByMailEvent::dispatch($ticket, TypeNotification::TICKET_PAYER);
+            } catch (\Throwable $e) {
+                Log::error('[Orange] Post-payment notifications failed for ticket ' . $ticket->id . ': ' . $e->getMessage());
             }
 
+            return redirect()->route('ticket.show-ticket', ['ticket' => $ticket])
+                ->with('success', 'Paiement effectué avec succès. Votre ticket vous a été envoyé par email.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[Orange] Payment failed for ticket ' . $ticket->id . ': ' . $e->getMessage());
 
+            return back()->with('error', "Une erreur est survenue lors de l'enregistrement du paiement. Veuillez réessayer.");
         }
-        else{
-            return back()->with('error',"Le code OTP est incorrect");
-        }
-
     }
-
-
 }

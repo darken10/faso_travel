@@ -10,16 +10,16 @@ use App\Http\Controllers\Api\V2\BuyVoyageController as BuyVoyageControllerV2;
 use App\Http\Controllers\Api\V2\NotificationController as NotificationControllerV2;
 use App\Http\Controllers\Api\V2\PaymentController as PaymentControllerV2;
 
- // API V2 - Nouvelle version avec rétrocompatibilité
+// API V2
 Route::prefix('v2')->group(function () {
-    // Routes d'authentification V2
-    Route::prefix('/auth')->controller(AuthControllerV2::class)->group(function () {
+    // Routes d'authentification V2 — rate limité
+    Route::prefix('/auth')->controller(AuthControllerV2::class)->middleware('throttle:10,1')->group(function () {
         Route::post('/register', 'register');
         Route::post('/login', 'login');
-        Route::post('/logout', 'logout')->middleware('auth:sanctum');
-        Route::post('/send-otp', 'sendOtp');
+        Route::post('/logout', 'logout')->middleware('auth:sanctum')->withoutMiddleware('throttle:10,1');
+        Route::post('/send-otp', 'sendOtp')->middleware('throttle:5,1');
         Route::post('/verify-otp', 'verifyOtp');
-        Route::post('/forgot-password', 'forgotPassword');
+        Route::post('/forgot-password', 'forgotPassword')->middleware('throttle:5,1');
         Route::post('/reset-password', 'resetPassword');
     });
 

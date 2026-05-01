@@ -2,6 +2,7 @@
 
 namespace App\Features\Payement;
 
+use App\Enums\MoyenPayment;
 use App\Enums\StatutPayement;
 use App\Features\Payement\PaymentGatewayInterface;
 use App\Models\Ticket\Payement;

@@ -121,17 +121,12 @@ class VoyageHelper
         return $a;
     }
 
-    public static function getVoyagesByDay(string $date):Collection
+    public static function getVoyagesByDay(string $date): Collection
     {
-        $infoDate = mb_split('-',$date);
-
         Carbon::setLocale('fr');
-        $d = Carbon::parse($date);
-        $day =ucfirst($d->translatedFormat('l')) ;
+        $day = ucfirst(Carbon::parse($date)->translatedFormat('l'));
 
-        return Voyage::query()
-            ->whereLike('days', "%".$day."%")
-            ->get();
+        return Voyage::whereJsonContains('days', $day)->get();
     }
 
 }

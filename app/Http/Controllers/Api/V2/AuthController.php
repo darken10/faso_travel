@@ -2,66 +2,64 @@
 
 namespace App\Http\Controllers\Api\V2;
 
-use App\Http\Controllers\Controller;
-use App\Services\V2\AuthService;
 use App\DTOs\Auth\LoginDTO;
-use Illuminate\Http\Request;
+use App\DTOs\Auth\RegisterDTO;
+use App\DTOs\Auth\ResetPasswordDTO;
+use App\DTOs\Auth\VerifyOtpDTO;
+use App\Exceptions\AuthenticationException;
+use App\Http\Controllers\Controller;
+use App\Services\Auth\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
-    protected $authService;
+    public function __construct(protected AuthService $authService) {}
 
-    public function __construct(AuthService $authService)
-    {
-        $this->authService = $authService;
-    }
-
-    /**
-     * Register a new user
-     */
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-            'first_name' => 'nullable|string|max:255',
-            'last_name' => 'nullable|string|max:255',
-            'sexe' => 'nullable|string',
-            'numero' => 'nullable|integer',
-            'numero_identifiant' => 'nullable|string|max:10',
-            'role' => 'nullable|string',
-            'compagnie_id' => 'nullable|exists:compagnies,id',
+            'name'                  => 'required|string|max:255',
+            'email'                 => 'required|string|email|max:255|unique:users',
+            'password'              => 'required|string|min:8|confirmed',
+            'first_name'            => 'nullable|string|max:255',
+            'last_name'             => 'nullable|string|max:255',
+            'sexe'                  => 'nullable|string',
+            'numero'                => 'nullable|integer',
+            'numero_identifiant'    => 'nullable|string|max:10',
+            'role'                  => 'nullable|string',
+            'compagnie_id'          => 'nullable|exists:compagnies,id',
         ]);
 
-        $result = $this->authService->register($validated);
-
-        return response()->json($result, 201);
-    }
-
-    /**
-     * Login user
-     */
-    public function login(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
-
-        $result = $this->authService->login(LoginDTO::fromRequest($validated));
+        $result = $this->authService->register(RegisterDTO::fromRequest($validated));
 
         return response()->json([
             'success' => true,
-            'message' => 'Connexion réussie',
-            'data' => $result,
+            'user'    => $result['user'],
+            'token'   => $result['token'],
+        ], 201);
+    }
+
+    public function login(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email'    => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+
+        try {
+            $result = $this->authService->login(LoginDTO::fromRequest($validated));
+        } catch (AuthenticationException $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'user'    => $result['user'],
+            'token'   => $result['token'],
         ]);
     }
 
-    /**
-     * Logout user
-     */
     public function logout(Request $request): JsonResponse
     {
         $this->authService->logout();
@@ -69,91 +67,61 @@ class AuthController extends Controller
         return response()->json(['message' => 'Déconnexion réussie']);
     }
 
-    /**
-     * Send OTP
-     */
     public function sendOtp(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone_or_email' => 'required|string',
+            'email' => 'required|string|email',
         ]);
 
-        $result = $this->authService->sendOtp($validated['phone_or_email']);
+        try {
+            $this->authService->sendOtp($validated['email']);
+        } catch (AuthenticationException $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()], 404);
+        }
 
-        return response()->json(['sent' => $result]);
+        return response()->json(['sent' => true]);
     }
 
-    /**
-     * Verify OTP
-     */
     public function verifyOtp(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone_or_email' => 'required|string',
-            'otp' => 'required|string|size:6',
+            'email' => 'required|string|email',
+            'otp'   => 'required|string|size:6',
         ]);
 
-        $result = $this->authService->verifyOtp(
-            $validated['phone_or_email'],
-            $validated['otp']
-        );
+        $dto    = new VerifyOtpDTO(phone_or_email: $validated['email'], otp: $validated['otp']);
+        $result = $this->authService->verifyOtp($dto);
 
-        if (!$result) {
-            return response()->json([
-                'error' => true,
-                'message' => 'Code OTP invalide ou expiré',
-                'status' => 400
-            ], 400);
-        }
-
-        return response()->json(['verified' => true]);
+        return response()->json(['verified' => $result]);
     }
 
-    /**
-     * Send password reset link
-     */
     public function forgotPassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'email' => 'required|string|email',
         ]);
 
-        $result = $this->authService->forgotPassword($validated['email']);
+        $sent = $this->authService->forgotPassword($validated['email']);
 
-        if (!$result) {
-            return response()->json([
-                'error' => true,
-                'message' => "Impossible d'envoyer le lien de réinitialisation",
-                'status' => 400
-            ], 400);
+        if (!$sent) {
+            return response()->json(['error' => true, 'message' => "Impossible d'envoyer le lien de réinitialisation"], 400);
         }
 
         return response()->json(['sent' => true]);
     }
 
-    /**
-     * Reset password
-     */
     public function resetPassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => 'required|string|email',
-            'token' => 'required|string',
+            'email'    => 'required|string|email',
+            'token'    => 'required|string',
             'password' => 'required|string|min:8',
         ]);
 
-        $result = $this->authService->resetPassword(
-            $validated['token'],
-            $validated['password'],
-            $validated['email']
-        );
+        $reset = $this->authService->resetPassword(ResetPasswordDTO::fromRequest($validated));
 
-        if (!$result) {
-            return response()->json([
-                'error' => true,
-                'message' => 'Impossible de réinitialiser le mot de passe',
-                'status' => 400
-            ], 400);
+        if (!$reset) {
+            return response()->json(['error' => true, 'message' => 'Impossible de réinitialiser le mot de passe'], 400);
         }
 
         return response()->json(['reset' => true]);

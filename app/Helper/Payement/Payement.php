@@ -23,9 +23,12 @@ class Payement {
         return $this->token;
     }
 
-    public static function verificationPayementStatutByPayementApi(string $token,MoyenPayment $moyenPayement=MoyenPayment::LIGDICASH):StatutPayement
+    public static function verificationPayementStatutByPayementApi(string $token, MoyenPayment $moyenPayement = MoyenPayment::LIGDICASH): StatutPayement
     {
-        return StatutPayement::Complete;
+        throw new \RuntimeException(
+            'verificationPayementStatutByPayementApi() n\'est pas implémentée. ' .
+            'Utilisez les méthodes getStatus() de chaque PaymentGateway.'
+        );
     }
 
 }

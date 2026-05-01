@@ -3,20 +3,18 @@
 namespace App\Features\Payement;
 
 use App\Enums\StatutPayement;
-use App\Features\Payement\PaymentGatewayInterface;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 
 class OrangeMoneyPaymentGateway implements PaymentGatewayInterface
 {
-
     public function processPayment(float $amount, Ticket $ticket, User $user, array $paymentDetails = []): bool|string
     {
-        // TODO: Implement processPayment() method.
+        throw new \RuntimeException('OrangeMoneyPaymentGateway::processPayment() n\'est pas encore intégré. Utilisez OrangePayementController pour les paiements Orange Money directs.');
     }
 
     public function getStatus(array $statusPayload): StatutPayement
     {
-        // TODO: Implement getStatus() method.
+        throw new \RuntimeException('OrangeMoneyPaymentGateway::getStatus() n\'est pas encore intégré.');
     }
 }
