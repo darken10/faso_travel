@@ -149,6 +149,7 @@ Route::prefix('/compagnie')->name('panel.compagnie.')->middleware(['auth', 'veri
     // Compagnie
     Route::get('/gares', \App\Livewire\Compagnie\Compagnie\GareManager::class)->name('gares');
     Route::get('/cares', \App\Livewire\Compagnie\Compagnie\CareManager::class)->name('cares');
+    Route::get('/chauffeurs', \App\Livewire\Compagnie\Compagnie\ChauffeurManager::class)->name('chauffeurs');
     Route::get('/users', \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users');
 
     // Publications

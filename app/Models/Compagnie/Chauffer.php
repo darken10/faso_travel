@@ -20,12 +20,15 @@ class Chauffer extends Model
      * @var array
      */
     protected $fillable = [
-        "first_name",
-        "last_name",
-        "date_naissance",
-        "genre",
-        "compagnie_id",
-        "statut",
+        'first_name',
+        'last_name',
+        'matricule',
+        'telephone',
+        'photo',
+        'date_naissance',
+        'genre',
+        'compagnie_id',
+        'statut',
     ];
 
     public function compagnie(): BelongsTo

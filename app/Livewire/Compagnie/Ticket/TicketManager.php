@@ -93,7 +93,7 @@ class TicketManager extends Component
                           )
                 )
             )
-            ->when($this->statutFilter, fn ($q) => $q->where('statut', $this->statutFilter))
+            ->when($this->statutFilter, fn ($q) => $q->where('tickets.statut', $this->statutFilter))
             ->when($this->dateFrom, fn ($q) => $q->whereDate('date', '>=', $this->dateFrom))
             ->when($this->dateTo, fn ($q) => $q->whereDate('date', '<=', $this->dateTo));
     }
@@ -114,10 +114,10 @@ class TicketManager extends Component
 
         $stats = [
             'total'   => (clone $statsBase)->count(),
-            'payes'   => (clone $statsBase)->where('statut', StatutTicket::Payer)->count(),
-            'valides' => (clone $statsBase)->where('statut', StatutTicket::Valider)->count(),
-            'bloques' => (clone $statsBase)->where('statut', StatutTicket::Bloquer)->count(),
-            'recette' => (clone $statsBase)->where('statut', StatutTicket::Valider)
+            'payes'   => (clone $statsBase)->where('tickets.statut', StatutTicket::Payer)->count(),
+            'valides' => (clone $statsBase)->where('tickets.statut', StatutTicket::Valider)->count(),
+            'bloques' => (clone $statsBase)->where('tickets.statut', StatutTicket::Bloquer)->count(),
+            'recette' => (clone $statsBase)->where('tickets.statut', StatutTicket::Valider)
                              ->join('payements', 'tickets.id', '=', 'payements.ticket_id')
                              ->sum('payements.montant'),
         ];
