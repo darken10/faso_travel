@@ -11,11 +11,6 @@ use Illuminate\Http\RedirectResponse;
 
 class NotificationsController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
     function allNotifications(): View|Factory|Application
     {
         return view('divers.notifications-liste',[
