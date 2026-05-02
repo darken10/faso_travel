@@ -14,17 +14,26 @@ class OrangePayementHelper extends Payement{
 
     public function payement(): array|false
     {
-        $apiKey = config('services.orange_money.api_key');
-        $apiUrl = config('services.orange_money.api_url');
-
-        if (!$apiKey || !$apiUrl) {
-            throw new \RuntimeException(
-                'Orange Money API non configurée. Définissez ORANGE_MONEY_API_KEY et ORANGE_MONEY_API_URL dans .env'
-            );
-        }
+        $apiKey     = config('services.orange_money.api_key');
+        $apiUrl     = config('services.orange_money.api_url');
+        $simulation = config('services.orange_money.simulation', !$apiKey || !$apiUrl);
 
         $transId = $this->generate_transaction_id('OM');
         $token   = $this->createFakeToken();
+
+        if ($simulation) {
+            // Simulation locale : accepte tout numéro/OTP sans appel réseau
+            $this->transaction_id = $transId;
+            $this->token          = $token;
+
+            return [
+                'transaction_id' => $this->transaction_id,
+                'numero'         => $this->numero,
+                'otp'            => $this->otp,
+                'token'          => $this->token,
+                'montant'        => $this->montant,
+            ];
+        }
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => 'Bearer ' . $apiKey,

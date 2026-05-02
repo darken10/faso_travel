@@ -68,7 +68,7 @@
                         @endif
 
                         @if($ticket?->statut === \App\Enums\StatutTicket::Payer or $ticket?->statut === \App\Enums\StatutTicket::Pause)
-                            <a href="{{ route('ticket.tranferer-ticket-to-other-user',$ticket) }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors">
+                            <a href="{{ route('ticket.transferer-ticket-to-other-user',$ticket) }}" class="flex items-center gap-2 px-4 py-2.5 text-sm text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors">
                                 <svg class="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
                                 Transférer
                             </a>
@@ -241,7 +241,7 @@
                 <svg class="w-4 h-4 text-surface-300 dark:text-surface-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
             </a>
 
-            <a href="{{ route('ticket.tranferer-ticket-to-other-user',$ticket) }}" class="card group flex items-center gap-3 hover:shadow-soft transition-all duration-200">
+            <a href="{{ route('ticket.transferer-ticket-to-other-user',$ticket) }}" class="card group flex items-center gap-3 hover:shadow-soft transition-all duration-200">
                 <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
                     <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" /></svg>
                 </div>

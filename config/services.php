@@ -36,8 +36,9 @@ return [
     ],
 
     'orange_money' => [
-        'api_key' => env('ORANGE_MONEY_API_KEY'),
-        'api_url'  => env('ORANGE_MONEY_API_URL', 'https://api.orange.com/orange-money-webpay/bf/v1'),
+        'api_key'    => env('ORANGE_MONEY_API_KEY'),
+        'api_url'    => env('ORANGE_MONEY_API_URL', 'https://api.orange.com/orange-money-webpay/bf/v1'),
+        'simulation' => env('ORANGE_MONEY_SIMULATION', false),
     ],
 
 ];

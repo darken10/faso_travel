@@ -19,7 +19,8 @@ class TicketNotificationMail extends Mailable
         public Ticket           $ticket,
         public TypeNotification $type,
         public string           $recipient,
-        public string           $title ="",
+        public string           $title   = "",
+        public string           $message = "",
     )
     {
     }
@@ -77,6 +78,18 @@ class TicketNotificationMail extends Mailable
                         'as'   => 'ticket.pdf',
                     ]);
             }
+
+            case TypeNotification::VOYAGE_ANNULE:
+                return $this->view('emails.voyage-annule-email', [
+                    'ticket'  => $this->ticket,
+                    'message' => $this->message,
+                ]);
+
+            case TypeNotification::VOYAGE_RETARDE:
+                return $this->view('emails.voyage-retarde-email', [
+                    'ticket'  => $this->ticket,
+                    'message' => $this->message,
+                ]);
 
             case TypeNotification::PayerTicket:
             case TypeNotification::UpdateTicket:
