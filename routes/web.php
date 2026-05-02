@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\MyRegisterController;
 use App\Http\Controllers\Auth\AccountActivationController;
+use App\Http\Controllers\Auth\PhoneLoginController;
 use App\Http\Controllers\Compagnie\CompagnieController;
 use App\Http\Controllers\Divers\ConditionConfidentialiteController;
 use App\Http\Controllers\Divers\NotificationsController;
@@ -143,6 +144,14 @@ Route::domain('app.'.$domain)->group(function () {
         Route::post('/step1', 'post_step1')->name('post_step1');
         Route::post('/step2', 'post_step2')->name('post_step2');
         Route::post('/step3', 'post_step3')->name('post_step3');
+    });
+
+    // ─── Connexion par téléphone / OTP ────────────────────────────────────
+    Route::prefix('/connexion/telephone')->name('auth.phone.')->controller(PhoneLoginController::class)->group(function () {
+        Route::get('/',          'showPhoneForm')->name('form');
+        Route::post('/demander', 'requestOtp')->name('request-otp');
+        Route::get('/otp',       'showOtpForm')->name('otp-form');
+        Route::post('/verifier', 'verifyOtp')->name('verify-otp');
     });
 });
 
