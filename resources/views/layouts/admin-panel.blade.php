@@ -130,36 +130,61 @@
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {{-- Top bar --}}
-        <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
-            <div class="flex items-center gap-3">
+        <header class="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 shadow-sm">
+            <div class="flex items-center gap-3 min-w-0">
                 {{-- Mobile burger --}}
-                <button @click="mobileSidebarOpen = !mobileSidebarOpen" class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+                <button @click="mobileSidebarOpen = !mobileSidebarOpen"
+                        class="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
                 {{-- Desktop sidebar toggle --}}
-                <button @click="sidebarOpen = !sidebarOpen" class="hidden lg:block p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+                <button @click="sidebarOpen = !sidebarOpen"
+                        class="hidden lg:flex p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
+
+                <div class="hidden sm:block w-px h-6 bg-gray-200 flex-shrink-0"></div>
+
                 @if(isset($heading))
-                    <h1 class="text-base sm:text-lg font-semibold text-gray-800 hidden sm:block">{{ $heading }}</h1>
+                    <div class="min-w-0">
+                        <h1 class="text-sm sm:text-base font-semibold text-gray-800 truncate">{{ $heading }}</h1>
+                        <p class="text-xs text-amber-500 font-medium hidden sm:block">Administration · Faso Travel</p>
+                    </div>
                 @endif
             </div>
-            <div class="flex items-center gap-3">
-                {{-- Breadcrumb current page on mobile --}}
-                @if(isset($heading))
-                    <span class="text-sm font-semibold text-gray-800 sm:hidden">{{ $heading }}</span>
-                @endif
+
+            <div class="flex items-center gap-2 flex-shrink-0">
                 @if(isset($actions))
-                    {{ $actions }}
+                    <div class="flex items-center gap-2">{{ $actions }}</div>
+                    <div class="w-px h-6 bg-gray-200"></div>
                 @endif
-                {{-- Quick profile --}}
-                <div class="flex items-center gap-2 text-sm text-gray-600">
-                    <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-xs border border-amber-200">
+
+                {{-- Notifications --}}
+                <a href="{{ route('user.notifications') }}"
+                   class="relative p-2 rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    @php $unread = auth()->user()->unreadNotifications()->count(); @endphp
+                    @if($unread > 0)
+                        <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                            {{ min($unread, 9) }}
+                        </span>
+                    @endif
+                </a>
+
+                {{-- User card --}}
+                <div class="flex items-center gap-2.5 pl-2 border-l border-gray-100">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm">
                         {{ strtoupper(substr(auth()->user()->first_name ?? auth()->user()->name ?? 'A', 0, 1)) }}
+                    </div>
+                    <div class="hidden md:block">
+                        <p class="text-xs font-semibold text-gray-800 leading-tight">{{ auth()->user()->first_name ?? auth()->user()->name }}</p>
+                        <p class="text-[10px] text-amber-500 font-medium leading-tight">Administrateur</p>
                     </div>
                 </div>
             </div>
