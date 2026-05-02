@@ -99,23 +99,18 @@ class TrajetManager extends Component
     public function save(): void
     {
         $this->validate([
-            'depart_id'     => 'required|exists:villes,id',
-            'arriver_id'    => 'required|exists:villes,id|different:depart_id',
-            'distance'      => 'nullable|numeric|min:0',
-            'temps_heures'  => 'nullable|integer|min:0|max:99',
-            'temps_minutes' => 'nullable|integer|min:0|max:59',
-            'etat'          => 'nullable|string|max:255',
+            'depart_id'  => 'required|exists:villes,id',
+            'arriver_id' => 'required|exists:villes,id|different:depart_id',
+            'distance'   => 'nullable|numeric|min:0',
+            'temps'      => 'nullable|date_format:H:i',
+            'etat'       => 'nullable|string|max:255',
         ]);
-
-        $h     = max(0, (int) $this->temps_heures);
-        $m     = max(0, min(59, (int) $this->temps_minutes));
-        $temps = ($h > 0 || $m > 0) ? sprintf('%02d:%02d:00', $h, $m) : null;
 
         $data = [
             'depart_id'  => $this->depart_id,
             'arriver_id' => $this->arriver_id,
             'distance'   => $this->distance ?: null,
-            'temps'      => $temps,
+            'temps'      => $this->temps ? $this->temps . ':00' : null,
             'etat'       => $this->etat ?: null,
         ];
 
@@ -132,10 +127,8 @@ class TrajetManager extends Component
             'editingId',
             'depart_pays_id', 'depart_region_id', 'depart_id',
             'arriver_pays_id', 'arriver_region_id', 'arriver_id',
-            'distance', 'etat',
+            'distance', 'temps', 'etat',
         ]);
-        $this->temps_heures  = '0';
-        $this->temps_minutes = '0';
     }
 
     public function delete(int $id): void
