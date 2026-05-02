@@ -11,7 +11,8 @@ class EnsureHasWebCompagnie
     public function handle(Request $request, Closure $next): Response
     {
         if (!$request->user()) {
-            return redirect()->route('login');
+            $scheme = str_starts_with(config('app.url'), 'https') ? 'https' : 'http';
+            return redirect($scheme.'://app.'.config('app.domain').'/login');
         }
 
         if (!$request->user()->compagnie_id) {
