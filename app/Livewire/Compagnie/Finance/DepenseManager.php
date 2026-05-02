@@ -6,6 +6,7 @@ use App\Models\Finance\CategorieDepense;
 use App\Models\Finance\Depense;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -40,6 +41,20 @@ class DepenseManager extends Component
 
     public function updatedSearch(): void { $this->resetPage(); }
     public function updatedCategorieFilter(): void { $this->resetPage(); }
+
+    public function openDocPanel(int $id): void
+    {
+        $dep = Depense::findOrFail($id);
+        $this->dispatch('open-doc-panel',
+            type:     Depense::class,
+            id:       (string) $id,
+            label:    $dep->libelle . ' · ' . number_format($dep->montant, 0, ',', ' ') . ' F',
+            typeName: 'Dépense',
+        );
+    }
+
+    #[On('doc-panel-saved')]
+    public function refreshDocCounts(): void {}
 
     public function openCreate(): void
     {
@@ -99,7 +114,8 @@ class DepenseManager extends Component
     {
         $compagnieId = Auth::user()->compagnie_id;
 
-        $depenses = Depense::where('compagnie_id', $compagnieId)
+        $depenses = Depense::withCount('documents')
+            ->where('compagnie_id', $compagnieId)
             ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
             ->when($this->categorieFilter, fn ($q) => $q->where('categorie_depense_id', $this->categorieFilter))
             ->with('categorie')

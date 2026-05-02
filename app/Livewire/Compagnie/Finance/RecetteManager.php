@@ -5,6 +5,7 @@ namespace App\Livewire\Compagnie\Finance;
 use App\Models\Finance\Recette;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -37,6 +38,20 @@ class RecetteManager extends Component
     }
 
     public function updatedSearch(): void { $this->resetPage(); }
+
+    public function openDocPanel(int $id): void
+    {
+        $rec = Recette::findOrFail($id);
+        $this->dispatch('open-doc-panel',
+            type:     Recette::class,
+            id:       (string) $id,
+            label:    $rec->libelle . ' · ' . number_format($rec->montant, 0, ',', ' ') . ' F',
+            typeName: 'Recette',
+        );
+    }
+
+    #[On('doc-panel-saved')]
+    public function refreshDocCounts(): void {}
 
     public function openCreate(): void
     {
@@ -96,7 +111,8 @@ class RecetteManager extends Component
     {
         $compagnieId = Auth::user()->compagnie_id;
 
-        $recettes = Recette::where('compagnie_id', $compagnieId)
+        $recettes = Recette::withCount('documents')
+            ->where('compagnie_id', $compagnieId)
             ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
             ->latest('date_recette')
             ->paginate(15);

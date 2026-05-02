@@ -5,6 +5,7 @@ namespace App\Livewire\Compagnie\Compagnie;
 use App\Enums\StatutCare;
 use App\Models\Compagnie\Care;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -28,6 +29,20 @@ class CareManager extends Component
     {
         $this->resetPage();
     }
+
+    public function openDocPanel(int $id): void
+    {
+        $care = Care::findOrFail($id);
+        $this->dispatch('open-doc-panel',
+            type:     Care::class,
+            id:       (string) $id,
+            label:    $care->immatrculation,
+            typeName: 'Véhicule',
+        );
+    }
+
+    #[On('doc-panel-saved')]
+    public function refreshDocCounts(): void {}
 
     public function openCreate(): void
     {
@@ -88,7 +103,7 @@ class CareManager extends Component
 
     public function render()
     {
-        $cares = Care::query()
+        $cares = Care::withCount('documents')
             ->when($this->search, fn($q) => $q->where('immatrculation', 'like', "%{$this->search}%"))
             ->latest()
             ->paginate(15);

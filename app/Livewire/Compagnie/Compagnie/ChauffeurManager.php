@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -34,6 +35,20 @@ class ChauffeurManager extends Component
     {
         $this->resetPage();
     }
+
+    public function openDocPanel(string $id): void
+    {
+        $c = Chauffer::findOrFail($id);
+        $this->dispatch('open-doc-panel',
+            type:     Chauffer::class,
+            id:       $id,
+            label:    $c->fullName(),
+            typeName: 'Chauffeur',
+        );
+    }
+
+    #[On('doc-panel-saved')]
+    public function refreshDocCounts(): void {}
 
     public function openCreate(): void
     {
@@ -124,7 +139,8 @@ class ChauffeurManager extends Component
 
     public function render()
     {
-        $chauffeurs = Chauffer::where('compagnie_id', Auth::user()->compagnie_id)
+        $chauffeurs = Chauffer::withCount('documents')
+            ->where('compagnie_id', Auth::user()->compagnie_id)
             ->when($this->search, fn($q) => $q
                 ->where('first_name', 'like', "%{$this->search}%")
                 ->orWhere('last_name', 'like', "%{$this->search}%")

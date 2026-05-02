@@ -8,6 +8,7 @@ use App\Models\Ville\Pays;
 use App\Models\Ville\Region;
 use App\Models\Ville\Ville;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -32,6 +33,20 @@ class GareManager extends Component
     {
         $this->resetPage();
     }
+
+    public function openDocPanel(int $id): void
+    {
+        $gare = Gare::findOrFail($id);
+        $this->dispatch('open-doc-panel',
+            type:     Gare::class,
+            id:       (string) $id,
+            label:    $gare->name,
+            typeName: 'Gare',
+        );
+    }
+
+    #[On('doc-panel-saved')]
+    public function refreshDocCounts(): void {}
 
     public function updatedPaysId(): void
     {
@@ -113,7 +128,7 @@ class GareManager extends Component
 
     public function render()
     {
-        $gares = Gare::query()
+        $gares = Gare::withCount('documents')
             ->with(['ville', 'statut'])
             ->when($this->search, fn($q) => $q
                 ->where('name', 'like', "%{$this->search}%")
