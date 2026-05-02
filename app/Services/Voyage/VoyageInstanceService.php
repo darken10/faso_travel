@@ -3,6 +3,7 @@
 namespace App\Services\Voyage;
 
 use App\Enums\JoursSemain;
+use App\Enums\StatutVoyageInstance;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use App\Helper\VoyagesInstanceHelpers;
@@ -36,6 +37,63 @@ class VoyageInstanceService
             });
         }
 
+    }
+
+    public function createForCompagnie(int $compagnieId, int $days = 30): array
+    {
+        $created  = 0;
+        $skipped  = 0;
+        $today    = now()->startOfDay();
+
+        $voyages = Voyage::withoutGlobalScopes()
+            ->where('compagnie_id', $compagnieId)
+            ->with('cares')
+            ->get();
+
+        for ($i = 0; $i < $days; $i++) {
+            $dateVoyage = $today->copy()->addDays($i);
+
+            foreach ($voyages as $voyage) {
+                $matchesToday = in_array(JoursSemain::ToutLesJours->value, $voyage->days)
+                    || VoyagesInstanceHelpers::isVoyageExisteInThisDate($dateVoyage, $voyage->days);
+
+                if (!$matchesToday) {
+                    continue;
+                }
+
+                $lastCare = $voyage->cares->last();
+
+                [$instance, $wasCreated] = [
+                    VoyageInstance::withTrashed()
+                        ->firstOrCreate(
+                            [
+                                'voyage_id' => $voyage->id,
+                                'date'      => $dateVoyage->toDateString(),
+                            ],
+                            [
+                                'heure'       => $voyage->heure?->format('H:i:s'),
+                                'nb_place'    => $lastCare?->number_place ?? 0,
+                                'care_id'     => $lastCare?->id,
+                                'chauffer_id' => null,
+                                'statut'      => StatutVoyageInstance::DISPONIBLE->value,
+                                'prix'        => $voyage->prix,
+                                'classe_id'   => $voyage->classe_id,
+                            ]
+                        ),
+                    false,
+                ];
+
+                $wasCreated = $instance->wasRecentlyCreated;
+
+                if ($wasCreated) {
+                    $created++;
+                } else {
+                    $skipped++;
+                }
+            }
+        }
+
+        return ['created' => $created, 'skipped' => $skipped];
     }
 
     public function getVoyageInstanceWithBasicRelations(string $id)

@@ -7,16 +7,116 @@
         </div>
     @endif
 
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
             <h2 class="text-xl font-bold text-gray-800">Instances de voyage</h2>
             <p class="text-sm text-gray-500 mt-0.5">{{ $instances->total() }} instances planifiées</p>
         </div>
-        <button wire:click="openCreate" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvelle instance
-        </button>
+        <div class="flex items-center gap-3">
+            {{-- Générer les instances --}}
+            <button wire:click="openGenModal"
+                    class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Générer les instances
+            </button>
+            {{-- Créer manuellement --}}
+            <button wire:click="openCreate"
+                    class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Nouvelle instance
+            </button>
+        </div>
     </div>
+
+    {{-- ═══ Modal Génération ═══ --}}
+    @if($showGenModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             x-data x-on:keydown.escape.window="$wire.set('showGenModal', false)">
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+                 wire:click="$set('showGenModal', false)"></div>
+
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                {{-- Header --}}
+                <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800">Générer les instances</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Planification automatique des voyages</p>
+                    </div>
+                    <button wire:click="$set('showGenModal', false)"
+                            class="ml-auto text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                {{-- Corps --}}
+                <div class="px-6 py-5 space-y-5">
+                    {{-- Explication --}}
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-sm text-emerald-800 space-y-1">
+                        <p class="font-medium">Comment ça fonctionne ?</p>
+                        <ul class="text-xs text-emerald-700 space-y-1 list-disc list-inside mt-1">
+                            <li>Tous les voyages actifs de votre compagnie sont analysés</li>
+                            <li>Une instance est créée pour chaque jour correspondant au calendrier du voyage</li>
+                            <li>Les instances déjà existantes ne sont pas dupliquées</li>
+                            <li>Véhicule et prix hérités du voyage (modifiables ensuite)</li>
+                        </ul>
+                    </div>
+
+                    {{-- Nb de jours --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Générer sur les prochains
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <input wire:model="genJours" type="number" min="1" max="90"
+                                   class="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                            <span class="text-sm text-gray-600">jours</span>
+                            <span class="text-xs text-gray-400">(max 90)</span>
+                        </div>
+                        @error('genJours') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+
+                        {{-- Aperçu de la période --}}
+                        <p class="text-xs text-gray-400 mt-2">
+                            Du {{ now()->format('d/m/Y') }} au {{ now()->addDays($genJours - 1)->format('d/m/Y') }}
+                        </p>
+                    </div>
+
+                    {{-- Voyages concernés --}}
+                    <div class="bg-gray-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Voyages concernés</span>
+                        <span class="text-sm font-bold text-gray-800">
+                            {{ \App\Models\Voyage\Voyage::withoutGlobalScopes()->where('compagnie_id', auth()->user()->compagnie_id)->count() }} voyage(s)
+                        </span>
+                    </div>
+                </div>
+
+                {{-- Actions --}}
+                <div class="flex gap-3 px-6 pb-6">
+                    <button type="button" wire:click="$set('showGenModal', false)"
+                            class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                        Annuler
+                    </button>
+                    <button wire:click="generateInstances"
+                            class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">
+                        <span wire:loading.remove wire:target="generateInstances">
+                            <svg class="w-4 h-4 inline -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Générer
+                        </span>
+                        <span wire:loading wire:target="generateInstances" class="flex items-center gap-2">
+                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Génération en cours…
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <div class="px-4 py-3 border-b border-gray-100">

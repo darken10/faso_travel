@@ -8,6 +8,7 @@ use App\Models\Compagnie\Chauffer;
 use App\Models\Voyage\Classe;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
+use App\Services\Voyage\VoyageInstanceService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -31,9 +32,31 @@ class VoyageInstanceManager extends Component
     public string $prix = '';
     public ?int $classe_id = null;
 
+    public bool $showGenModal = false;
+    public int  $genJours     = 30;
+
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function openGenModal(): void
+    {
+        $this->genJours     = 30;
+        $this->showGenModal = true;
+    }
+
+    public function generateInstances(VoyageInstanceService $service): void
+    {
+        $this->validate(['genJours' => 'required|integer|min:1|max:90']);
+
+        $compagnieId = auth()->user()->compagnie_id;
+        $result      = $service->createForCompagnie($compagnieId, $this->genJours);
+
+        $this->showGenModal = false;
+        session()->flash('success',
+            "{$result['created']} instance(s) créée(s) · {$result['skipped']} déjà existante(s) ignorée(s)."
+        );
     }
 
     public function openCreate(): void
