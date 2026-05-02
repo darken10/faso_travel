@@ -18,7 +18,7 @@
 
     {{-- Results --}}
     <div class="card">
-        <form action="{{ route('ticket.tranferer-ticket-to-other-user-traitement',$ticket) }}" method="post">
+        <form action="{{ route('ticket.transferer-ticket-to-other-user-traitement',$ticket) }}" method="post">
             @csrf
             <div class="space-y-1">
                 @forelse($users as $user)
