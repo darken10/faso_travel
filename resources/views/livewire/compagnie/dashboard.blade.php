@@ -55,6 +55,20 @@
         </div>
     </div>
 
+    {{-- Carte du réseau de gares --}}
+    <div class="mb-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-700">Carte du réseau</h3>
+                <p class="text-xs text-gray-400 mt-0.5">{{ $garesGeo->count() }} gare(s) géolocalisée(s)</p>
+            </div>
+            @if($garesGeo->isEmpty())
+                <span class="text-xs text-amber-500 italic">Aucune gare avec coordonnées GPS</span>
+            @endif
+        </div>
+        <div id="dashboard-map" class="h-[420px] w-full"></div>
+    </div>
+
     {{-- Charts --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {{-- Line chart --}}
@@ -76,6 +90,43 @@
     @push('scripts')
     <script>
     (function () {
+        // ── Carte du réseau ──
+        var garesGeo = @json($garesGeo);
+        var mapEl = document.getElementById('dashboard-map');
+        if (mapEl) {
+            var hasGares = garesGeo.length > 0;
+            var center   = hasGares
+                ? [
+                    garesGeo.reduce(function(s, g) { return s + g.lat; }, 0) / garesGeo.length,
+                    garesGeo.reduce(function(s, g) { return s + g.lng; }, 0) / garesGeo.length,
+                  ]
+                : [12.3714277, -1.5196603];
+
+            var dashMap = L.map(mapEl, { zoomControl: true }).setView(center, 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+            }).addTo(dashMap);
+
+            garesGeo.forEach(function(g) {
+                L.marker([g.lat, g.lng])
+                    .bindPopup(
+                        '<strong style="font-size:13px">' + g.name + '</strong>' +
+                        (g.ville ? '<br><span style="color:#6b7280;font-size:11px">' + g.ville + '</span>' : '')
+                    )
+                    .addTo(dashMap);
+            });
+
+            if (hasGares && garesGeo.length > 1) {
+                var bounds = L.latLngBounds(garesGeo.map(function(g) { return [g.lat, g.lng]; }));
+                dashMap.fitBounds(bounds, { padding: [50, 50] });
+            } else if (hasGares) {
+                dashMap.setView([garesGeo[0].lat, garesGeo[0].lng], 13);
+            }
+
+            setTimeout(function() { dashMap.invalidateSize(); }, 100);
+        }
+
         const lineCtx = document.getElementById('financeLineChart')?.getContext('2d');
         if (lineCtx) {
             new Chart(lineCtx, {

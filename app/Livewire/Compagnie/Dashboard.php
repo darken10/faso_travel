@@ -93,13 +93,27 @@ class Dashboard extends Component
         $doughnutLabels = $depensesCategories->pluck('nom')->toArray();
         $doughnutData   = $depensesCategories->pluck('total')->toArray();
 
+        // ── Carte : gares géolocalisées ──
+        $garesGeo = Gare::where('compagnie_id', $compagnieId)
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->with('ville:id,name')
+            ->get(['id', 'name', 'lat', 'lng', 'ville_id'])
+            ->map(fn($g) => [
+                'name'  => $g->name,
+                'ville' => $g->ville?->name ?? '',
+                'lat'   => (float) $g->lat,
+                'lng'   => (float) $g->lng,
+            ]);
+
         return view('livewire.compagnie.dashboard', compact(
             'totalVoyages', 'totalGares', 'totalPosts', 'totalUsers',
             'ticketsPayes', 'ticketsValides', 'ticketsBloques',
             'recetteTickets', 'recetteManuelles', 'totalRecettes',
             'totalDepenses', 'solde', 'depensesMois', 'recettesMois',
             'chartLabels', 'chartRecettes', 'chartDepenses',
-            'doughnutLabels', 'doughnutData'
+            'doughnutLabels', 'doughnutData',
+            'garesGeo'
         ));
     }
 }
