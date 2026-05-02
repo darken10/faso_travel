@@ -135,7 +135,7 @@ class VoyageInstanceManager extends Component
             ->with(['voyage.trajet.depart', 'voyage.trajet.arriver', 'care', 'chauffer'])
             ->when($this->search, fn($q) => $q->whereHas('voyage.trajet.depart', fn($r) => $r->where('name', 'like', "%{$this->search}%"))
                 ->orWhereHas('voyage.trajet.arriver', fn($r) => $r->where('name', 'like', "%{$this->search}%")))
-            ->orderByDesc('date')
+            ->orderByRaw('(date >= CURDATE()) DESC, date ASC')
             ->paginate(15);
 
         $voyages   = Voyage::withoutGlobalScopes()->where('compagnie_id', $compagnieId)->with(['trajet.depart', 'trajet.arriver'])->get();

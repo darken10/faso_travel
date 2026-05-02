@@ -206,7 +206,7 @@
                             {{-- Duration connector --}}
                             <div class="flex flex-col items-center flex-shrink-0 px-1">
                                 <span class="text-xs text-surface-400 dark:text-surface-500 mb-1">
-                                    {{ $durationH > 0 ? $durationH.'h' : '' }}{{ $durationM > 0 ? $durationM.'min' : '' ?: '—' }}
+                                    {{ ($durationH > 0 || $durationM > 0) ? ($durationH > 0 ? $durationH.'h' : '') . ($durationM > 0 ? $durationM.'min' : '') : '—' }}
                                 </span>
                                 <div class="flex items-center gap-1">
                                     <div class="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
