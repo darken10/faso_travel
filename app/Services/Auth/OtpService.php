@@ -7,15 +7,17 @@ use Illuminate\Support\Facades\Log;
 
 class OtpService
 {
-    public function send(string $phone): string
+    public function send(string $phone, string $channel = 'sms'): string
     {
         $otp = PhoneOtp::generate($phone);
 
-        if (config('app.env') === 'production' && config('services.sms.api_key')) {
-            $this->sendViaSms($phone, $otp->code);
+        if (config('app.env') === 'production') {
+            match ($channel) {
+                'whatsapp' => $this->sendViaWhatsApp($phone, $otp->code),
+                default    => $this->sendViaSms($phone, $otp->code),
+            };
         } else {
-            // Mode simulation : affichage dans les logs et dans la session
-            Log::info("[OTP SIMULATION] Phone: {$phone} → Code: {$otp->code}");
+            Log::info("[OTP SIMULATION] Phone: {$phone} Channel: {$channel} → Code: {$otp->code}");
             session(['otp_simulation_code' => $otp->code]);
         }
 
@@ -24,10 +26,21 @@ class OtpService
 
     private function sendViaSms(string $phone, string $code): void
     {
-        // Brancher ici le prestataire SMS (Orange, Twilio, etc.)
-        // \Http::post(config('services.sms.url'), [
-        //     'to'      => $phone,
-        //     'message' => "Votre code de connexion LIPTRA : {$code}. Valide 5 minutes.",
+        // Twilio SMS
+        // $client = new \Twilio\Rest\Client(config('sms.twillo.twilio_sid'), config('sms.twillo.twilio_token'));
+        // $client->messages->create('+226'.$phone, [
+        //     'from' => config('sms.twillo.twilio_phone_number'),
+        //     'body' => "Votre code LIPTRA : {$code}. Valide 5 minutes.",
+        // ]);
+    }
+
+    private function sendViaWhatsApp(string $phone, string $code): void
+    {
+        // Twilio WhatsApp
+        // $client = new \Twilio\Rest\Client(config('sms.twillo.twilio_sid'), config('sms.twillo.twilio_token'));
+        // $client->messages->create('whatsapp:+226'.$phone, [
+        //     'from' => 'whatsapp:'.config('sms.twillo.twilio_phone_number'),
+        //     'body' => "Votre code LIPTRA : {$code}. Valide 5 minutes.",
         // ]);
     }
 }

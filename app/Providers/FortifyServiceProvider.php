@@ -48,23 +48,27 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::authenticateUsing(function (Request $request) {
             $host = $request->getHost();
 
-            $user = User::where('email', $request->email)->first();
+            if (str_starts_with($host, 'admin.') || str_starts_with($host, 'compagnie.')) {
+                // Admin et compagnie : email + mot de passe
+                $user = User::where('email', $request->input('email', ''))->first();
+            } else {
+                // Client : numéro de téléphone + mot de passe
+                $phone = preg_replace('/\D/', '', $request->input('phone', ''));
+                $user  = $phone ? User::where('numero', (int) $phone)->first() : null;
+            }
 
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return null;
             }
 
-            // Admin subdomain: Admin et Root seulement
             if (str_starts_with($host, 'admin.')) {
                 return in_array($user->role, [UserRole::Admin, UserRole::Root]) ? $user : null;
             }
 
-            // Compagnie subdomain: utilisateurs rattachés à une compagnie
             if (str_starts_with($host, 'compagnie.')) {
                 return $user->compagnie_id ? $user : null;
             }
 
-            // Client subdomain: exclure Admin et Root (ils ont leur propre espace)
             if (in_array($user->role, [UserRole::Admin, UserRole::Root])) {
                 return null;
             }

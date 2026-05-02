@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\MyRegisterController;
 use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\PhoneLoginController;
+use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Compagnie\CompagnieController;
 use App\Http\Controllers\Divers\ConditionConfidentialiteController;
 use App\Http\Controllers\Divers\NotificationsController;
@@ -146,12 +147,12 @@ Route::domain('app.'.$domain)->group(function () {
         Route::post('/step3', 'post_step3')->name('post_step3');
     });
 
-    // ─── Connexion par téléphone / OTP ────────────────────────────────────
-    Route::prefix('/connexion/telephone')->name('auth.phone.')->controller(PhoneLoginController::class)->group(function () {
+    // ─── Reset mot de passe par téléphone (SMS / WhatsApp) ───────────────
+    Route::prefix('/mot-de-passe-oublie/telephone')->name('password.phone.')->controller(PhonePasswordResetController::class)->group(function () {
         Route::get('/',          'showPhoneForm')->name('form');
-        Route::post('/demander', 'requestOtp')->name('request-otp');
-        Route::get('/otp',       'showOtpForm')->name('otp-form');
-        Route::post('/verifier', 'verifyOtp')->name('verify-otp');
+        Route::post('/',         'sendOtp')->name('send');
+        Route::get('/verifier',  'showResetForm')->name('verify-form');
+        Route::post('/verifier', 'reset')->name('reset');
     });
 });
 

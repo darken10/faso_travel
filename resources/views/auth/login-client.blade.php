@@ -1,107 +1,62 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Connexion — {{ config('app.name', 'Liptra') }}</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700&display=swap" rel="stylesheet" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="font-sans antialiased bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+<x-guest-layout>
+    <x-authentication-card>
+        <x-slot name="logo">
+            <x-authentication-card-logo />
+        </x-slot>
 
-<div class="w-full max-w-md">
+        <x-slot name="registre">
+            Pas encore de compte ?
+            <a href="{{ route('register') }}" class="font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+                Créer un compte
+            </a>
+        </x-slot>
 
-    {{-- Logo --}}
-    <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-lg mb-4">
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-            </svg>
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-surface-900 dark:text-white">Connexion</h2>
+            <p class="mt-1 text-sm text-surface-500 dark:text-surface-400">Connectez-vous avec votre numéro de téléphone</p>
         </div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ config('app.name', 'Liptra') }}</h1>
-        <p class="text-sm text-gray-500 mt-1">Votre espace voyageur</p>
-    </div>
 
-    <div class="bg-white rounded-2xl shadow-xl p-8">
-
-        @if ($errors->any())
-            <div class="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
-                <ul class="space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <x-validation-errors class="mb-4" />
 
         @session('status')
-            <div class="mb-5 p-3 rounded-xl bg-green-50 border border-green-200 text-sm text-green-700">
+            <div class="mb-4 p-3 rounded-xl bg-success-50 border border-success-200 text-sm text-success-700 dark:bg-success-500/10 dark:border-success-500/20 dark:text-success-400">
                 {{ $value }}
             </div>
         @endsession
-
-        {{-- Onglets Email / Téléphone --}}
-        <div class="flex rounded-xl bg-gray-100 p-1 mb-6" x-data="{ tab: 'email' }">
-            <button type="button"
-                @click="tab = 'email'"
-                :class="tab === 'email' ? 'bg-white shadow text-blue-600 font-semibold' : 'text-gray-500 hover:text-gray-700'"
-                class="flex-1 py-2 rounded-lg text-sm transition-all">
-                Par email
-            </button>
-            <a href="{{ route('auth.phone.form') }}"
-                class="flex-1 py-2 rounded-lg text-sm text-center text-gray-500 hover:text-gray-700 transition-all">
-                Par téléphone
-            </a>
-        </div>
 
         <form method="POST" action="{{ route('login') }}" class="space-y-5">
             @csrf
 
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
-                <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
-                    placeholder="votre@email.com">
+                <x-label for="phone" value="Numéro de téléphone" />
+                <div class="flex mt-1">
+                    <span class="inline-flex items-center px-4 rounded-l-xl border border-r-0 border-surface-200 dark:border-surface-600 bg-surface-50 dark:bg-surface-700 text-surface-500 dark:text-surface-400 text-sm font-medium select-none">
+                        +226
+                    </span>
+                    <input id="phone" type="tel" name="phone" value="{{ old('phone') }}" required autofocus inputmode="numeric"
+                        class="flex-1 rounded-r-xl border-surface-200 dark:border-surface-600 dark:bg-surface-700 dark:text-white focus:border-primary-500 focus:ring-primary-500 text-sm shadow-sm"
+                        placeholder="70 00 00 00">
+                </div>
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-                <input id="password" type="password" name="password" required
-                    class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
-                    placeholder="••••••••">
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" name="remember" class="rounded border-gray-300 text-blue-600">
-                    <span class="text-sm text-gray-600">Se souvenir de moi</span>
-                </label>
-                @if (Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                <div class="flex items-center justify-between mb-1">
+                    <x-label for="password" value="Mot de passe" />
+                    <a href="{{ route('password.phone.form') }}" class="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 transition-colors">
                         Mot de passe oublié ?
                     </a>
-                @endif
+                </div>
+                <x-input id="password" class="block w-full" type="password" name="password" required autocomplete="current-password" placeholder="••••••••" />
             </div>
 
-            <button type="submit"
-                class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors text-sm">
+            <div class="flex items-center gap-2">
+                <x-checkbox id="remember_me" name="remember" />
+                <label for="remember_me" class="text-sm text-surface-600 dark:text-surface-400 cursor-pointer">Se souvenir de moi</label>
+            </div>
+
+            <x-button class="w-full justify-center">
                 Se connecter
-            </button>
+            </x-button>
         </form>
-
-        <p class="mt-6 text-center text-sm text-gray-500">
-            Pas encore de compte ?
-            <a href="{{ route('register') }}" class="font-semibold text-blue-600 hover:text-blue-500">Créer un compte</a>
-        </p>
-    </div>
-
-    <p class="text-center text-xs text-gray-400 mt-6">
-        &copy; {{ date('Y') }} {{ config('app.name', 'Liptra') }}. Tous droits réservés.
-    </p>
-</div>
-
-@livewireScripts
-</body>
-</html>
+    </x-authentication-card>
+</x-guest-layout>
