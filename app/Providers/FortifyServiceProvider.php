@@ -52,9 +52,14 @@ class FortifyServiceProvider extends ServiceProvider
                 // Admin et compagnie : email + mot de passe
                 $user = User::where('email', $request->input('email', ''))->first();
             } else {
-                // Client : numéro de téléphone + mot de passe
-                $phone = preg_replace('/\D/', '', $request->input('phone', ''));
-                $user  = $phone ? User::where('numero', (int) $phone)->first() : null;
+                // Client : email OU numéro de téléphone + mot de passe
+                $identifier = trim($request->input('email', ''));
+                if (str_contains($identifier, '@')) {
+                    $user = User::where('email', $identifier)->first();
+                } else {
+                    $phone = preg_replace('/\D/', '', $identifier);
+                    $user  = $phone ? User::where('numero', (int) $phone)->first() : null;
+                }
             }
 
             if (!$user || !Hash::check($request->password, $user->password)) {

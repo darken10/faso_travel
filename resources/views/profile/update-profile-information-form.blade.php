@@ -1,18 +1,25 @@
-<div x-data="{ photoPreview: null }" wire:submit="updateProfileInformation">
+<div x-data="{ photoPreview: null }">
 
     {{-- Photo de profil --}}
     @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
-        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-surface-100 dark:border-surface-700">
-            <div class="relative">
+        <div class="flex items-center gap-5 mb-6 pb-6 border-b border-surface-100 dark:border-surface-700">
+            {{-- Avatar actuel / preview --}}
+            <div class="relative flex-shrink-0">
                 <div x-show="! photoPreview">
                     <img src="{{ $this->user->profile_photo_url }}" alt="{{ $this->user->name }}"
-                         class="w-16 h-16 rounded-xl object-cover">
+                         class="w-20 h-20 rounded-xl object-cover ring-2 ring-surface-200 dark:ring-surface-600">
                 </div>
-                <div x-show="photoPreview" style="display:none;" class="w-16 h-16 rounded-xl bg-cover bg-center bg-no-repeat"
+                <div x-show="photoPreview" style="display:none;"
+                     class="w-20 h-20 rounded-xl bg-cover bg-center bg-no-repeat ring-2 ring-primary-300"
                      x-bind:style="'background-image: url(\'' + photoPreview + '\');'">
                 </div>
             </div>
-            <div>
+
+            {{-- Actions photo --}}
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-surface-900 dark:text-white mb-1">Photo de profil</p>
+                <p class="text-xs text-surface-500 dark:text-surface-400 mb-3">JPG, PNG ou GIF — max 1 Mo</p>
+
                 <input type="file" id="photo" class="hidden" wire:model.live="photo"
                     x-ref="photo"
                     x-on:change="
@@ -20,62 +27,75 @@
                         reader.onload = (e) => { photoPreview = e.target.result; };
                         reader.readAsDataURL($refs.photo.files[0]);
                     ">
-                <button type="button"
-                    x-on:click.prevent="$refs.photo.click()"
-                    class="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                    Changer la photo
-                </button>
-                @if ($this->user->profile_photo_path)
-                    <button type="button" wire:click="deleteProfilePhoto"
-                        class="ml-3 text-sm text-surface-400 hover:text-red-500 transition-colors">
-                        Supprimer
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" x-on:click.prevent="$refs.photo.click()"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 border border-primary-200 dark:border-primary-700 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        Changer la photo
                     </button>
-                @endif
-                <p class="text-xs text-surface-400 mt-1">JPG, PNG ou GIF. Max 1 Mo.</p>
-                <x-input-error for="photo" class="mt-1" />
+
+                    @if ($this->user->profile_photo_path)
+                        <button type="button" wire:click="deleteProfilePhoto"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-700 transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Supprimer
+                        </button>
+                    @endif
+                </div>
+                <x-input-error for="photo" class="mt-2" />
             </div>
         </div>
     @endif
 
-    {{-- Champs --}}
-    <div class="space-y-4">
+    {{-- Formulaire --}}
+    <form wire:submit.prevent="updateProfileInformation" class="space-y-4">
 
         <div>
-            <label for="name" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Nom complet</label>
-            <input id="name" type="text" wire:model="state.name" required autocomplete="name"
-                class="w-full px-4 py-2.5 rounded-xl border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm">
+            <x-label for="name" value="Nom complet" />
+            <x-input id="name" type="text" class="block mt-1 w-full" wire:model="state.name"
+                required autocomplete="name" placeholder="Votre nom complet" />
             <x-input-error for="name" class="mt-1" />
         </div>
 
         <div>
-            <label for="email" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Adresse e-mail</label>
-            <input id="email" type="email" wire:model="state.email" required autocomplete="username"
-                class="w-full px-4 py-2.5 rounded-xl border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-700 text-surface-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm">
+            <x-label for="email" value="Adresse e-mail" />
+            <x-input id="email" type="email" class="block mt-1 w-full" wire:model="state.email"
+                required autocomplete="username" placeholder="votre@email.com" />
             <x-input-error for="email" class="mt-1" />
 
             @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::emailVerification()) && ! $this->user->hasVerifiedEmail())
-                <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                <div class="mt-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                     Email non vérifié.
                     <button type="button" wire:click.prevent="sendEmailVerification"
-                        class="underline font-medium hover:text-amber-700 transition-colors">
-                        Renvoyer la vérification
+                        class="underline font-medium hover:text-amber-700 dark:hover:text-amber-300 transition-colors">
+                        Renvoyer le lien
                     </button>
-                </p>
+                </div>
                 @if ($this->verificationLinkSent)
-                    <p class="mt-1 text-xs text-green-600">Lien envoyé !</p>
+                    <p class="mt-1 text-xs text-success-600 dark:text-success-400">Lien envoyé !</p>
                 @endif
             @endif
         </div>
-    </div>
 
-    {{-- Actions --}}
-    <div class="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-surface-100 dark:border-surface-700">
-        <x-action-message on="saved" class="text-sm text-green-600 dark:text-green-400">
-            Enregistré.
-        </x-action-message>
-        <button type="button" wire:click="updateProfileInformation"
-            class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
-            Enregistrer
-        </button>
-    </div>
+        {{-- Actions --}}
+        <div class="flex items-center justify-between pt-4 border-t border-surface-100 dark:border-surface-700">
+            <x-action-message on="saved" class="text-sm text-success-600 dark:text-success-400 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Enregistré
+            </x-action-message>
+            <x-button>
+                Enregistrer les modifications
+            </x-button>
+        </div>
+    </form>
 </div>

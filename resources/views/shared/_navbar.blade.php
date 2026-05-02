@@ -5,12 +5,9 @@
 
             {{-- Logo --}}
             <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 flex-shrink-0">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                    </svg>
-                </div>
-                <span class="font-bold text-gray-900 text-lg tracking-tight hidden sm:block">Liptra</span>
+                <img src="{{ asset('images/logo.jpg') }}" alt="{{ config('app.name', 'Liptra') }}"
+                     class="w-9 h-9 rounded-xl object-cover shadow-sm">
+                <span class="font-bold text-gray-900 text-lg tracking-tight hidden sm:block">{{ config('app.name', 'Liptra') }}</span>
             </a>
 
             {{-- Desktop Navigation --}}
