@@ -3,6 +3,7 @@
 namespace App\Models\Compagnie;
 
 use App\Enums\StatutCare;
+use App\Models\Document;
 use App\Models\User;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Auth;
 
 class Care extends Model
@@ -65,6 +67,11 @@ class Care extends Model
     function voyageInstances():HasMany
     {
         return $this->hasMany(VoyageInstance::class);
+    }
+
+    public function documents(): MorphMany
+    {
+        return $this->morphMany(Document::class, 'documentable');
     }
 
 }

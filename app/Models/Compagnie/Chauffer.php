@@ -2,12 +2,14 @@
 
 namespace App\Models\Compagnie;
 
+use App\Models\Document;
 use App\Models\Voyage\VoyageInstance;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Chauffer extends Model
 {
@@ -39,6 +41,11 @@ class Chauffer extends Model
     function voyageInstances():HasMany
     {
         return $this->hasMany(VoyageInstance::class);
+    }
+
+    public function documents(): MorphMany
+    {
+        return $this->morphMany(Document::class, 'documentable');
     }
 
     /**

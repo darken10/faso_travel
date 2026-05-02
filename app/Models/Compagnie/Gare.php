@@ -3,6 +3,7 @@
 namespace App\Models\Compagnie;
 
 use App\Models\Compagnie\Compagnie;
+use App\Models\Document;
 use App\Models\User;
 use App\Models\Statut;
 use App\Models\Ville\Ville;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Auth;
 
 class Gare extends Model
@@ -86,5 +88,10 @@ class Gare extends Model
     function arrives():HasMany
     {
         return $this->hasMany(Voyage::class, 'arrive_id');
+    }
+
+    public function documents(): MorphMany
+    {
+        return $this->morphMany(Document::class, 'documentable');
     }
 }

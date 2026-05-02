@@ -155,6 +155,9 @@ Route::prefix('/compagnie')->name('panel.compagnie.')->middleware(['auth', 'veri
     // Publications
     Route::get('/posts', \App\Livewire\Compagnie\Post\PostManager::class)->name('posts');
 
+    // Documents
+    Route::get('/documents', \App\Livewire\Compagnie\Document\DocumentManager::class)->name('documents');
+
     // Comptabilité
     Route::get('/bilan', \App\Livewire\Compagnie\Finance\BilanFinancier::class)->name('bilan');
     Route::get('/depenses', \App\Livewire\Compagnie\Finance\DepenseManager::class)->name('depenses');
