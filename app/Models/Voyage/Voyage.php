@@ -38,11 +38,10 @@ class Voyage extends Model
         'depart_id',
         'arrive_id',
         'days',
-        'care_id',
         'temps',
-        "prix_aller_retour",
-        "is_quotidient",
-        "temps",
+        'prix_aller_retour',
+        'is_quotidient',
+        'classe_id',
     ];
 
     protected $with = [

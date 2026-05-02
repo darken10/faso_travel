@@ -125,20 +125,25 @@
                         </div>
                     </div>
 
-                    {{-- Heure & Durée & Statut --}}
+                    {{-- Heure + Durée (read-only depuis trajet) + Statut --}}
                     <div class="grid grid-cols-3 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Heure de départ *</label>
-                            <input wire:model="heure" type="time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <input wire:model="heure" type="time"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                             @error('heure') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Durée estimée</label>
-                            <input wire:model="temps" type="time" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <div class="w-full px-3 py-2 border border-gray-100 bg-gray-50 rounded-lg text-sm text-gray-500 font-mono min-h-[38px] flex items-center">
+                                {{ $temps ?: '—' }}
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">Héritée du trajet</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                            <select wire:model="statut_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <select wire:model="statut_id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                                 <option value="">-- Statut --</option>
                                 @foreach($statuts as $s)
                                     <option value="{{ $s->id }}">{{ $s->name }}</option>
@@ -151,35 +156,30 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Prix aller *</label>
-                            <input wire:model="prix" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Ex: 5000">
+                            <input wire:model="prix" type="number" step="0.01"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                   placeholder="Ex: 5000">
                             @error('prix') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Prix aller-retour</label>
-                            <input wire:model="prix_aller_retour" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Ex: 9000">
+                            <input wire:model="prix_aller_retour" type="number" step="0.01"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                   placeholder="Ex: 9000">
                         </div>
                     </div>
 
-                    {{-- Classe & Care --}}
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Classe</label>
-                            <select wire:model="classe_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                <option value="">-- Classe --</option>
-                                @foreach($classes as $c)
-                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Véhicule (Care)</label>
-                            <select wire:model="care_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                <option value="">-- Véhicule --</option>
-                                @foreach($cares as $care)
-                                    <option value="{{ $care->id }}">{{ $care->immatrculation }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                    {{-- Classe --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Classe</label>
+                        <select wire:model="classe_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <option value="">-- Classe (optionnel) --</option>
+                            @foreach($classes as $c)
+                                <option value="{{ $c->id }}">{{ $c->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Le véhicule est assigné lors de chaque exécution du voyage</p>
                     </div>
 
                     {{-- Calendrier --}}
