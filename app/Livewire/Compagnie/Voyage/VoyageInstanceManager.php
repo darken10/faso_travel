@@ -2,12 +2,15 @@
 
 namespace App\Livewire\Compagnie\Voyage;
 
+use App\Enums\StatutTicket;
 use App\Enums\StatutVoyageInstance;
+use App\Enums\TypeNotification;
 use App\Models\Compagnie\Care;
 use App\Models\Compagnie\Chauffer;
 use App\Models\Voyage\Classe;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
+use App\Notifications\Ticket\TicketNotification;
 use App\Services\Voyage\VoyageInstanceService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -35,6 +38,20 @@ class VoyageInstanceManager extends Component
     public bool $showGenModal = false;
     public int  $genJours     = 30;
 
+    // ── Modale affectation (chauffeur / véhicule) ─────────────────────────────
+    public bool    $showAssignModal   = false;
+    public ?string $assigningId       = null;
+    public ?int    $assignCareId      = null;
+    public ?string $assignChauffeurId = null;
+    public string  $assignNbPlace     = '';
+    public string  $assignPrix        = '';
+
+    // ── Modale alerte (annulation / retard) ───────────────────────────────────
+    public bool    $showAlertModal = false;
+    public ?string $alertingId     = null;
+    public string  $alertType      = 'ANNULE';
+    public string  $alertReason    = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -56,6 +73,94 @@ class VoyageInstanceManager extends Component
         $this->showGenModal = false;
         session()->flash('success',
             "{$result['created']} instance(s) créée(s) · {$result['skipped']} déjà existante(s) ignorée(s)."
+        );
+    }
+
+    // ── Affectation ───────────────────────────────────────────────────────────
+
+    public function openAssignModal(string $id): void
+    {
+        $instance = VoyageInstance::findOrFail($id);
+        $this->assigningId       = $id;
+        $this->assignCareId      = $instance->care_id;
+        $this->assignChauffeurId = $instance->chauffer_id;
+        $this->assignNbPlace     = (string) ($instance->nb_place ?? '');
+        $this->assignPrix        = (string) ($instance->prix ?? '');
+        $this->showAssignModal   = true;
+    }
+
+    public function saveAssignment(): void
+    {
+        $this->validate([
+            'assignCareId'       => 'nullable|exists:cares,id',
+            'assignChauffeurId'  => 'nullable|exists:chauffers,id',
+            'assignNbPlace'      => 'nullable|integer|min:1',
+            'assignPrix'         => 'nullable|numeric|min:0',
+        ]);
+
+        VoyageInstance::findOrFail($this->assigningId)->update([
+            'care_id'     => $this->assignCareId ?: null,
+            'chauffer_id' => $this->assignChauffeurId ?: null,
+            'nb_place'    => $this->assignNbPlace ?: null,
+            'prix'        => $this->assignPrix ?: null,
+        ]);
+
+        $this->showAssignModal = false;
+        session()->flash('success', 'Affectation enregistrée.');
+    }
+
+    // ── Alerte annulation / retard ───────────────────────────────────────────
+
+    public function openAlertModal(string $id): void
+    {
+        $this->alertingId     = $id;
+        $this->alertType      = 'ANNULE';
+        $this->alertReason    = '';
+        $this->showAlertModal = true;
+    }
+
+    public function confirmAlert(): void
+    {
+        $this->validate([
+            'alertType'   => 'required|in:ANNULE,RETARDE',
+            'alertReason' => 'nullable|string|max:500',
+        ]);
+
+        $instance = VoyageInstance::findOrFail($this->alertingId);
+        $isAnnule = $this->alertType === 'ANNULE';
+
+        $instance->update(['statut' => $this->alertType]);
+
+        $tickets = $instance->tickets()
+            ->whereIn('statut', [
+                StatutTicket::Payer->value,
+                StatutTicket::Valider->value,
+                StatutTicket::EnAttente->value,
+            ])
+            ->with('user')
+            ->get();
+
+        $notifType  = $isAnnule ? TypeNotification::VOYAGE_ANNULE : TypeNotification::VOYAGE_RETARDE;
+        $notifTitle = $isAnnule ? 'Voyage annulé' : 'Voyage retardé';
+        $notifMsg   = $this->alertReason ?: ($isAnnule
+            ? 'Votre voyage a été annulé. Votre ticket est suspendu en attente de remboursement.'
+            : 'Votre voyage a été retardé. Nous vous tiendrons informé des nouvelles horaires.');
+
+        foreach ($tickets as $ticket) {
+            if ($isAnnule) {
+                $ticket->update(['statut' => StatutTicket::Pause->value]);
+            }
+            try {
+                $ticket->user?->notify(new TicketNotification($ticket, $notifType, $notifTitle, $notifMsg));
+            } catch (\Throwable) {
+                // notification failure shouldn't block the action
+            }
+        }
+
+        $this->showAlertModal = false;
+        session()->flash('success', $isAnnule
+            ? "Instance annulée · {$tickets->count()} ticket(s) mis en pause et client(s) notifié(s)."
+            : "Instance signalée comme retardée · {$tickets->count()} client(s) notifié(s)."
         );
     }
 

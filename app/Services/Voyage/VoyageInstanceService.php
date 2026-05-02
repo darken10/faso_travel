@@ -54,8 +54,11 @@ class VoyageInstanceService
             $dateVoyage = $today->copy()->addDays($i);
 
             foreach ($voyages as $voyage) {
-                $matchesToday = in_array(JoursSemain::ToutLesJours->value, $voyage->days)
-                    || VoyagesInstanceHelpers::isVoyageExisteInThisDate($dateVoyage, $voyage->days);
+                $daysArray = is_array($voyage->days) ? $voyage->days : [];
+
+                $matchesToday = $voyage->is_quotidient
+                    || in_array(JoursSemain::ToutLesJours->value, $daysArray)
+                    || (!empty($daysArray) && VoyagesInstanceHelpers::isVoyageExisteInThisDate($dateVoyage, $daysArray));
 
                 if (!$matchesToday) {
                     continue;
@@ -63,29 +66,23 @@ class VoyageInstanceService
 
                 $lastCare = $voyage->cares->last();
 
-                [$instance, $wasCreated] = [
-                    VoyageInstance::withTrashed()
-                        ->firstOrCreate(
-                            [
-                                'voyage_id' => $voyage->id,
-                                'date'      => $dateVoyage->toDateString(),
-                            ],
-                            [
-                                'heure'       => $voyage->heure?->format('H:i:s'),
-                                'nb_place'    => $lastCare?->number_place ?? 0,
-                                'care_id'     => $lastCare?->id,
-                                'chauffer_id' => null,
-                                'statut'      => StatutVoyageInstance::DISPONIBLE->value,
-                                'prix'        => $voyage->prix,
-                                'classe_id'   => $voyage->classe_id,
-                            ]
-                        ),
-                    false,
-                ];
+                $instance = VoyageInstance::firstOrCreate(
+                    [
+                        'voyage_id' => $voyage->id,
+                        'date'      => $dateVoyage->toDateString(),
+                    ],
+                    [
+                        'heure'       => $voyage->heure?->format('H:i:s'),
+                        'nb_place'    => $lastCare?->number_place ?? 0,
+                        'care_id'     => $lastCare?->id,
+                        'chauffer_id' => null,
+                        'statut'      => StatutVoyageInstance::DISPONIBLE->value,
+                        'prix'        => $voyage->prix,
+                        'classe_id'   => $voyage->classe_id,
+                    ]
+                );
 
-                $wasCreated = $instance->wasRecentlyCreated;
-
-                if ($wasCreated) {
+                if ($instance->wasRecentlyCreated) {
                     $created++;
                 } else {
                     $skipped++;

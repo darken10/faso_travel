@@ -22,4 +22,7 @@ enum TypeNotification: string
     case TICKET_PAYER = 'PAYER';
     case TICKET_REDELIVERED = 'REDELIVERED';
     case TICKET_REGENERATED = 'REGENERATED';
+
+    case VOYAGE_ANNULE  = 'VOYAGE_ANNULE';
+    case VOYAGE_RETARDE = 'VOYAGE_RETARDE';
 }

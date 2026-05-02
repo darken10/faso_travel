@@ -132,31 +132,81 @@
                     <th class="text-left px-4 py-3 font-semibold text-gray-600">Date</th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-600">Heure</th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-600">Places</th>
-                    <th class="text-left px-4 py-3 font-semibold text-gray-600">Véhicule</th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-600">Véhicule / Chauffeur</th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-600">Statut</th>
                     <th class="text-right px-4 py-3 font-semibold text-gray-600">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($instances as $instance)
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-4 py-3 font-medium text-gray-800">
-                            {{ $instance->voyage?->trajet?->depart?->name }} → {{ $instance->voyage?->trajet?->arriver?->name }}
-                        </td>
-                        <td class="px-4 py-3 text-gray-600">{{ $instance->date?->format('d/m/Y') }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $instance->heure?->format('H:i') }}</td>
-                        <td class="px-4 py-3 text-gray-600">{{ $instance->nb_place }}</td>
-                        <td class="px-4 py-3 text-gray-500 font-mono text-xs">{{ $instance->care?->immatrculation ?? '—' }}</td>
+                    @php
+                        $statutVal = $instance->statut?->value ?? '';
+                        $isPast    = $instance->date?->isPast();
+                        $rowCls    = match($statutVal) {
+                            'ANNULE'  => 'bg-red-50/40',
+                            'RETARDE' => 'bg-amber-50/40',
+                            default   => '',
+                        };
+                    @endphp
+                    <tr class="hover:bg-gray-50 transition-colors {{ $rowCls }}">
                         <td class="px-4 py-3">
-                            @php $sc = match($instance->statut?->value ?? '') { 'DISPONIBLE' => 'green', 'INACTIF' => 'gray', 'RETARDE' => 'amber', default => 'gray' }; @endphp
-                            <x-panel.badge :color="$sc" size="xs">{{ $instance->statut?->value }}</x-panel.badge>
+                            <span class="font-medium text-gray-800">
+                                {{ $instance->voyage?->trajet?->depart?->name }} → {{ $instance->voyage?->trajet?->arriver?->name }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
+                            {{ $instance->date?->format('d/m/Y') }}
+                            @if($isPast)
+                                <span class="ml-1 text-xs text-gray-400">(passé)</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">{{ $instance->heure?->format('H:i') }}</td>
+                        <td class="px-4 py-3 text-gray-600">{{ $instance->nb_place ?: '—' }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex flex-col gap-0.5">
+                                @if($instance->care)
+                                    <span class="font-mono text-xs text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded w-fit">{{ $instance->care->immatrculation }}</span>
+                                @else
+                                    <span class="text-xs text-gray-300 italic">Aucun véhicule</span>
+                                @endif
+                                @if($instance->chauffer)
+                                    <span class="text-xs text-gray-500">{{ $instance->chauffer->first_name }} {{ $instance->chauffer->last_name }}</span>
+                                @else
+                                    <span class="text-xs text-gray-300 italic">Aucun chauffeur</span>
+                                @endif
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            @php $sc = match($statutVal) { 'DISPONIBLE' => 'green', 'RETARDE' => 'amber', 'ANNULE' => 'red', default => 'gray' }; @endphp
+                            <x-panel.badge :color="$sc" size="xs">{{ $statutVal ?: 'N/A' }}</x-panel.badge>
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
-                                <button wire:click="openEdit('{{ $instance->id }}')" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                {{-- Affecter chauffeur/véhicule --}}
+                                @if(!in_array($statutVal, ['ANNULE']))
+                                    <button wire:click="openAssignModal('{{ $instance->id }}')"
+                                            title="Affecter chauffeur / véhicule"
+                                            class="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    </button>
+                                    {{-- Annuler / Retarder --}}
+                                    <button wire:click="openAlertModal('{{ $instance->id }}')"
+                                            title="Annuler ou signaler un retard"
+                                            class="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                        </svg>
+                                    </button>
+                                @endif
+                                <button wire:click="openEdit('{{ $instance->id }}')"
+                                        title="Modifier"
+                                        class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
-                                <button wire:click="delete('{{ $instance->id }}')" wire:confirm="Supprimer cette instance ?" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <button wire:click="delete('{{ $instance->id }}')" wire:confirm="Supprimer cette instance ?"
+                                        class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
                             </div>
@@ -260,6 +310,182 @@
                         <button type="submit" class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg">{{ $editingId ? 'Enregistrer' : 'Créer' }}</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- ═══ Modale Affectation (chauffeur / véhicule) ═══ --}}
+    @if($showAssignModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             x-data x-on:keydown.escape.window="$wire.set('showAssignModal', false)">
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+                 wire:click="$set('showAssignModal', false)"></div>
+
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-800">Affecter ressources</h3>
+                    <button wire:click="$set('showAssignModal', false)"
+                            class="ml-auto text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="px-6 py-5 space-y-4">
+                    {{-- Véhicule --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Véhicule</label>
+                        <select wire:model="assignCareId"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                            <option value="">— Aucun véhicule —</option>
+                            @foreach($cares as $care)
+                                <option value="{{ $care->id }}">{{ $care->immatrculation }} ({{ $care->number_place }} places)</option>
+                            @endforeach
+                        </select>
+                        @error('assignCareId') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Chauffeur --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Chauffeur</label>
+                        <select wire:model="assignChauffeurId"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                            <option value="">— Aucun chauffeur —</option>
+                            @foreach($chaufers as $c)
+                                <option value="{{ $c->id }}">{{ $c->first_name }} {{ $c->last_name }}{{ $c->matricule ? ' · '.$c->matricule : '' }}</option>
+                            @endforeach
+                        </select>
+                        @error('assignChauffeurId') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Nb places / Prix --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nb. de places</label>
+                            <input wire:model="assignNbPlace" type="number" min="1"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                   placeholder="Héritée du véhicule">
+                            @error('assignNbPlace') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Prix (F)</label>
+                            <input wire:model="assignPrix" type="number" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                   placeholder="Hérité du voyage">
+                            @error('assignPrix') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 px-6 pb-6">
+                    <button type="button" wire:click="$set('showAssignModal', false)"
+                            class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                        Annuler
+                    </button>
+                    <button wire:click="saveAssignment"
+                            class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">
+                        <span wire:loading.remove wire:target="saveAssignment">Enregistrer</span>
+                        <span wire:loading wire:target="saveAssignment">Enregistrement…</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ═══ Modale Alerte (annulation / retard) ═══ --}}
+    @if($showAlertModal)
+        @php
+            $alertInstance = \App\Models\Voyage\VoyageInstance::withCount([
+                'tickets as tickets_actifs_count' => fn($q) => $q->whereIn('statut', ['Payer','Valider','En attente'])
+            ])->find($alertingId);
+        @endphp
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             x-data x-on:keydown.escape.window="$wire.set('showAlertModal', false)">
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+                 wire:click="$set('showAlertModal', false)"></div>
+
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+                    <div class="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800">Signaler un problème</h3>
+                        <p class="text-xs text-gray-500">
+                            {{ $alertInstance?->voyage?->trajet?->depart?->name }} → {{ $alertInstance?->voyage?->trajet?->arriver?->name }}
+                            · {{ $alertInstance?->date?->format('d/m/Y') }}
+                        </p>
+                    </div>
+                    <button wire:click="$set('showAlertModal', false)"
+                            class="ml-auto text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="px-6 py-5 space-y-4">
+                    {{-- Type d'alerte --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        @foreach(['ANNULE' => ['label' => 'Annuler le voyage', 'icon' => 'M6 18L18 6M6 6l12 12', 'color' => 'red'], 'RETARDE' => ['label' => 'Signaler un retard', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', 'color' => 'amber']] as $val => $cfg)
+                            @php $selected = $alertType === $val; @endphp
+                            <label class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 cursor-pointer transition-all
+                                {{ $selected
+                                    ? ($val === 'ANNULE' ? 'border-red-400 bg-red-50' : 'border-amber-400 bg-amber-50')
+                                    : 'border-gray-200 bg-white hover:border-gray-300' }}">
+                                <input type="radio" wire:model.live="alertType" value="{{ $val }}" class="sr-only">
+                                <svg class="w-6 h-6 {{ $selected ? ($val === 'ANNULE' ? 'text-red-600' : 'text-amber-600') : 'text-gray-400' }}"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $cfg['icon'] }}"/>
+                                </svg>
+                                <span class="text-xs font-semibold text-center {{ $selected ? ($val === 'ANNULE' ? 'text-red-700' : 'text-amber-700') : 'text-gray-600' }}">
+                                    {{ $cfg['label'] }}
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+
+                    {{-- Raison --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Message aux clients <span class="text-gray-400 font-normal">(optionnel)</span>
+                        </label>
+                        <textarea wire:model="alertReason" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                  placeholder="{{ $alertType === 'ANNULE' ? 'Raison de l\'annulation...' : 'Raison du retard, nouvelles horaires...' }}"></textarea>
+                    </div>
+
+                    {{-- Résumé impact --}}
+                    <div class="{{ $alertType === 'ANNULE' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100' }} border rounded-xl px-4 py-3 space-y-1">
+                        <p class="text-sm font-medium {{ $alertType === 'ANNULE' ? 'text-red-800' : 'text-amber-800' }}">
+                            Impact : {{ $alertInstance?->tickets_actifs_count ?? 0 }} ticket(s) actif(s)
+                        </p>
+                        @if($alertType === 'ANNULE')
+                            <p class="text-xs text-red-700">→ Tous les tickets seront mis en <strong>Pause</strong> et les clients notifiés.</p>
+                        @else
+                            <p class="text-xs text-amber-700">→ Les clients seront notifiés du retard. Leurs tickets restent actifs.</p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="flex gap-3 px-6 pb-6">
+                    <button type="button" wire:click="$set('showAlertModal', false)"
+                            class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                        Annuler
+                    </button>
+                    <button wire:click="confirmAlert"
+                            class="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-colors
+                                {{ $alertType === 'ANNULE' ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600' }}">
+                        <span wire:loading.remove wire:target="confirmAlert">
+                            {{ $alertType === 'ANNULE' ? 'Confirmer l\'annulation' : 'Confirmer le retard' }}
+                        </span>
+                        <span wire:loading wire:target="confirmAlert">Traitement…</span>
+                    </button>
+                </div>
             </div>
         </div>
     @endif
