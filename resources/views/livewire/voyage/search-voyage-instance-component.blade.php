@@ -54,7 +54,7 @@
                         </svg>
                     </div>
                     <input
-                        wire:model="villeDepart"
+                        wire:model.lazy="villeDepart"
                         type="text"
                         placeholder="Ex: Ouagadougou"
                         class="input pl-9"
@@ -72,7 +72,7 @@
                         </svg>
                     </div>
                     <input
-                        wire:model="villeArrivee"
+                        wire:model.lazy="villeArrivee"
                         type="text"
                         placeholder="Ex: Bobo-Dioulasso"
                         class="input pl-9"
@@ -105,12 +105,11 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between" x-data="{ searching: false, resetting: false }">
             <button
-                wire:click="resetFilters"
                 class="btn btn-ghost text-sm"
-                wire:loading.attr="disabled"
-                wire:target="resetFilters"
+                :disabled="resetting"
+                @click.prevent="resetting = true; $wire.resetFilters().then(() => { resetting = false })"
             >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -119,17 +118,14 @@
             </button>
 
             <button
-                wire:click="search"
                 class="btn btn-primary"
-                wire:loading.attr="disabled"
-                wire:target="search"
+                :disabled="searching"
+                @click.prevent="searching = true; $wire.search().then(() => { searching = false })"
             >
-                <span wire:loading.remove wire:target="search">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                </span>
-                <svg wire:loading wire:target="search" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <svg x-show="!searching" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <svg x-show="searching" x-cloak class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
