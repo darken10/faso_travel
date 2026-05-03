@@ -1,7 +1,7 @@
-<div x-data="{ step: 1, maxStep: 3 }" class="space-y-6">
+<div x-data="{ step: 1, maxStep: 3, submitting: false }" class="space-y-6">
 
     {{-- Progress Stepper --}}
-    <div class="flex items-center justify-center gap-0 px-4 py-6">
+    <div wire:ignore class="flex items-center justify-center gap-0 px-4 py-6">
         <template x-for="s in maxStep" :key="s">
             <div class="flex items-center">
                 <div class="flex flex-col items-center">
@@ -16,9 +16,9 @@
                     </div>
                     <span :class="step >= s ? 'text-primary-600 dark:text-primary-400 font-medium' : 'text-surface-400 dark:text-surface-500'"
                           class="text-[11px] mt-1.5 whitespace-nowrap transition-colors">
-                        <template x-if="s === 1">Siège & Type</template>
-                        <template x-if="s === 2">Pour qui ?</template>
-                        <template x-if="s === 3">Confirmation</template>
+                        <template x-if="s === 1"><span>Siège &amp; Type</span></template>
+                        <template x-if="s === 2"><span>Pour qui ?</span></template>
+                        <template x-if="s === 3"><span>Confirmation</span></template>
                     </span>
                 </div>
                 <template x-if="s < maxStep">
@@ -274,12 +274,18 @@
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
                     Retour
                 </button>
-                <button wire:click="submit" wire:loading.attr="disabled" wire:target="submit" class="btn-success flex-1 relative">
-                    <span wire:loading.remove wire:target="submit" class="flex items-center justify-center gap-2">
+                <button
+                    wire:click="submit"
+                    @click="submitting = true"
+                    x-on:livewire:commit.window="submitting = false"
+                    class="btn-success flex-1 relative"
+                    :disabled="submitting"
+                >
+                    <span x-show="!submitting" class="flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" /></svg>
                         Confirmer l'achat
                     </span>
-                    <span wire:loading wire:target="submit" class="flex items-center justify-center gap-2">
+                    <span x-show="submitting" x-cloak class="flex items-center justify-center gap-2">
                         <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                         Traitement...
                     </span>
