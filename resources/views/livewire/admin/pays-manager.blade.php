@@ -121,9 +121,9 @@
                     </div>
                     <div class="flex gap-3 pt-2">
                         <button type="button" wire:click="$set('showModal', false)" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Annuler</button>
-                        <button type="submit" class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors" wire:loading.attr="disabled">
-                            <span wire:loading.remove>{{ $editingId ? 'Enregistrer' : 'Créer' }}</span>
-                            <span wire:loading>Enregistrement...</span>
+                        <button type="submit" class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors" wire:loading.attr="disabled" wire:target="save">
+                            <span wire:loading.remove wire:target="save">{{ $editingId ? 'Enregistrer' : 'Créer' }}</span>
+                            <span wire:loading wire:target="save">Enregistrement...</span>
                         </button>
                     </div>
                 </form>
