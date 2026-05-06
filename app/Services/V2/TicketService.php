@@ -82,11 +82,13 @@ class TicketService
         // Si le ticket est pour une autre personne
         if (isset($data['autre_personne']) && $data['autre_personne']) {
             $autrePersonne = new AutrePersonne();
-            $autrePersonne->nom = $data['nom_autre_personne'];
-            $autrePersonne->prenom = $data['prenom_autre_personne'];
-            $autrePersonne->telephone = $data['telephone_autre_personne'];
+            $autrePersonne->first_name     = $data['first_name'] ?? '';
+            $autrePersonne->last_name      = $data['last_name'] ?? '';
+            $autrePersonne->email          = $data['email'] ?? null;
+            $autrePersonne->numero         = $data['numero'] ?? null;
+            $autrePersonne->lien_relation  = $data['lien_relation'] ?? null;
             $autrePersonne->save();
-            
+
             $ticket->autre_personne_id = $autrePersonne->id;
         }
         

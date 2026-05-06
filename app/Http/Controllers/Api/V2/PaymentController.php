@@ -120,12 +120,14 @@ class PaymentController extends Controller
                 'seat_number'        => $validated['seat_number'] ?? null,
             ];
 
-            if (!$validated['is_for_self'] && !empty($validated['passenger_name'])) {
-                [$nom, $prenom] = array_pad(explode(' ', $validated['passenger_name'], 2), 2, '');
-                $ticketData['autre_personne']          = true;
-                $ticketData['nom_autre_personne']       = $nom;
-                $ticketData['prenom_autre_personne']    = $prenom;
-                $ticketData['telephone_autre_personne'] = $validated['passenger_phone'] ?? '';
+            if (!$validated['is_for_self']) {
+                $nameParts = array_pad(explode(' ', trim($validated['passenger_name'] ?? ''), 2), 2, '');
+                $ticketData['autre_personne']  = true;
+                $ticketData['first_name']      = $nameParts[0];
+                $ticketData['last_name']       = $nameParts[1];
+                $ticketData['email']           = $validated['passenger_email'] ?? null;
+                $ticketData['numero']          = $validated['passenger_phone'] ?? null;
+                $ticketData['lien_relation']   = $validated['relation'] ?? null;
             }
 
             $ticket = $this->ticketService->createTicket($ticketData);
