@@ -85,6 +85,11 @@ class VenteTicket extends Component
 
     public function nextStep(): void
     {
+        if (! Caisse::sessionOuverte()) {
+            session()->flash('error', 'Vous devez ouvrir une caisse avant de pouvoir vendre un ticket.');
+            return;
+        }
+
         if ($this->step === 1) {
             $this->validateOnly('voyage_instance_id');
             $this->validateOnly('type_ticket');
@@ -116,6 +121,12 @@ class VenteTicket extends Component
             'client_telephone'   => 'nullable|string|max:20',
             'montant_recu'       => 'required|numeric|min:0',
         ]);
+
+        if (! Caisse::sessionOuverte()) {
+            session()->flash('error', 'Aucune caisse ouverte. Ouvrez une caisse avant de vendre un ticket.');
+            $this->step = 1;
+            return;
+        }
 
         if ($this->montant_recu < $this->prix) {
             $this->addError('montant_recu', 'Le montant reçu est inférieur au prix du ticket.');
