@@ -191,7 +191,7 @@ class Ticket extends Model
 
     public function scopeActive(Builder $builder): Builder
     {
-        return $builder->where('statut', StatutTicket::Actif);
+        return $builder->where('statut', StatutTicket::Valider);
     }
 
     public function scopeValidated(Builder $builder): Builder

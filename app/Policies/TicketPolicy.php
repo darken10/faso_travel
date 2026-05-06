@@ -29,7 +29,7 @@ class TicketPolicy
     public function update(User $user, Ticket $ticket): bool
     {
         return $user->id === $ticket->user_id
-            && in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Actif]);
+            && in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Valider]);
     }
 
     public function delete(User $user, Ticket $ticket): bool
@@ -40,13 +40,13 @@ class TicketPolicy
     public function pause(User $user, Ticket $ticket): bool
     {
         return $user->id === $ticket->user_id
-            && $ticket->statut === StatutTicket::Actif;
+            && $ticket->statut === StatutTicket::Valider;
     }
 
     public function transfer(User $user, Ticket $ticket): bool
     {
         return $user->id === $ticket->user_id
-            && in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Actif]);
+            && in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Valider]);
     }
 
     public function validate(User $user, Ticket $ticket): bool

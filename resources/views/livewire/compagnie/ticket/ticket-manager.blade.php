@@ -112,7 +112,7 @@
                         @php
                             $statutColor = match($ticket->statut) {
                                 \App\Enums\StatutTicket::Valider => ['bg' => 'bg-green-100', 'text' => 'text-green-700'],
-                                \App\Enums\StatutTicket::Payer, \App\Enums\StatutTicket::Actif => ['bg' => 'bg-blue-100', 'text' => 'text-blue-700'],
+                                \App\Enums\StatutTicket::Payer => ['bg' => 'bg-blue-100', 'text' => 'text-blue-700'],
                                 \App\Enums\StatutTicket::Pause => ['bg' => 'bg-amber-100', 'text' => 'text-amber-700'],
                                 \App\Enums\StatutTicket::Bloquer, \App\Enums\StatutTicket::Annuler => ['bg' => 'bg-red-100', 'text' => 'text-red-700'],
                                 default => ['bg' => 'bg-gray-100', 'text' => 'text-gray-600'],
@@ -174,7 +174,7 @@
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-1" x-data>
 
-                                    @if($ticket->statut === \App\Enums\StatutTicket::Payer || $ticket->statut === \App\Enums\StatutTicket::Actif)
+                                    @if($ticket->statut === \App\Enums\StatutTicket::Payer )
                                         <button wire:click="valider({{ $ticket->id }})"
                                                 title="Valider ce ticket"
                                                 class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"

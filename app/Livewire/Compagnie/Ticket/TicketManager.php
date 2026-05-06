@@ -74,7 +74,7 @@ class TicketManager extends Component
         $compagnieId = Auth::user()->compagnie_id;
 
         return Ticket::withoutGlobalScopes()
-            ->with(['user', 'autrePersonne', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'payements'])
+            ->with(['user', 'autre_personne', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'payements'])
             ->whereHas('voyageInstance', fn ($q) =>
                 $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
             )
@@ -87,7 +87,7 @@ class TicketManager extends Component
                                 ->orWhere('last_name', 'like', '%' . $this->search . '%')
                                 ->orWhere('phone', 'like', '%' . $this->search . '%')
                           )
-                          ->orWhereHas('autrePersonne', fn ($ap) =>
+                          ->orWhereHas('autre_personne', fn ($ap) =>
                               $ap->where('first_name', 'like', '%' . $this->search . '%')
                                  ->orWhere('last_name', 'like', '%' . $this->search . '%')
                           )

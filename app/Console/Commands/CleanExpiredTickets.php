@@ -26,9 +26,10 @@ class CleanExpiredTickets extends Command
 
         $tickets = Ticket::whereNotIn('statut', [
                 StatutTicket::Payer,
-                StatutTicket::Actif,
                 StatutTicket::Valider,
+                StatutTicket::Bloquer,
                 StatutTicket::Annuler,
+                StatutTicket::Pause,
             ])
             ->where('created_at', '<', $cutoff)
             ->get();

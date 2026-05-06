@@ -37,10 +37,18 @@ class VoyageInstanceManager extends Component
     public int  $genJours     = 30;
 
     // ── Modale affectation (chauffeur / véhicule) ─────────────────────────────
-    public bool    $showAssignModal   = false;
-    public ?string $assigningId       = null;
-    public ?int    $assignCareId      = null;
-    public ?string $assignChauffeurId = null;
+    public bool    $showAssignModal              = false;
+    public ?string $assigningId                  = null;
+    public ?int    $assignCareId                 = null;
+    public ?string $assignChauffeurId            = null;
+    public string $assignPreviewNbPlace         = '';
+    public string $assignPreviewPrix            = '';
+    public string $assignPreviewPrixAllerRetour = '';
+
+    // ── Prévisualisation modale création/édition ──────────────────────────────
+    public string $previewNbPlace         = '';
+    public string $previewPrix            = '';
+    public string $previewPrixAllerRetour = '';
 
     // ── Modale alerte (annulation / retard) ───────────────────────────────────
     public bool    $showAlertModal = false;
@@ -51,6 +59,37 @@ class VoyageInstanceManager extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    // ── Hooks réactifs ────────────────────────────────────────────────────────
+
+    public function updatedAssignCareId(): void
+    {
+        $care     = $this->assignCareId ? Care::find($this->assignCareId) : null;
+        $instance = VoyageInstance::find($this->assigningId);
+        $nb       = $care?->number_place ?: ($instance?->voyage?->nb_pace ?: 0);
+        $this->assignPreviewNbPlace = $nb ? (string) $nb : '—';
+    }
+
+    public function updatedVoyageId(): void
+    {
+        $this->refreshCreatePreview();
+    }
+
+    public function updatedCareId(): void
+    {
+        $this->refreshCreatePreview();
+    }
+
+    private function refreshCreatePreview(): void
+    {
+        $voyage = $this->voyage_id ? Voyage::find($this->voyage_id) : null;
+        $care   = $this->care_id   ? Care::find($this->care_id)     : null;
+
+        $nb = $care?->number_place ?: ($voyage?->nb_pace ?: 0);
+        $this->previewNbPlace         = $nb ? (string) $nb : '—';
+        $this->previewPrix            = $voyage?->prix             ? number_format($voyage->prix, 0, ',', ' ') : '—';
+        $this->previewPrixAllerRetour = $voyage?->prix_aller_retour ? number_format($voyage->prix_aller_retour, 0, ',', ' ') : '—';
     }
 
     public function openGenModal(): void
@@ -76,11 +115,19 @@ class VoyageInstanceManager extends Component
 
     public function openAssignModal(string $id): void
     {
-        $instance = VoyageInstance::findOrFail($id);
+        $instance = VoyageInstance::with('voyage', 'care')->findOrFail($id);
         $this->assigningId       = $id;
         $this->assignCareId      = $instance->care_id;
         $this->assignChauffeurId = $instance->chauffer_id;
-        $this->showAssignModal   = true;
+
+        $care   = $instance->care;
+        $voyage = $instance->voyage;
+        $nb     = $care?->number_place ?: ($voyage?->nb_pace ?: 0);
+        $this->assignPreviewNbPlace         = $nb ? (string) $nb : '—';
+        $this->assignPreviewPrix            = $voyage?->prix             ? number_format($voyage->prix, 0, ',', ' ')             : '—';
+        $this->assignPreviewPrixAllerRetour = $voyage?->prix_aller_retour ? number_format($voyage->prix_aller_retour, 0, ',', ' ') : '—';
+
+        $this->showAssignModal = true;
     }
 
     public function saveAssignment(): void
@@ -166,14 +213,15 @@ class VoyageInstanceManager extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['editingId', 'voyage_id', 'date', 'care_id', 'heure', 'chauffer_id', 'statut', 'classe_id']);
+        $this->reset(['editingId', 'voyage_id', 'date', 'care_id', 'heure', 'chauffer_id', 'statut', 'classe_id',
+                      'previewNbPlace', 'previewPrix', 'previewPrixAllerRetour']);
         $this->statut = StatutVoyageInstance::DISPONIBLE->value;
         $this->showModal = true;
     }
 
     public function openEdit(string $id): void
     {
-        $instance = VoyageInstance::findOrFail($id);
+        $instance = VoyageInstance::with('voyage', 'care')->findOrFail($id);
         $this->editingId   = $id;
         $this->voyage_id   = $instance->voyage_id;
         $this->date        = $instance->date ? $instance->date->format('Y-m-d') : '';
@@ -182,7 +230,15 @@ class VoyageInstanceManager extends Component
         $this->chauffer_id = $instance->chauffer_id;
         $this->statut      = $instance->statut->value ?? StatutVoyageInstance::DISPONIBLE->value;
         $this->classe_id   = $instance->classe_id;
-        $this->showModal   = true;
+
+        $voyage = $instance->voyage;
+        $care   = $instance->care;
+        $nb     = $care?->number_place ?: ($voyage?->nb_pace ?: 0);
+        $this->previewNbPlace         = $nb ? (string) $nb : '—';
+        $this->previewPrix            = $voyage?->prix             ? number_format($voyage->prix, 0, ',', ' ')             : '—';
+        $this->previewPrixAllerRetour = $voyage?->prix_aller_retour ? number_format($voyage->prix_aller_retour, 0, ',', ' ') : '—';
+
+        $this->showModal = true;
     }
 
     public function save(): void

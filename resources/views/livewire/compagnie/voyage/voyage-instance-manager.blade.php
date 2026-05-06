@@ -235,7 +235,7 @@
                 <form wire:submit="save" class="px-6 py-5 space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Voyage *</label>
-                        <select wire:model="voyage_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <select wire:model.live="voyage_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                             <option value="">-- Choisir un voyage --</option>
                             @foreach($voyages as $v)
                                 <option value="{{ $v->id }}">{{ $v->trajet?->depart?->name }} → {{ $v->trajet?->arriver?->name }} ({{ $v->heure ? \Carbon\Carbon::parse($v->heure)->format('H:i') : '—' }})</option>
@@ -255,17 +255,28 @@
                             @error('heure') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                     </div>
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
-                        <p class="font-medium mb-1">Valeurs automatiques</p>
-                        <ul class="list-disc list-inside space-y-0.5 text-blue-600">
-                            <li>Nombre de places : issu du véhicule sélectionné (sinon valeur par défaut du voyage)</li>
-                            <li>Prix hérité du voyage source</li>
-                        </ul>
+                    {{-- Valeurs dérivées (lecture seule) --}}
+                    <div class="grid grid-cols-3 gap-3" x-data>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Nb. de places</label>
+                            <input type="text" x-bind:value="$wire.previewNbPlace || '—'" readonly
+                                   class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Prix aller (F)</label>
+                            <input type="text" x-bind:value="$wire.previewPrix || '—'" readonly
+                                   class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Prix aller-retour (F)</label>
+                            <input type="text" x-bind:value="$wire.previewPrixAllerRetour || '—'" readonly
+                                   class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Véhicule</label>
-                            <select wire:model="care_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <select wire:model.live="care_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                                 <option value="">-- Véhicule --</option>
                                 @foreach($cares as $care)
                                     <option value="{{ $care->id }}">{{ $care->immatrculation }}</option>
@@ -335,7 +346,7 @@
                     {{-- Véhicule --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Véhicule</label>
-                        <select wire:model="assignCareId"
+                        <select wire:model.live="assignCareId"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
                             <option value="">— Aucun véhicule —</option>
                             @foreach($cares as $care)
@@ -358,13 +369,23 @@
                         @error('assignChauffeurId') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Info automatique --}}
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
-                        <p class="font-medium">Valeurs appliquées automatiquement</p>
-                        <ul class="list-disc list-inside space-y-0.5 text-blue-600">
-                            <li>Nombre de places : issu du véhicule sélectionné (sinon valeur par défaut du voyage)</li>
-                            <li>Prix : aller simple et aller-retour hérités du voyage source</li>
-                        </ul>
+                    {{-- Valeurs dérivées (lecture seule) --}}
+                    <div class="grid grid-cols-3 gap-3" x-data>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Nb. de places</label>
+                            <input type="text" x-bind:value="$wire.assignPreviewNbPlace || '—'" readonly
+                                   class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Prix aller (F)</label>
+                            <input type="text" x-bind:value="$wire.assignPreviewPrix || '—'" readonly
+                                   class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Prix aller-retour (F)</label>
+                            <input type="text" x-bind:value="$wire.assignPreviewPrixAllerRetour || '—'" readonly
+                                   class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600 cursor-not-allowed">
+                        </div>
                     </div>
                 </div>
 
