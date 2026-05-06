@@ -75,7 +75,9 @@ class TicketService
         $ticket->code_qr            = Str::uuid()->toString();
         $ticket->numero_ticket      = TicketHelpers::generateTicketNumber();
         $ticket->code_sms           = TicketHelpers::generateTicketCodeSms();
-        $ticket->numero_chaise      = $this->attribuerNumeroPlace($voyageInstance->id);
+        $ticket->numero_chaise      = isset($data['seat_number']) && $data['seat_number']
+            ? (int) $data['seat_number']
+            : $this->attribuerNumeroPlace($voyageInstance->id);
         
         // Si le ticket est pour une autre personne
         if (isset($data['autre_personne']) && $data['autre_personne']) {

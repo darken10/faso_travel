@@ -51,6 +51,7 @@ class PaymentController extends Controller
             'trip_id'         => 'required|string|exists:voyage_instances,id',
             'trip_type'       => 'required|in:one-way,round-trip',
             'is_for_self'     => 'required|boolean',
+            'seat_number'     => 'nullable|integer|min:1',
             'passenger_name'  => 'required_if:is_for_self,false|nullable|string|max:255',
             'passenger_phone' => 'required_if:is_for_self,false|nullable|string|max:30',
             'passenger_email' => 'nullable|email|max:255',
@@ -95,11 +96,28 @@ class PaymentController extends Controller
                 ], 409);
             }
 
+            // Vérifier que le siège demandé est libre
+            if (!empty($validated['seat_number'])) {
+                $siegeDejaPris = Ticket::where('voyage_instance_id', $voyageInstance->id)
+                    ->where('statut', '!=', StatutTicket::Annuler)
+                    ->where('numero_chaise', $validated['seat_number'])
+                    ->exists();
+
+                if ($siegeDejaPris) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La place n°' . $validated['seat_number'] . ' est déjà réservée. Veuillez choisir une autre place.',
+                    ], 409);
+                }
+            }
+
             // Créer le ticket
             $ticketData = [
                 'voyage_instance_id' => $voyageInstance->id,
                 'type'               => $tripType->value,
                 'is_for_self'        => $validated['is_for_self'],
+                'seat_number'        => $validated['seat_number'] ?? null,
             ];
 
             if (!$validated['is_for_self'] && !empty($validated['passenger_name'])) {
