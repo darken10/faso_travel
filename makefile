@@ -1,5 +1,5 @@
 deploy:
-	ssh o2switch 'cd ~/sites/app.liptra.net  && git pull origin main && make install'
+	ssh o2switch 'cd ~/sites/app.liptra.net  && git pull origin main && make install && npm run build'
 
 
 install: vendor/autoload.php .env public/storage public/build/manifest.json

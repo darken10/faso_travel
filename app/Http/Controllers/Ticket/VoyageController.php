@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Ticket;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterAutrePersonneFormRequest;
 use App\Http\Requests\Voyage\IsMyTicketBooleanFormRequest;
 use App\Models\Ticket\AutrePersonne;
 use App\Models\Ticket\Ticket;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class VoyageController extends Controller
 {
@@ -58,7 +61,7 @@ class VoyageController extends Controller
         ]);
     }
 
-    function is_my_ticket(VoyageInstance $voyageInstance): \Illuminate\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View
+    function is_my_ticket(VoyageInstance $voyageInstance): Application|Factory|View
     {
         return view('ticket.voyage.is-my-ticket',['voyageInstance'=>$voyageInstance]);
     }
