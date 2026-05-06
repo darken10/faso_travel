@@ -22,10 +22,66 @@ class TicketManager extends Component
     public string $dateTo = '';
     public string $perPage = '15';
 
+    public bool   $showConfirmModal    = false;
+    public ?int   $confirmTicketId     = null;
+    public string $confirmAction       = '';
+    public string $confirmTitle        = '';
+    public string $confirmMessage      = '';
+    public string $confirmButtonLabel  = '';
+    public string $confirmButtonClass  = '';
+
     public function updatedSearch(): void { $this->resetPage(); }
     public function updatedStatutFilter(): void { $this->resetPage(); }
     public function updatedDateFrom(): void { $this->resetPage(); }
     public function updatedDateTo(): void { $this->resetPage(); }
+
+    public function openConfirm(int $id, string $action): void
+    {
+        $this->confirmTicketId = $id;
+        $this->confirmAction   = $action;
+
+        match ($action) {
+            'valider' => [
+                $this->confirmTitle       = 'Valider ce ticket',
+                $this->confirmMessage     = 'Êtes-vous sûr de vouloir valider ce ticket ? Cette action marquera le ticket comme validé.',
+                $this->confirmButtonLabel = 'Valider',
+                $this->confirmButtonClass = 'bg-green-600 hover:bg-green-700 text-white',
+            ],
+            'bloquer' => [
+                $this->confirmTitle       = 'Bloquer ce ticket',
+                $this->confirmMessage     = 'Êtes-vous sûr de vouloir bloquer ce ticket ? Le client ne pourra plus l\'utiliser.',
+                $this->confirmButtonLabel = 'Bloquer',
+                $this->confirmButtonClass = 'bg-red-600 hover:bg-red-700 text-white',
+            ],
+            'activer' => [
+                $this->confirmTitle       = 'Réactiver ce ticket',
+                $this->confirmMessage     = 'Êtes-vous sûr de vouloir réactiver ce ticket ?',
+                $this->confirmButtonLabel = 'Réactiver',
+                $this->confirmButtonClass = 'bg-blue-600 hover:bg-blue-700 text-white',
+            ],
+            default => null,
+        };
+
+        $this->showConfirmModal = true;
+    }
+
+    public function executeConfirm(): void
+    {
+        if (! $this->confirmTicketId || ! $this->confirmAction) {
+            return;
+        }
+
+        match ($this->confirmAction) {
+            'valider' => $this->valider($this->confirmTicketId),
+            'bloquer' => $this->bloquer($this->confirmTicketId),
+            'activer' => $this->activer($this->confirmTicketId),
+            default   => null,
+        };
+
+        $this->showConfirmModal = false;
+        $this->confirmTicketId  = null;
+        $this->confirmAction    = '';
+    }
 
     public function resetFilters(): void
     {

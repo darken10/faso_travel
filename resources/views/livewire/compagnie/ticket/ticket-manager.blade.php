@@ -126,8 +126,8 @@
                             </td>
 
                             <td class="px-4 py-3">
-                                @if($ticket->autrePersonne)
-                                    <p class="font-medium text-gray-800 text-sm">{{ $ticket->autrePersonne->first_name }} {{ $ticket->autrePersonne->last_name }}</p>
+                                @if($ticket->autre_personne)
+                                    <p class="font-medium text-gray-800 text-sm">{{ $ticket->autre_personne->first_name }} {{ $ticket->autre_personne->last_name }}</p>
                                     <p class="text-xs text-gray-400">Via {{ $ticket->user?->first_name ?? 'inconnu' }}</p>
                                 @elseif($ticket->user)
                                     <p class="font-medium text-gray-800 text-sm">{{ $ticket->user->first_name }} {{ $ticket->user->last_name }}</p>
@@ -172,31 +172,28 @@
                             </td>
 
                             <td class="px-4 py-3 text-right">
-                                <div class="flex items-center justify-end gap-1" x-data>
+                                <div class="flex items-center justify-end gap-1">
 
-                                    @if($ticket->statut === \App\Enums\StatutTicket::Payer )
-                                        <button wire:click="valider({{ $ticket->id }})"
+                                    @if($ticket->statut === \App\Enums\StatutTicket::Payer)
+                                        <button wire:click="openConfirm({{ $ticket->id }}, 'valider')"
                                                 title="Valider ce ticket"
-                                                class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                wire:confirm="Valider ce ticket ?">
+                                                class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         </button>
-                                        <button wire:click="bloquer({{ $ticket->id }})"
+                                        <button wire:click="openConfirm({{ $ticket->id }}, 'bloquer')"
                                                 title="Bloquer ce ticket"
-                                                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                wire:confirm="Bloquer ce ticket ?">
+                                                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                                         </button>
                                     @endif
 
                                     @if($ticket->statut === \App\Enums\StatutTicket::Pause)
-                                        <button wire:click="valider({{ $ticket->id }})"
+                                        <button wire:click="openConfirm({{ $ticket->id }}, 'valider')"
                                                 title="Valider retour"
-                                                class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                wire:confirm="Valider le retour de ce ticket ?">
+                                                class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         </button>
-                                        <button wire:click="activer({{ $ticket->id }})"
+                                        <button wire:click="openConfirm({{ $ticket->id }}, 'activer')"
                                                 title="Réactiver le ticket"
                                                 class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -204,10 +201,9 @@
                                     @endif
 
                                     @if($ticket->statut === \App\Enums\StatutTicket::Bloquer)
-                                        <button wire:click="activer({{ $ticket->id }})"
+                                        <button wire:click="openConfirm({{ $ticket->id }}, 'activer')"
                                                 title="Réactiver le ticket"
-                                                class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                wire:confirm="Réactiver ce ticket ?">
+                                                class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                         </button>
                                     @endif
@@ -240,5 +236,71 @@
             </div>
         @endif
     </div>
+
+    {{-- ── Modal confirmation action ticket ──────────────────────────────────── --}}
+    @if($showConfirmModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center px-4"
+         x-data
+         x-on:keydown.escape.window="$wire.showConfirmModal = false">
+
+        {{-- Backdrop --}}
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+             wire:click="$set('showConfirmModal', false)"></div>
+
+        {{-- Panel --}}
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150">
+
+            {{-- Icône --}}
+            <div class="flex items-center justify-center mb-4">
+                @if($confirmAction === 'valider')
+                    <div class="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                @elseif($confirmAction === 'bloquer')
+                    <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg class="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                        </svg>
+                    </div>
+                @else
+                    <div class="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
+                        <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Titre & message --}}
+            <h3 class="text-lg font-bold text-gray-900 text-center mb-2">{{ $confirmTitle }}</h3>
+            <p class="text-sm text-gray-500 text-center mb-6 leading-relaxed">{{ $confirmMessage }}</p>
+
+            {{-- Boutons --}}
+            <div class="flex gap-3">
+                <button type="button"
+                        wire:click="$set('showConfirmModal', false)"
+                        class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+                    Annuler
+                </button>
+                <button type="button"
+                        wire:click="executeConfirm"
+                        wire:loading.attr="disabled"
+                        wire:target="executeConfirm"
+                        class="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60 {{ $confirmButtonClass }}">
+                    <span wire:loading.remove wire:target="executeConfirm">{{ $confirmButtonLabel }}</span>
+                    <span wire:loading wire:target="executeConfirm" class="inline-flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                        En cours…
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 
 </div>
