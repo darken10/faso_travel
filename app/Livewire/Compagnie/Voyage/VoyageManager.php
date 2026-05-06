@@ -32,6 +32,7 @@ class VoyageManager extends Component
     public ?int   $classe_id         = null;
     public bool   $is_quotidient     = false;
     public array  $days              = [];
+    public string $nb_pace           = '';
 
     public function updatedTrajetId(): void
     {
@@ -74,7 +75,7 @@ class VoyageManager extends Component
     {
         $this->reset([
             'editingId', 'trajet_id', 'heure', 'temps', 'prix', 'prix_aller_retour',
-            'statut_id', 'depart_id', 'arrive_id', 'classe_id', 'is_quotidient', 'days',
+            'statut_id', 'depart_id', 'arrive_id', 'classe_id', 'is_quotidient', 'days', 'nb_pace',
         ]);
         $this->showModal = true;
     }
@@ -95,6 +96,7 @@ class VoyageManager extends Component
         $this->classe_id         = $voyage->classe_id;
         $this->is_quotidient     = (bool) $voyage->is_quotidient;
         $this->days              = is_array($voyage->days) ? $voyage->days : [];
+        $this->nb_pace           = (string) ($voyage->nb_pace ?? '');
         $this->showModal         = true;
     }
 
@@ -109,6 +111,7 @@ class VoyageManager extends Component
             'arrive_id'         => 'required|exists:gares,id',
             'classe_id'         => 'nullable|exists:classes,id',
             'prix_aller_retour' => 'nullable|numeric|min:0',
+            'nb_pace'           => 'required|integer|min:1',
         ]);
 
         $trajet = Trajet::find($this->trajet_id);
@@ -125,6 +128,7 @@ class VoyageManager extends Component
             'classe_id'         => $this->classe_id,
             'is_quotidient'     => $this->is_quotidient,
             'days'              => $this->days,
+            'nb_pace'           => (int) $this->nb_pace,
         ];
 
         if ($this->editingId) {
@@ -138,7 +142,7 @@ class VoyageManager extends Component
         $this->showModal = false;
         $this->reset([
             'editingId', 'trajet_id', 'heure', 'temps', 'prix', 'prix_aller_retour',
-            'statut_id', 'depart_id', 'arrive_id', 'classe_id', 'is_quotidient', 'days',
+            'statut_id', 'depart_id', 'arrive_id', 'classe_id', 'is_quotidient', 'days', 'nb_pace',
         ]);
     }
 

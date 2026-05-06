@@ -23,11 +23,11 @@ class TripResource extends JsonResource
         $arriver = $trajet->arriver;
         $compagnie = $voyage->compagnie;
         // Calculate available seats
-        $totalSeats = $this->care->nombre_place ?? 50;
+        $totalSeats = $this->nb_place ?: ($this->care?->number_place ?? 50);
         $occupiedSeats = \App\Models\Ticket\Ticket::where('voyage_instance_id', $this->id)
             ->where('statut', '!=', 'annuler')
             ->count();
-        $availableSeats = $totalSeats - $occupiedSeats;
+        $availableSeats = max(0, $totalSeats - $occupiedSeats);
 
         // Calculate estimated arrival time
         $date = Carbon::parse($this->date)->format('Y-m-d');

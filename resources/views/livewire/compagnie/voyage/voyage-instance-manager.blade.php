@@ -255,16 +255,12 @@
                             @error('heure') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nb. de places *</label>
-                            <input wire:model="nb_place" type="number" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Ex: 60">
-                            @error('nb_place') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Prix (optionnel)</label>
-                            <input wire:model="prix" type="number" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Laisser vide = prix voyage">
-                        </div>
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
+                        <p class="font-medium mb-1">Valeurs automatiques</p>
+                        <ul class="list-disc list-inside space-y-0.5 text-blue-600">
+                            <li>Nombre de places : issu du véhicule sélectionné (sinon valeur par défaut du voyage)</li>
+                            <li>Prix hérité du voyage source</li>
+                        </ul>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -362,22 +358,13 @@
                         @error('assignChauffeurId') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Nb places / Prix --}}
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nb. de places</label>
-                            <input wire:model="assignNbPlace" type="number" min="1"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                                   placeholder="Héritée du véhicule">
-                            @error('assignNbPlace') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Prix (F)</label>
-                            <input wire:model="assignPrix" type="number" min="0"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                                   placeholder="Hérité du voyage">
-                            @error('assignPrix') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
+                    {{-- Info automatique --}}
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
+                        <p class="font-medium">Valeurs appliquées automatiquement</p>
+                        <ul class="list-disc list-inside space-y-0.5 text-blue-600">
+                            <li>Nombre de places : issu du véhicule sélectionné (sinon valeur par défaut du voyage)</li>
+                            <li>Prix : aller simple et aller-retour hérités du voyage source</li>
+                        </ul>
                     </div>
                 </div>
 

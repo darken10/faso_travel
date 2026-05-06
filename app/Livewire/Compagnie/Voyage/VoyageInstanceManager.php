@@ -29,10 +29,8 @@ class VoyageInstanceManager extends Component
     public string $date = '';
     public ?int $care_id = null;
     public string $heure = '';
-    public string $nb_place = '';
     public ?string $chauffer_id = null;
     public string $statut = '';
-    public string $prix = '';
     public ?int $classe_id = null;
 
     public bool $showGenModal = false;
@@ -43,8 +41,6 @@ class VoyageInstanceManager extends Component
     public ?string $assigningId       = null;
     public ?int    $assignCareId      = null;
     public ?string $assignChauffeurId = null;
-    public string  $assignNbPlace     = '';
-    public string  $assignPrix        = '';
 
     // ── Modale alerte (annulation / retard) ───────────────────────────────────
     public bool    $showAlertModal = false;
@@ -84,25 +80,29 @@ class VoyageInstanceManager extends Component
         $this->assigningId       = $id;
         $this->assignCareId      = $instance->care_id;
         $this->assignChauffeurId = $instance->chauffer_id;
-        $this->assignNbPlace     = (string) ($instance->nb_place ?? '');
-        $this->assignPrix        = (string) ($instance->prix ?? '');
         $this->showAssignModal   = true;
     }
 
     public function saveAssignment(): void
     {
         $this->validate([
-            'assignCareId'       => 'nullable|exists:cares,id',
-            'assignChauffeurId'  => 'nullable|exists:chauffers,id',
-            'assignNbPlace'      => 'nullable|integer|min:1',
-            'assignPrix'         => 'nullable|numeric|min:0',
+            'assignCareId'      => 'nullable|exists:cares,id',
+            'assignChauffeurId' => 'nullable|exists:chauffers,id',
         ]);
 
-        VoyageInstance::findOrFail($this->assigningId)->update([
+        $instance = VoyageInstance::findOrFail($this->assigningId);
+
+        $nbPlace = $instance->nb_place;
+        if ($this->assignCareId) {
+            $care    = Care::find($this->assignCareId);
+            $nbPlace = $care?->number_place ?: ($instance->voyage?->nb_pace ?: $nbPlace);
+        }
+
+        $instance->update([
             'care_id'     => $this->assignCareId ?: null,
             'chauffer_id' => $this->assignChauffeurId ?: null,
-            'nb_place'    => $this->assignNbPlace ?: null,
-            'prix'        => $this->assignPrix ?: null,
+            'nb_place'    => $nbPlace,
+            'prix'        => $instance->voyage?->prix ?? 0,
         ]);
 
         $this->showAssignModal = false;
@@ -166,7 +166,7 @@ class VoyageInstanceManager extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['editingId', 'voyage_id', 'date', 'care_id', 'heure', 'nb_place', 'chauffer_id', 'statut', 'prix', 'classe_id']);
+        $this->reset(['editingId', 'voyage_id', 'date', 'care_id', 'heure', 'chauffer_id', 'statut', 'classe_id']);
         $this->statut = StatutVoyageInstance::DISPONIBLE->value;
         $this->showModal = true;
     }
@@ -179,10 +179,8 @@ class VoyageInstanceManager extends Component
         $this->date        = $instance->date ? $instance->date->format('Y-m-d') : '';
         $this->care_id     = $instance->care_id;
         $this->heure       = $instance->heure ? $instance->heure->format('H:i') : '';
-        $this->nb_place    = $instance->nb_place ?? '';
         $this->chauffer_id = $instance->chauffer_id;
         $this->statut      = $instance->statut->value ?? StatutVoyageInstance::DISPONIBLE->value;
-        $this->prix        = $instance->prix ?? '';
         $this->classe_id   = $instance->classe_id;
         $this->showModal   = true;
     }
@@ -193,24 +191,26 @@ class VoyageInstanceManager extends Component
             'voyage_id'   => 'required|exists:voyages,id',
             'date'        => 'required|date',
             'heure'       => 'required|string',
-            'nb_place'    => 'required|integer|min:1',
             'statut'      => 'required|string',
-            'prix'        => 'nullable|numeric|min:0',
             'care_id'     => 'nullable|exists:cares,id',
             'classe_id'   => 'nullable|exists:classes,id',
             'chauffer_id' => 'nullable|exists:chauffers,id',
         ]);
 
+        $voyage  = Voyage::find($this->voyage_id);
+        $care    = $this->care_id ? Care::find($this->care_id) : null;
+        $nbPlace = $care?->number_place ?: ($voyage?->nb_pace ?: 0);
+
         $data = [
             'voyage_id'   => $this->voyage_id,
             'date'        => $this->date,
             'heure'       => $this->heure,
-            'nb_place'    => $this->nb_place,
+            'nb_place'    => $nbPlace,
             'statut'      => $this->statut,
-            'prix'        => $this->prix ?: null,
-            'care_id'     => $this->care_id,
+            'prix'        => $voyage?->prix ?? 0,
+            'care_id'     => $this->care_id ?: null,
             'classe_id'   => $this->classe_id,
-            'chauffer_id' => $this->chauffer_id,
+            'chauffer_id' => $this->chauffer_id ?: null,
         ];
 
         if ($this->editingId) {
@@ -222,7 +222,7 @@ class VoyageInstanceManager extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['editingId', 'voyage_id', 'date', 'care_id', 'heure', 'nb_place', 'chauffer_id', 'statut', 'prix', 'classe_id']);
+        $this->reset(['editingId', 'voyage_id', 'date', 'care_id', 'heure', 'chauffer_id', 'statut', 'classe_id']);
     }
 
     public function delete(string $id): void

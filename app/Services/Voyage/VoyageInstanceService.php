@@ -25,12 +25,14 @@ class VoyageInstanceService
             Voyage::all()->each(function (Voyage $voyage) use ($dateVoyage) {
                 if (in_array(JoursSemain::ToutLesJours->value, $voyage->days) || VoyagesInstanceHelpers::isVoyageExisteInThisDate($dateVoyage,$voyage->days)){
 
+                    $lastCareOld = $voyage->cares->last();
                     VoyageInstance::firstOrCreate([
                         'voyage_id' => $voyage->id,
                         'date' => $dateVoyage,
                         'heure'=> $voyage->heure,
-                        'nb_place'=>$voyage->nb_pace,
-                        'care_id'=> $voyage->cares->last()->id ?? null,
+                        'nb_place'=> $voyage->nb_pace ?: ($lastCareOld?->number_place ?? 0),
+                        'prix' => $voyage->prix ?? 0,
+                        'care_id'=> $lastCareOld?->id ?? null,
                         'chauffer_id'=> null
                     ]);
                 }
@@ -73,7 +75,7 @@ class VoyageInstanceService
                     ],
                     [
                         'heure'       => $voyage->heure?->format('H:i:s'),
-                        'nb_place'    => $lastCare?->number_place ?? 0,
+                        'nb_place'    => $voyage->nb_pace ?: ($lastCare?->number_place ?? 0),
                         'care_id'     => $lastCare?->id,
                         'chauffer_id' => null,
                         'statut'      => StatutVoyageInstance::DISPONIBLE->value,

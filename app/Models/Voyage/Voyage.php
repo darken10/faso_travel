@@ -42,6 +42,7 @@ class Voyage extends Model
         'prix_aller_retour',
         'is_quotidient',
         'classe_id',
+        'nb_pace',
     ];
 
     protected $with = [
