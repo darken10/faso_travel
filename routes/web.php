@@ -199,7 +199,9 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/users',     \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users');
 
     // ─── Contenu ──────────────────────────────────────────────────────────
-    Route::get('/posts',     \App\Livewire\Compagnie\Post\PostManager::class)->name('posts');
+    Route::get('/posts',              \App\Livewire\Compagnie\Post\PostManager::class)->name('posts');
+    Route::get('/posts/create',       \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.create');
+    Route::get('/posts/{postId}/edit', \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.edit');
     Route::get('/documents', \App\Livewire\Compagnie\Document\DocumentManager::class)->name('documents');
 
     // ─── Comptabilité ─────────────────────────────────────────────────────

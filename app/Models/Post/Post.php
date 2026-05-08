@@ -98,7 +98,8 @@ class Post extends Model
 
     function getImageUrl():string
     {
-        return url(Storage::url($this->images_uri));
+        $path = is_array($this->images_uri) ? ($this->images_uri[0] ?? '') : ($this->images_uri ?? '');
+        return url(Storage::url($path));
     }
 
     function getSummary():string{
