@@ -176,10 +176,10 @@ class VoyageTicketController extends Controller
      * @param string $voyageInstanceId
      * @return JsonResponse
      */
-    public function getTicketsByVoyageInstance($voyageInstanceId)
+    public function getTicketsByVoyageInstance($voyageInstance)
     {
         try {
-            $tickets = $this->voyageTicketService->getTicketsByVoyageInstance($voyageInstanceId);
+            $tickets = $this->voyageTicketService->getTicketsByVoyageInstance($voyageInstance);
 
             return response()->json($tickets);
         } catch (\Exception $e) {

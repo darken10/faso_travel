@@ -265,9 +265,9 @@ class TicketController extends Controller
     /**
      * Récupérer les passagers (tickets) d'une instance de voyage
      */
-    public function getPassengers(string $voyageInstanceId): JsonResponse
+    public function getPassengers(string $voyageInstance): JsonResponse
     {
-        $tickets = Ticket::where('voyage_instance_id', $voyageInstanceId)
+        $tickets = Ticket::where('voyage_instance_id', $voyageInstance)
             ->whereIn('statut', [
                 StatutTicket::Payer,
                 StatutTicket::Valider,
@@ -280,7 +280,7 @@ class TicketController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Passagers récupérés avec succès',
-            'data'    => $tickets->map(fn($t) => $this->formatPassenger($t, $voyageInstanceId)),
+            'data'    => $tickets->map(fn($t) => $this->formatPassenger($t, $voyageInstance)),
         ]);
     }
 
