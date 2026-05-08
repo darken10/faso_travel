@@ -312,6 +312,48 @@ class TicketController extends Controller
     }
 
     /**
+     * Retourne le détail d'un passager à partir de l'ID du ticket
+     */
+    public function getPassengerByTicket(string $ticketId): JsonResponse
+    {
+        try {
+            $ticket = Ticket::findOrFail($ticketId);
+            $ticket->load(['user', 'autrePersonne', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver']);
+
+            $isAutre = $ticket->autre_personne_id !== null;
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'id'         => $ticket->id,
+                    'ticket_id'  => $ticket->id,
+                    'name'       => $isAutre ? ($ticket->autrePersonne?->nom ?? 'N/A') : ($ticket->user?->name ?? 'N/A'),
+                    'phone'      => $isAutre ? ($ticket->autrePersonne?->numero ?? null) : ($ticket->user?->numero ?? null),
+                    'seat_number' => $ticket->numero_chaise,
+                    'qr_code'    => $ticket->code_qr,
+                    'code_sms'   => $ticket->code_sms,
+                    'status'     => $this->mapPassengerStatus($ticket->statut),
+                    'boarded_at' => $ticket->valider_at,
+                    'voyage_id'  => $ticket->voyage_instance_id,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Passager introuvable'], 404);
+        }
+    }
+
+    private function mapPassengerStatus(StatutTicket $statut): string
+    {
+        return match ($statut) {
+            StatutTicket::Valider              => 'boarded',
+            StatutTicket::Payer, StatutTicket::Pause => 'pending',
+            StatutTicket::Annuler, StatutTicket::Refuser,
+            StatutTicket::Bloquer, StatutTicket::Suspendre => 'cancelled',
+            default                            => 'pending',
+        };
+    }
+
+    /**
      * Format a ticket for API response
      */
     private function formatTicket(Ticket $ticket): array
