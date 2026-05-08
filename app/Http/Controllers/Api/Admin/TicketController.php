@@ -263,93 +263,69 @@ class TicketController extends Controller
     }
 
     /**
-     * Récupérer les passagers d'un voyage instance
+     * Récupérer les passagers (tickets) d'une instance de voyage
      */
     public function getPassengers(string $voyageInstanceId): JsonResponse
     {
-        \Log::info("Fetching passengers for voyage instance: {$voyageInstanceId}");
-        
         $tickets = Ticket::where('voyage_instance_id', $voyageInstanceId)
-            ->with(['user', 'autrePersonne'])
             ->whereIn('statut', [
                 StatutTicket::Payer,
                 StatutTicket::Valider,
                 StatutTicket::Pause,
                 StatutTicket::Bloquer,
             ])
+            ->with(['user', 'autrePersonne'])
             ->get();
-
-        \Log::info("Found " . count($tickets) . " tickets");
-
-        $passengers = $tickets->map(function ($ticket) {
-            $isAutre = $ticket->autre_personne_id !== null;
-            $passengerName = $isAutre
-                ? ($ticket->autre_personne?->name ?? 'N/A')
-                : ($ticket->user?->name ?? 'N/A');
-            $phone = $isAutre
-                ? ($ticket->autre_personne?->numero ?? '')
-                : ($ticket->user?->numero ?? '');
-            
-            \Log::debug("Ticket: {$ticket->numero_ticket}, PassengerName: {$passengerName}, Phone: {$phone}, IsAutre: {$isAutre}");
-            
-            return [
-                'ticket_id' => $ticket->id,
-                'passenger_name' => $passengerName,
-                'phone' => $phone,
-                'seat_number' => $ticket->numero_chaise,
-                'ticket_statut' => $ticket->statut->value,
-                'ticket_type' => $ticket->type->value,
-                'ticket_numero' => $ticket->numero_ticket,
-                'is_autre_personne' => $isAutre,
-            ];
-        });
 
         return response()->json([
             'success' => true,
             'message' => 'Passagers récupérés avec succès',
-            'data' => $passengers,
+            'data'    => $tickets->map(fn($t) => $this->formatPassenger($t, $voyageInstanceId)),
         ]);
     }
 
     /**
-     * Retourne le détail d'un passager à partir de l'ID du ticket
+     * Retourne le détail d'un passager (ticket) par son ID
      */
     public function getPassengerByTicket(string $ticketId): JsonResponse
     {
         try {
             $ticket = Ticket::findOrFail($ticketId);
-            $ticket->load(['user', 'autrePersonne', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver']);
-
-            $isAutre = $ticket->autre_personne_id !== null;
+            $ticket->load(['user', 'autrePersonne']);
 
             return response()->json([
                 'success' => true,
-                'data'    => [
-                    'id'         => $ticket->id,
-                    'ticket_id'  => $ticket->id,
-                    'name'       => $isAutre ? ($ticket->autrePersonne?->nom ?? 'N/A') : ($ticket->user?->name ?? 'N/A'),
-                    'phone'      => $isAutre ? ($ticket->autrePersonne?->numero ?? null) : ($ticket->user?->numero ?? null),
-                    'seat_number' => $ticket->numero_chaise,
-                    'qr_code'    => $ticket->code_qr,
-                    'code_sms'   => $ticket->code_sms,
-                    'status'     => $this->mapPassengerStatus($ticket->statut),
-                    'boarded_at' => $ticket->valider_at,
-                    'voyage_id'  => $ticket->voyage_instance_id,
-                ],
+                'data'    => $this->formatPassenger($ticket),
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Passager introuvable'], 404);
         }
     }
 
+    private function formatPassenger(Ticket $ticket, ?string $voyageId = null): array
+    {
+        $isAutre = $ticket->autre_personne_id !== null;
+
+        return [
+            'id'          => $ticket->id,
+            'ticket_id'   => $ticket->id,
+            'name'        => $isAutre ? ($ticket->autrePersonne?->nom ?? 'N/A') : ($ticket->user?->name ?? 'N/A'),
+            'phone'       => $isAutre ? ($ticket->autrePersonne?->numero ?? null) : ($ticket->user?->numero ?? null),
+            'seat_number' => $ticket->numero_chaise,
+            'qr_code'     => $ticket->code_qr,
+            'code_sms'    => $ticket->code_sms,
+            'status'      => $this->mapPassengerStatus($ticket->statut),
+            'boarded_at'  => $ticket->valider_at,
+            'voyage_id'   => $voyageId ?? $ticket->voyage_instance_id,
+        ];
+    }
+
     private function mapPassengerStatus(StatutTicket $statut): string
     {
         return match ($statut) {
-            StatutTicket::Valider              => 'boarded',
-            StatutTicket::Payer, StatutTicket::Pause => 'pending',
-            StatutTicket::Annuler, StatutTicket::Refuser,
-            StatutTicket::Bloquer, StatutTicket::Suspendre => 'cancelled',
-            default                            => 'pending',
+            StatutTicket::Valider                        => 'boarded',
+            StatutTicket::Payer, StatutTicket::Pause     => 'pending',
+            default                                      => 'cancelled',
         };
     }
 
