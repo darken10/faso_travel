@@ -87,9 +87,20 @@ class TicketController extends Controller
         return view('ticket.ticket.my-tickets', ['tickets' => $tickets]);
     }
 
-    public function showMyTicket(Ticket $ticket)
+    public function showMyTicket(Ticket $ticket): \Illuminate\View\View
     {
-        return view('ticket.ticket.show-my-ticket', ['ticket' => $ticket]);
+        return view('ticket.ticket.show-my-ticket', [
+            'ticket'    => $ticket,
+            'qrDataUri' => app(\App\Services\Ticket\QrCodeService::class)->dataUri($ticket->code_qr),
+        ]);
+    }
+
+    public function downloadPdf(Ticket $ticket): \Illuminate\Http\Response
+    {
+        return app(\App\Services\Ticket\PdfService::class)->download(
+            $ticket,
+            'ticket-' . str_replace(' ', '-', $ticket->numero_ticket) . '.pdf',
+        );
     }
 
     public function navigateToGare(Ticket $ticket)

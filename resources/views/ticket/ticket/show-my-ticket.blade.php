@@ -185,7 +185,8 @@
         <div class="mt-4 pt-4 border-t border-dashed border-surface-200 dark:border-surface-700">
             @if($ticket?->statut === \App\Enums\StatutTicket::Payer)
                 <div class="flex flex-col items-center gap-2">
-                    <img src="{{ asset(\Illuminate\Support\Facades\Storage::url($ticket?->code_qr_uri)) }}"
+                    {{-- QR généré en mémoire, injecté directement en data URI --}}
+                    <img src="{{ $qrDataUri }}"
                          alt="Code QR" class="w-28 h-28 rounded-lg border border-surface-200 dark:border-surface-700 p-1 bg-white">
                     <div class="flex items-center gap-2 bg-surface-100 dark:bg-surface-900 px-3 py-1.5 rounded-lg">
                         <svg class="w-4 h-4 text-surface-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
@@ -221,6 +222,21 @@
     {{-- Quick Actions --}}
     @if($ticket->statut === \App\Enums\StatutTicket::Payer)
         <div class="grid grid-cols-1 gap-2">
+            {{-- Téléchargement PDF in-memory --}}
+            <a href="{{ route('ticket.download-pdf', $ticket) }}"
+               class="card group flex items-center gap-3 hover:shadow-soft transition-all duration-200">
+                <div class="w-10 h-10 rounded-lg bg-success-100 dark:bg-success-900/30 flex items-center justify-center group-hover:bg-success-200 dark:group-hover:bg-success-900/50 transition-colors">
+                    <svg class="w-5 h-5 text-success-600 dark:text-success-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-medium text-surface-900 dark:text-white">Télécharger le PDF</p>
+                    <p class="text-xs text-surface-400 dark:text-surface-500">Généré à la volée, sans stockage serveur</p>
+                </div>
+                <svg class="w-4 h-4 text-surface-300 dark:text-surface-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+            </a>
+
             <a href="{{ route('ticket.reenvoyer',$ticket) }}" class="card group flex items-center gap-3 hover:shadow-soft transition-all duration-200">
                 <div class="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors">
                     <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>

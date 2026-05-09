@@ -70,6 +70,7 @@ Route::prefix('v2')->group(function () {
         Route::get('/{ticketId}/equivalent-trips', 'getEquivalentTrips')->name('equivalent-trips');
         Route::post('/{ticketId}/regenerate', 'regenerateTicket')->name('regenerate');
         Route::get('/{ticketId}/qr-code', 'getTicketQrCode')->name('qr-code');
+        Route::get('/{ticketId}/pdf', 'downloadPdf')->name('pdf');
     });
     
     // Routes voyages V2

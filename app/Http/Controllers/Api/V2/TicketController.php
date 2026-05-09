@@ -270,15 +270,30 @@ class TicketController extends Controller
     }
 
     /**
-     * Get QR code for a ticket
+     * Get QR code for a ticket.
+     * Retourne le code brut + un data URI PNG généré en mémoire (aucun fichier disque).
      */
     public function getTicketQrCode(string $ticketId): JsonResponse
     {
         $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
 
         return response()->json([
-            'qr_code' => $ticket->code_qr,
-            'qr_image_url' => $ticket->code_qr_uri ? url('storage/' . $ticket->code_qr_uri) : null,
+            'qr_code'      => $ticket->code_qr,
+            'qr_image_uri' => app(\App\Services\Ticket\QrCodeService::class)->dataUri($ticket->code_qr),
+            'pdf_url'      => route('api.v2.tickets.pdf', $ticketId),
         ]);
+    }
+
+    /**
+     * Téléchargement du PDF ticket généré à la volée (aucun fichier disque).
+     */
+    public function downloadPdf(string $ticketId): \Illuminate\Http\Response
+    {
+        $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
+
+        return app(\App\Services\Ticket\PdfService::class)->download(
+            $ticket,
+            'ticket-' . $ticket->numero_ticket . '.pdf',
+        );
     }
 }

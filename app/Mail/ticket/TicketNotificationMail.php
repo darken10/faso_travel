@@ -4,100 +4,85 @@ namespace App\Mail\ticket;
 
 use App\Enums\TypeNotification;
 use App\Models\Ticket\Ticket;
+use App\Services\Ticket\PdfService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class TicketNotificationMail extends Mailable
 {
-
+    use Queueable, SerializesModels;
 
     public function __construct(
         public Ticket           $ticket,
         public TypeNotification $type,
         public string           $recipient,
-        public string           $title   = "",
-        public string           $message = "",
-    )
-    {
-    }
+        public string           $title   = '',
+        public string           $message = '',
+    ) {}
 
     /**
      * @throws \Exception
      */
-    public function build()
+    public function build(): static
     {
         $this->to($this->recipient)
             ->subject($this->title)
             ->from(config('mail.from.address'));
 
-        switch ($this->type) {
-            case TypeNotification::TICKET_MISE_PAUSE:
-                return $this->view('emails.mise-pause-ticket-email', ['ticket' => $this->ticket]);
-            case TypeNotification::TICKET_CLOSED:
-                return $this->view('emails.close-ticket-email', ['ticket' => $this->ticket]);
-            case TypeNotification::TICKET_ACTIVE:
-                return $this->view('emails.active-ticket-email', ['ticket' => $this->ticket]);
-            case TypeNotification::TICKET_SENDED:
-                return $this->view('emails.sended-ticket-email', ['ticket' => $this->ticket]);
-            case TypeNotification::TICKET_RECEIVED:
-                return $this->view('emails.received-ticket-email', ['ticket' => $this->ticket])
-                    ->attach(storage_path(getenv("STORAGE_DIR") . $this->ticket->pdf_uri), [
-                        'mime' => 'application/pdf',
-                        'as'   => 'ticket.pdf',
-                    ]);
-            case TypeNotification::TICKET_VALIDATED:
-                return $this->view('emails.validated-ticket-email', ['ticket' => $this->ticket]);
-            case TypeNotification::TICKET_REPORTED:
-                return $this->view('emails.reported-ticket-email', ['ticket' => $this->ticket]);
-            case TypeNotification::TICKET_UPDATED:
-                return $this->view('emails.updated-ticket-email', ['ticket' => $this->ticket])
-                    ->attach(storage_path(getenv("STORAGE_DIR") . $this->ticket->pdf_uri), [
-                        'mime' => 'application/pdf',
-                        'as'   => 'ticket.pdf',
-                    ]);
-            case TypeNotification::TICKET_PAYER:
-                return $this->view('mail.ticket.ticket-mail', ['ticket' => $this->ticket])
-                    ->attach(storage_path(getenv("STORAGE_DIR") . $this->ticket->pdf_uri), [
-                        'mime' => 'application/pdf',
-                        'as'   => 'ticket.pdf',
-                    ]);
-            case TypeNotification::TICKET_REDELIVERED:
-                return $this->view('emails.redelivred-ticket-email', ['ticket' => $this->ticket])
-                    ->attach(storage_path(getenv("STORAGE_DIR") . $this->ticket->pdf_uri), [
-                        'mime' => 'application/pdf',
-                        'as'   => 'ticket.pdf',
-                    ]);
-            case TypeNotification::TICKET_REGENERATED:{
-                return $this->view('emails.regenerated-ticket-email', ['ticket' => $this->ticket])
-                    ->attach(storage_path(getenv("STORAGE_DIR") . $this->ticket->pdf_uri), [
-                        'mime' => 'application/pdf',
-                        'as'   => 'ticket.pdf',
-                    ]);
-            }
+        // URL publique vers le QR généré à la volée — compatible tous clients mail.
+        $qrImage  = route('ticket.qrcode.image', $this->ticket->code_qr);
+        $viewData = ['ticket' => $this->ticket, 'qrImage' => $qrImage];
 
-            case TypeNotification::VOYAGE_ANNULE:
-                return $this->view('emails.voyage-annule-email', [
-                    'ticket'  => $this->ticket,
-                    'message' => $this->message,
-                ]);
+        return match ($this->type) {
+            TypeNotification::TICKET_MISE_PAUSE  => $this->view('emails.mise-pause-ticket-email', $viewData),
 
-            case TypeNotification::VOYAGE_RETARDE:
-                return $this->view('emails.voyage-retarde-email', [
-                    'ticket'  => $this->ticket,
-                    'message' => $this->message,
-                ]);
+            TypeNotification::TICKET_CLOSED      => $this->view('emails.close-ticket-email', $viewData),
 
-            case TypeNotification::PayerTicket:
-            case TypeNotification::UpdateTicket:
-            case TypeNotification::TransactionTicket:
-            case TypeNotification::RecevoirTicket:
-            case TypeNotification::CreationPost:
-                throw new \Exception('notification de non implementer');
-        }
+            TypeNotification::TICKET_ACTIVE      => $this->view('emails.active-ticket-email', $viewData),
+
+            TypeNotification::TICKET_SENDED      => $this->view('emails.sended-ticket-email', $viewData),
+
+            TypeNotification::TICKET_VALIDATED   => $this->view('emails.validated-ticket-email', $viewData),
+
+            TypeNotification::TICKET_REPORTED    => $this->view('emails.reported-ticket-email', $viewData),
+
+            TypeNotification::VOYAGE_ANNULE      => $this->view('emails.voyage-annule-email', [
+                'ticket'  => $this->ticket,
+                'message' => $this->message,
+            ]),
+
+            TypeNotification::VOYAGE_RETARDE     => $this->view('emails.voyage-retarde-email', [
+                'ticket'  => $this->ticket,
+                'message' => $this->message,
+            ]),
+
+            // Cas avec QR dans le corps + PDF en pièce jointe.
+            TypeNotification::TICKET_RECEIVED    => $this->view('emails.received-ticket-email', $viewData)
+                ->attachData($this->pdfContent(), 'ticket.pdf', ['mime' => 'application/pdf']),
+
+            TypeNotification::TICKET_UPDATED     => $this->view('emails.updated-ticket-email', $viewData)
+                ->attachData($this->pdfContent(), 'ticket.pdf', ['mime' => 'application/pdf']),
+
+            TypeNotification::TICKET_PAYER       => $this->view('mail.ticket.ticket-mail', $viewData)
+                ->attachData($this->pdfContent(), 'ticket.pdf', ['mime' => 'application/pdf']),
+
+            TypeNotification::TICKET_REDELIVERED => $this->view('emails.redelivred-ticket-email', $viewData)
+                ->attachData($this->pdfContent(), 'ticket.pdf', ['mime' => 'application/pdf']),
+
+            TypeNotification::TICKET_REGENERATED => $this->view('emails.regenerated-ticket-email', $viewData)
+                ->attachData($this->pdfContent(), 'ticket.pdf', ['mime' => 'application/pdf']),
+
+            TypeNotification::PayerTicket,
+            TypeNotification::UpdateTicket,
+            TypeNotification::TransactionTicket,
+            TypeNotification::RecevoirTicket,
+            TypeNotification::CreationPost       => throw new \Exception('notification non implémentée : ' . $this->type->name),
+        };
     }
 
+    private function pdfContent(): string
+    {
+        return app(PdfService::class)->output($this->ticket);
+    }
 }

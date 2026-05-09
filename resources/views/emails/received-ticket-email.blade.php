@@ -72,7 +72,7 @@
             <li><strong>Prix :</strong> {{$ticket->prix()}} XOF</li>
         </ul>
         <div class=" center">
-            <img src="{{ asset(\Illuminate\Support\Facades\Storage::url($ticket->code_qr_uri))  }}"   alt="Le code QR">
+            <img src="{{ $qrImage }}" alt="Code QR" style="width:150px;height:150px;display:block;">
         </div>
         <div class=" center">
             {{$ticket->code_sms}}

@@ -20,7 +20,7 @@
 </p>
 
 <div class=" flex justify-center my-4">
-    <img src="{{ asset(\Illuminate\Support\Facades\Storage::url($ticket->code_qr_uri))  }}"   alt="Le code QR">
+    <img src="{{ $qrImage }}" alt="Code QR" style="width:150px;height:150px;display:block;margin:0 auto;">
 </div>
 </body>
 </html>

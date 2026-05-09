@@ -3,61 +3,28 @@
 namespace App\Mail\Ticket;
 
 use App\Models\Ticket\Ticket;
+use App\Services\Ticket\PdfService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Attachment;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class TransfertTicketToUserMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public string $storage_public_dir = 'app/public/';
+    public function __construct(public Ticket $ticket) {}
 
-
-    /**
-     * Create a new message instance.
-     */
-    public function __construct(public Ticket $ticket)
+    public function build(): static
     {
-        //
-    }
-
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
-    {
-        return new Envelope(
-            subject: 'Transfert Ticket To User Mail',
-        );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'mail.ticket.transfert-ticket-to-user-mail',
-
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
-    public function attachments(): array
-    {
-        return [
-            Attachment::fromPath(storage_path($this->storage_public_dir.$this->ticket->pdf_uri))
-                ->as('ticket.pdf')
-                ->withMime('application/pdf'),
-        ];
+        return $this->subject('Transfert de Ticket de Voyage')
+            ->view('mail.ticket.transfert-ticket-to-user-mail', [
+                'ticket'  => $this->ticket,
+                'qrImage' => route('ticket.qrcode.image', $this->ticket->code_qr),
+            ])
+            ->attachData(
+                app(PdfService::class)->output($this->ticket),
+                'ticket.pdf',
+                ['mime' => 'application/pdf'],
+            );
     }
 }

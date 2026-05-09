@@ -98,6 +98,7 @@ Route::domain('app.'.$domain)->group(function () {
             Route::get('/mes-tickets',                                 'myTickets')->name('myTickets');
             Route::get('/mes-tickets/{ticket}/edite',                  'editTicket')->name('editTicket');
             Route::get('/mes-tickets/{ticket}',                        'showMyTicket')->name('show-ticket')->where(['ticket' => '[0-9]+']);
+            Route::get('/mes-tickets/{ticket}/pdf',                    'downloadPdf')->name('download-pdf')->where(['ticket' => '[0-9]+']);
             Route::get('/mes-tickets/{ticket}/navigation',             'navigateToGare')->name('navigate-to-gare')->where(['ticket' => '[0-9]+']);
             Route::get('/re-envoyer/{ticket}',                        'reenvoyer')->name('reenvoyer')->where(['ticket' => '[0-9]+']);
             Route::get('/regenerer/{ticket}',                          'regenerer')->name('regenerer')->where(['ticket' => '[0-9]+']);
@@ -156,6 +157,15 @@ Route::domain('app.'.$domain)->group(function () {
     });
 });
 
+
+// ════════════════════════════════════════════════════════════════════════════
+// Route publique — QR code image (utilisée dans les emails, pas d'auth)
+// Le code_qr est un jeton aléatoire 32 chars, c'est lui le secret.
+// ════════════════════════════════════════════════════════════════════════════
+Route::get('/qr/{code}', [\App\Http\Controllers\Ticket\QrCodeImageController::class, '__invoke'])
+    ->middleware('throttle:60,1')
+    ->name('ticket.qrcode.image')
+    ->where('code', '[A-Za-z0-9_\-]{10,64}');
 
 // ════════════════════════════════════════════════════════════════════════════
 // admin.{domain} — Administration
