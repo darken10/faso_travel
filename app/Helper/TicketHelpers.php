@@ -23,7 +23,17 @@ class TicketHelpers
 
     public static function generateTicketCodeQr(): string
     {
-        return now()->format('ymdHi') . Ulid::generate(now()) . Ulid::generate(now());
+        $length = 32; // desired length of the random string
+        try {
+            // generate enough random bytes, then base64url-encode and trim to length
+            $bytes = random_bytes((int) ceil($length * 3 / 4));
+            $base64 = base64_encode($bytes);
+            $safe = rtrim(strtr($base64, '+/', '-_'), '=');
+            return substr($safe, 0, $length);
+        } catch (\Throwable $e) {
+            // fallback to hex string
+            return substr(bin2hex(random_bytes((int) ceil($length / 2))), 0, $length);
+        }
     }
 
     /**
