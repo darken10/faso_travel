@@ -5,9 +5,12 @@ namespace App\Mail\ticket;
 use App\Enums\TypeNotification;
 use App\Models\Ticket\Ticket;
 use App\Services\Ticket\PdfService;
+use App\Services\Ticket\QrCodeService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Part\DataPart;
 
 class TicketNotificationMail extends Mailable
 {
@@ -30,9 +33,20 @@ class TicketNotificationMail extends Mailable
             ->subject($this->title)
             ->from(config('mail.from.address'));
 
-        // URL publique vers le QR généré à la volée — compatible tous clients mail.
-        $qrImage  = route('ticket.qrcode.image', $this->ticket->code_qr);
-        $viewData = ['ticket' => $this->ticket, 'qrImage' => $qrImage];
+        // Image QR embarquée en CID inline — fonctionne dans Gmail, Outlook, Apple Mail.
+        $dataPart = new DataPart(
+            app(QrCodeService::class)->pngContent($this->ticket->code_qr),
+            'qrcode.png',
+            'image/png',
+        );
+        $dataPart->asInline();
+        $cid = $dataPart->getContentId();
+
+        $this->withSymfonyMessage(static function (Email $message) use ($dataPart): void {
+            $message->addPart($dataPart);
+        });
+
+        $viewData = ['ticket' => $this->ticket, 'qrImage' => 'cid:' . $cid];
 
         return match ($this->type) {
             TypeNotification::TICKET_MISE_PAUSE  => $this->view('emails.mise-pause-ticket-email', $viewData),

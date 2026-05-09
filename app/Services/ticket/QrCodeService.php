@@ -36,11 +36,17 @@ final class QrCodeService
 
     private function build(string $data): ResultInterface
     {
-        return Builder::create()
-            ->writer(new PngWriter())
-            ->data($data)
-            ->size($this->size)
-            ->margin($this->margin)
-            ->build();
+        // Silencer les E_DEPRECATED de la lib Endroid (signatures PHP 8.1+ non mises à jour).
+        $prev = error_reporting(error_reporting() & ~E_DEPRECATED);
+        try {
+            return Builder::create()
+                ->writer(new PngWriter())
+                ->data($data)
+                ->size($this->size)
+                ->margin($this->margin)
+                ->build();
+        } finally {
+            error_reporting($prev);
+        }
     }
 }
