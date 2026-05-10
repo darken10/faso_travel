@@ -108,6 +108,7 @@ Route::prefix('v2')->group(function () {
 
     // ── Notation compagnies V2 ────────────────────────────────────────────────
     Route::prefix('/companies')->name('api.v2.companies.')->group(function () {
+        Route::get('/', [RatingControllerV2::class, 'listCompanies'])->name('list');
         Route::middleware('auth:sanctum')->controller(RatingControllerV2::class)->group(function () {
             Route::get('/{id}/ratings', 'index')->name('ratings.index');
             Route::post('/{id}/ratings', 'store')->name('ratings.store');

@@ -15,7 +15,7 @@ class RatingService
     {
         $compagnie = Compagnie::findOrFail($compagnieId);
 
-        $ratings = Rating::with('user:id,name,profile_photo_url')
+        $ratings = Rating::with('user:id,name,first_name,last_name,profile_photo_path')
             ->where('compagnie_id', $compagnieId)
             ->orderByDesc('created_at')
             ->get();
@@ -56,7 +56,7 @@ class RatingService
             'comment'      => $comment,
         ]);
 
-        return $rating->load('user:id,name,profile_photo_url');
+        return $rating->load('user:id,name,first_name,last_name,profile_photo_path');
     }
 
     /**
@@ -73,7 +73,7 @@ class RatingService
             'comment' => $comment,
         ]);
 
-        return $rating->load('user:id,name,profile_photo_url');
+        return $rating->load('user:id,name,first_name,last_name,profile_photo_path');
     }
 
     private function formatRating(Rating $rating): array

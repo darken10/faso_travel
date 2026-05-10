@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Controller;
+use App\Models\Compagnie\Compagnie;
 use App\Services\V2\RatingService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,31 @@ class RatingController extends Controller
 {
     public function __construct(protected RatingService $service)
     {
+    }
+
+    /**
+     * GET /v2/companies
+     * Liste toutes les compagnies avec leur note moyenne.
+     */
+    public function listCompanies(): JsonResponse
+    {
+        $companies = Compagnie::select(['id', 'name', 'sigle', 'description', 'logo_uri'])
+            ->withCount('ratings')
+            ->withAvg('ratings', 'stars')
+            ->orderByDesc('ratings_avg_stars')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Compagnie $c) => [
+                'id'           => $c->id,
+                'name'         => $c->name,
+                'sigle'        => $c->sigle,
+                'description'  => $c->description,
+                'logo'         => $c->logo_uri,
+                'avg_rating'   => round((float) ($c->ratings_avg_stars ?? 0), 1),
+                'total_ratings' => $c->ratings_count,
+            ]);
+
+        return response()->json(['data' => $companies]);
     }
 
     /**

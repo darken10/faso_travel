@@ -2,16 +2,15 @@
 
 namespace App\Services\V2;
 
+use App\Mail\BugReportSubmitted;
 use App\Models\BugReport;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class BugReportService
 {
-    /**
-     * Enregistre un rapport de bug soumis par l'utilisateur.
-     */
     public function create(
         string $category,
         string $title,
@@ -25,7 +24,7 @@ class BugReportService
             $screenshotUrl = Storage::url($path);
         }
 
-        return BugReport::create([
+        $report = BugReport::create([
             'user_id'        => Auth::id(),
             'category'       => $category,
             'title'          => $title,
@@ -33,5 +32,13 @@ class BugReportService
             'screenshot_url' => $screenshotUrl,
             'status'         => 'open',
         ]);
+
+        $report->load('user');
+
+        $supportEmail = config('mail.support_email', env('SUPPORT_EMAIL', 'support@liptra.net'));
+
+        Mail::to($supportEmail)->send(new BugReportSubmitted($report));
+
+        return $report;
     }
 }
