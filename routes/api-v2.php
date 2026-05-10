@@ -1,5 +1,5 @@
 <?php
- 
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V2\AuthController as AuthControllerV2;
 use App\Http\Controllers\Api\V2\UserController as UserControllerV2;
@@ -9,6 +9,9 @@ use App\Http\Controllers\Api\V2\ArticleController as ArticleControllerV2;
 use App\Http\Controllers\Api\V2\BuyVoyageController as BuyVoyageControllerV2;
 use App\Http\Controllers\Api\V2\NotificationController as NotificationControllerV2;
 use App\Http\Controllers\Api\V2\PaymentController as PaymentControllerV2;
+use App\Http\Controllers\Api\V2\ConversationController as ConversationControllerV2;
+use App\Http\Controllers\Api\V2\RatingController as RatingControllerV2;
+use App\Http\Controllers\Api\V2\BugReportController as BugReportControllerV2;
 
 // API V2
 Route::prefix('v2')->group(function () {
@@ -92,6 +95,33 @@ Route::prefix('v2')->group(function () {
     Route::prefix('/payement')->middleware('auth:sanctum')->controller(PaymentControllerV2::class)->name('api.v2.payement.')->group(function () {
         Route::post('/orange-money', 'orangeMoney')->name('orange-money');
     });
+
+    // ── Messagerie V2 ────────────────────────────────────────────────────────
+    Route::prefix('/conversations')->middleware('auth:sanctum')->controller(ConversationControllerV2::class)->name('api.v2.conversations.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{id}/messages', 'messages')->name('messages');
+        Route::post('/{id}/messages', 'sendMessage')->name('send-message');
+        Route::patch('/{id}/read', 'markAsRead')->name('mark-as-read');
+        Route::delete('/{id}', 'destroy')->name('destroy');
+    });
+
+    // ── Notation compagnies V2 ────────────────────────────────────────────────
+    Route::prefix('/companies')->name('api.v2.companies.')->group(function () {
+        Route::middleware('auth:sanctum')->controller(RatingControllerV2::class)->group(function () {
+            Route::get('/{id}/ratings', 'index')->name('ratings.index');
+            Route::post('/{id}/ratings', 'store')->name('ratings.store');
+        });
+    });
+
+    Route::put('/ratings/{id}', [RatingControllerV2::class, 'update'])
+        ->middleware('auth:sanctum')
+        ->name('api.v2.ratings.update');
+
+    // ── Signalement de bugs V2 ────────────────────────────────────────────────
+    Route::post('/bug-reports', [BugReportControllerV2::class, 'store'])
+        ->middleware('auth:sanctum')
+        ->name('api.v2.bug-reports.store');
 });
 
 

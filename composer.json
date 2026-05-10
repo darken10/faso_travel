@@ -15,6 +15,7 @@
         "intervention/image": "^3.8",
         "laravel/framework": "^11.9",
         "laravel/jetstream": "^5.1",
+        "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.15",
         "laravel/tinker": "^2.9",

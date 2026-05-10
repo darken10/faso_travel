@@ -13,15 +13,10 @@ class Message extends Model
     use HasUuids;
     use SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
-        "conversation_id",
-        "user_id",
-        "message",
+        'conversation_id',
+        'sender_id',
+        'message',
     ];
 
     public function conversation(): BelongsTo
@@ -29,7 +24,8 @@ class Message extends Model
         return $this->belongsTo(Conversation::class);
     }
 
-    public function sender() {
+    public function sender(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'sender_id');
     }
 }

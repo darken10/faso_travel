@@ -2,6 +2,7 @@
 
 namespace App\Models\Compagnie;
 
+use App\Models\Rating;
 use App\Models\User;
 use App\Models\Statut;
 use App\Models\Voyage\Classe;
@@ -77,6 +78,11 @@ class Compagnie extends Model
     function scopeActives(Builder $query)
     {
         return $query;
+    }
+
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(Rating::class);
     }
 
     public function settings(): Compagnie|Builder|HasMany
