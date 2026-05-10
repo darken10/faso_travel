@@ -70,7 +70,7 @@ class ConversationService
         $conversation = $this->findConversationForUser($conversationId);
 
         return $conversation->messages()
-            ->with('sender:id,name,profile_photo_url')
+            ->with('sender:id,name,first_name,last_name,profile_photo_path')
             ->orderByDesc('created_at')
             ->cursorPaginate($perPage, ['*'], 'cursor', $cursor);
     }
@@ -94,7 +94,7 @@ class ConversationService
             'unread_count_agent'  => $conversation->unread_count_agent + 1,
         ]);
 
-        $message->load('sender:id,name,profile_photo_url');
+        $message->load('sender:id,name,first_name,last_name,profile_photo_path');
 
         // Diffusion WebSocket via Reverb
         broadcast(new MessageSent($message))->toOthers();
