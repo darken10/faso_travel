@@ -79,11 +79,12 @@ class Ticket extends Model
     protected function casts(): array
     {
         return [
-            'type'=> TypeTicket::class,
-            'a_bagage'=> 'boolean',
-            'date'=> 'date',
-            'bagages'=> 'array',
-            'statut'=>StatutTicket::class,
+            'type'         => TypeTicket::class,
+            'a_bagage'     => 'boolean',
+            'is_my_ticket' => 'boolean',
+            'date'         => 'date',
+            'bagages'      => 'array',
+            'statut'       => StatutTicket::class,
         ];
     }
 
