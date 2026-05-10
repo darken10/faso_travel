@@ -13,6 +13,7 @@ use App\DTOs\Auth\VerifyOtpDTO;
 use App\DTOs\Auth\ResetPasswordDTO;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
@@ -47,13 +48,35 @@ class AuthService
 
     public function login(LoginDTO $dto): array
     {
-        if (!Auth::attempt(['email' => $dto->email, 'password' => $dto->password])) {
-            throw AuthenticationException::invalidCredentials();
+        if ($dto->email) {
+            // ── Connexion par email ─────────────────────────────────────────
+            if (!Auth::attempt(['email' => $dto->email, 'password' => $dto->password])) {
+                throw AuthenticationException::invalidCredentials();
+            }
+            $user = User::where('email', $dto->email)->firstOrFail();
+        } else {
+            // ── Connexion par numéro de téléphone ───────────────────────────
+            // Normalise le numéro : on ne garde que les chiffres puis on tente
+            // plusieurs formes (avec/sans indicatif +226)
+            $digits = preg_replace('/\D/', '', $dto->phone);
+
+            // Tente d'abord le numéro local (8 derniers chiffres si >8 chiffres)
+            $local  = strlen($digits) > 8 ? ltrim(substr($digits, -8), '0') : $digits;
+
+            $user = User::where('numero', $digits)
+                ->orWhere('numero', (int) $digits)
+                ->orWhere('numero', $local)
+                ->orWhere('numero', (int) $local)
+                ->first();
+
+            if (!$user || !Hash::check($dto->password, $user->password)) {
+                throw AuthenticationException::invalidCredentials();
+            }
+
+            Auth::login($user);
         }
 
-        $user = User::where('email', $dto->email)->firstOrFail();
-
-        // Révoquer les anciens tokens pour éviter l'accumulation
+        // Révocation des anciens tokens pour éviter l'accumulation
         $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 

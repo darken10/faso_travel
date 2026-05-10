@@ -42,12 +42,17 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validated = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
+            'email'    => 'required_without:phone|nullable|email|max:255',
+            'phone'    => 'required_without:email|nullable|string|max:20',
+            'password' => 'required|string',
+        ], [
+            'email.required_without'    => 'L\'email est requis si aucun numéro de téléphone n\'est fourni.',
+            'phone.required_without'    => 'Le numéro de téléphone est requis si aucun email n\'est fourni.',
+            'password.required'         => 'Le mot de passe est requis.',
         ]);
 
         try {
-            $dto    = new LoginDTO($validated['email'], $validated['password']);
+            $dto    = LoginDTO::fromRequest($validated);
             $result = $this->authService->login($dto);
 
             return response()->json([

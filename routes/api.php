@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\Voyage\VoyageApiContoller;
@@ -11,8 +12,8 @@ use App\Http\Controllers\Api\Admin\Ticket\TicketApiController;
 
 // ─── Authentification V1 ──────────────────────────────────────────────────────
 Route::prefix('/auth')->name('api.auth.')->middleware('throttle:api-auth')->group(function () {
-    Route::post('/register', [UserController::class, 'register'])->name('register');
-    Route::post('/login', [UserController::class, 'login'])->name('login');
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
+    Route::post('/login', [AuthController::class, 'login'])->name('login');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', fn(Request $request) => $request->user())->name('me');
