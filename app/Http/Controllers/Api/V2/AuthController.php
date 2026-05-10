@@ -43,14 +43,15 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email'    => 'required|string|email',
+            'email'    => 'required_without:phone|nullable|string|email|max:255',
+            'phone'    => 'required_without:email|nullable|string|max:20',
             'password' => 'required|string',
         ]);
 
         try {
             $result = $this->authService->login(LoginDTO::fromRequest($validated));
         } catch (AuthenticationException $e) {
-            return response()->json(['error' => true, 'message' => $e->getMessage()], 401);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 401);
         }
 
         return response()->json([
