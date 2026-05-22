@@ -35,7 +35,7 @@ class AgentAuthController extends Controller
         if (!$user || !Hash::check($password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Identifiants incorrects ou compte non associé à une compagnie.',
+                'message' => 'Identifiants incorrects. Veuillez contacter votre administrateur.',
             ], 401);
         }
 
