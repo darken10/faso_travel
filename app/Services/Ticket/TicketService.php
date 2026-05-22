@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\ticket;
+namespace App\Services\Ticket;
 
 use App\Enums\TypeTicket;
 use App\Enums\StatutTicket;
