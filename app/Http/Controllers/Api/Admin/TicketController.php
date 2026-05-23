@@ -274,7 +274,7 @@ class TicketController extends Controller
                 StatutTicket::Pause,
                 StatutTicket::Bloquer,
             ])
-            ->with(['user', 'autre_personne'])
+            ->with(['user', 'autre_personne', 'voyageInstance.voyage.classe'])
             ->get();
 
         return response()->json([
@@ -291,7 +291,7 @@ class TicketController extends Controller
     {
         try {
             $ticket = Ticket::findOrFail($ticketId);
-            $ticket->load(['user', 'autre_personne']);
+            $ticket->load(['user', 'autre_personne', 'voyageInstance.voyage.classe']);
 
             return response()->json([
                 'success' => true,
@@ -304,19 +304,24 @@ class TicketController extends Controller
 
     private function formatPassenger(Ticket $ticket, ?string $voyageId = null): array
     {
-        $isAutre = $ticket->autre_personne_id !== null;
+        $isAutre  = $ticket->autre_personne_id !== null;
+        $instance = $ticket->voyageInstance;
 
         return [
-            'id'          => $ticket->id,
-            'ticket_id'   => $ticket->id,
-            'name'        => $isAutre ? ($ticket->autre_personne?->nom ?? 'N/A') : ($ticket->user?->name ?? 'N/A'),
-            'phone'       => $isAutre ? ($ticket->autre_personne?->numero ?? null) : ($ticket->user?->numero ?? null),
-            'seat_number' => $ticket->numero_chaise,
-            'qr_code'     => $ticket->code_qr,
-            'code_sms'    => $ticket->code_sms,
-            'status'      => $this->mapPassengerStatus($ticket->statut),
-            'boarded_at'  => $ticket->valider_at,
-            'voyage_id'   => $voyageId ?? $ticket->voyage_instance_id,
+            'id'            => $ticket->id,
+            'ticket_id'     => $ticket->id,
+            'numero_ticket' => $ticket->numero_ticket,
+            'name'          => $isAutre ? ($ticket->autre_personne?->nom ?? 'N/A') : ($ticket->user?->name ?? 'N/A'),
+            'phone'         => $isAutre ? ($ticket->autre_personne?->numero ?? null) : ($ticket->user?->numero ?? null),
+            'seat_number'   => $ticket->numero_chaise,
+            'qr_code'       => $ticket->code_qr,
+            'code_sms'      => $ticket->code_sms,
+            'status'        => $this->mapPassengerStatus($ticket->statut),
+            'boarded_at'    => $ticket->valider_at,
+            'voyage_id'     => $voyageId ?? $ticket->voyage_instance_id,
+            'type'          => $ticket->type?->value,
+            'classe'        => $instance?->voyage?->classe?->name,
+            'date'          => $ticket->date?->format('Y-m-d'),
         ];
     }
 
