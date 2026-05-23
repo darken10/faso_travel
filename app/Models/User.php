@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\StatutUser;
+use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Auth\VerifyEmailNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Models\Compagnie\Compagnie;
@@ -156,6 +158,16 @@ class User extends Authenticatable implements MustVerifyEmail
     function ticketsAutrePersonne()
     {
         return $this->morphMany(Ticket::class,'autre_personne');
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification());
     }
 
 }

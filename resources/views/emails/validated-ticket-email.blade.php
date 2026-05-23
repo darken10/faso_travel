@@ -1,72 +1,94 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ticket de Voyage - Validation</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            background: #dc3545;
-            color: #ffffff;
-            padding: 15px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-        }
-        .content {
-            padding: 20px;
-            text-align: left;
-        }
-        .footer {
-            text-align: center;
-            padding: 15px;
-            font-size: 12px;
-            color: #777;
-        }
-        .button {
-            display: inline-block;
-            background: #dc3545;
-            color: #ffffff;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="header">
-        <h2>Ticket de Voyage - Utilisation Confirmée</h2>
+@extends('emails.email-layout')
+
+@section('title', 'Embarquement confirmé — LIPTRA')
+@section('preheader', 'Votre ticket ' . $ticket->numero_ticket . ' a été validé avec succès. Bon voyage !')
+
+@section('header-bg', '#059669')
+
+@section('header-icon')
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+@endsection
+
+@section('header-title', 'Embarquement confirmé !')
+@section('header-sub', 'Votre ticket a été validé avec succès')
+
+@section('body')
+  @php
+    $passengerName = $ticket->autre_personne_id
+      ? ($ticket->autre_personne->nom ?? 'Passager')
+      : ($ticket->user->name ?? 'Passager');
+
+    $instance  = $ticket->voyageInstance;
+    $depart    = $instance?->villeDepart()?->name ?? '—';
+    $arrivee   = $instance?->villeArrive()?->name ?? '—';
+    $dateVoyage = $instance?->date?->format('d/m/Y') ?? '—';
+    $heureVoyage = $instance?->heure?->format('H\hi') ?? '—';
+    $validatedAt = $ticket->valider_at
+      ? \Carbon\Carbon::parse($ticket->valider_at)->setTimezone('Africa/Ouagadougou')->format('d/m/Y à H\hi')
+      : now()->format('d/m/Y à H\hi');
+  @endphp
+
+  <p class="greeting">Bonjour {{ $passengerName }},</p>
+
+  <p class="text">
+    Votre embarquement a été <strong style="color:#059669;">confirmé</strong> par l'agent de contrôle.
+    Nous vous souhaitons un excellent voyage !
+  </p>
+
+  {{-- Route --}}
+  <div class="route-badge" style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:12px;">
+    <div class="route-city" style="color:#065F46;">{{ $depart }}</div>
+    <div class="route-arrow">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6EE7B7" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </div>
-    <div class="content">
-        <p>Bonjour <strong>[Nom de l'utilisateur]</strong>,</p>
-        <p>Votre ticket a été validé par un administrateur et vient d'être utilisé.</p>
-        <p><strong>Détails du Ticket :</strong></p>
-        <ul>
-            <li><strong>Numéro du ticket :</strong> [Numéro du ticket]</li>
-            <li><strong>Départ :</strong> [Ville de départ]</li>
-            <li><strong>Destination :</strong> [Ville d'arrivée]</li>
-            <li><strong>Statut :</strong> Utilisé</li>
-        </ul>
-        <p>Merci d'avoir voyagé avec nous. Si vous avez des questions, n'hésitez pas à nous contacter :</p>
-        <p><a href="[Lien support]" class="button">Contacter le support</a></p>
+    <div class="route-city" style="color:#065F46;">{{ $arrivee }}</div>
+  </div>
+
+  {{-- Ticket details --}}
+  <div class="info-card">
+    <div class="info-row">
+      <span class="info-label">N° Ticket</span>
+      <span class="info-value mono" style="color:#059669;">{{ $ticket->numero_ticket }}</span>
     </div>
-    <div class="footer">
-        <p>&copy; 2025 Votre Compagnie de Voyage. Tous droits réservés.</p>
+    <div class="info-row">
+      <span class="info-label">Date de voyage</span>
+      <span class="info-value">{{ $dateVoyage }}</span>
     </div>
-</div>
-</body>
-</html>
+    <div class="info-row">
+      <span class="info-label">Heure de départ</span>
+      <span class="info-value">{{ $heureVoyage }}</span>
+    </div>
+    @if($ticket->numero_chaise)
+    <div class="info-row">
+      <span class="info-label">Siège</span>
+      <span class="info-value">Siège n°{{ $ticket->numero_chaise }}</span>
+    </div>
+    @endif
+    <div class="info-row">
+      <span class="info-label">Validé le</span>
+      <span class="info-value">{{ $validatedAt }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Statut</span>
+      <span class="info-value" style="color:#059669; display:flex; align-items:center; gap:6px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:#059669;display:inline-block;"></span>
+        Embarqué
+      </span>
+    </div>
+  </div>
+
+  {{-- QR code reference --}}
+  @if(isset($qrImage))
+  <div class="qr-section">
+    <img src="{{ $qrImage }}" alt="QR Code du ticket" style="width:140px;height:140px;border:4px solid #ECFDF5;border-radius:12px;">
+    <div class="qr-caption">QR code de référence — {{ $ticket->numero_ticket }}</div>
+  </div>
+  @endif
+
+  <div class="alert alert-info">
+    <strong>Bon à savoir :</strong> Conservez ce mail comme justificatif de votre voyage.
+    En cas de problème, contactez notre support en précisant votre numéro de ticket.
+  </div>
+@endsection
