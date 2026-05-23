@@ -304,23 +304,22 @@ class TicketController extends Controller
 
     private function formatPassenger(Ticket $ticket, ?string $voyageId = null): array
     {
-        $isAutre  = $ticket->autre_personne_id !== null;
-        $instance = $ticket->voyageInstance;
+        $t = $this->formatTicket($ticket);
 
         return [
-            'id'            => $ticket->id,
-            'ticket_id'     => $ticket->id,
-            'numero_ticket' => $ticket->numero_ticket,
-            'name'          => $isAutre ? ($ticket->autre_personne?->nom ?? 'N/A') : ($ticket->user?->name ?? 'N/A'),
-            'phone'         => $isAutre ? ($ticket->autre_personne?->numero ?? null) : ($ticket->user?->numero ?? null),
-            'seat_number'   => $ticket->numero_chaise,
-            'qr_code'       => $ticket->code_qr,
+            'id'            => $t['id'],
+            'ticket_id'     => $t['id'],
+            'numero_ticket' => $t['numero_ticket'],
+            'name'          => $t['passenger_name'],
+            'phone'         => $t['passenger_phone'],
+            'seat_number'   => $t['numero_chaise'],
+            'qr_code'       => $t['code_qr'],
             'code_sms'      => $ticket->code_sms,
             'status'        => $this->mapPassengerStatus($ticket->statut),
-            'boarded_at'    => $ticket->valider_at,
+            'boarded_at'    => $t['valider_at'],
             'voyage_id'     => $voyageId ?? $ticket->voyage_instance_id,
-            'type'          => $ticket->type?->value,
-            'classe'        => $instance?->voyage?->classe?->name,
+            'type'          => $t['type'],
+            'classe'        => $t['classe'],
             'date'          => $ticket->date?->format('Y-m-d'),
         ];
     }
