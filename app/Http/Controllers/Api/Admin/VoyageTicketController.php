@@ -126,7 +126,7 @@ class VoyageTicketController extends Controller
         return [
             'id'             => $instance->id,
             'numero_voyage'  => $voyage?->reference ?? $instance->id,
-            'departure_time' => $instance->date . 'T' . ($instance->heure ?? '00:00'),
+            'departure_time' => $instance->date->format('Y-m-d') . 'T' . ($instance->heure ? $instance->heure->format('H:i:s') : '00:00:00'),
             'status'         => $this->mapStatut($instance->statut),
             'total_seats'    => $instance->nb_place,
             'boarded_count'  => $boarded,
@@ -148,6 +148,7 @@ class VoyageTicketController extends Controller
                 'id'              => $instance->care->id,
                 'immatriculation' => $instance->care->immatrculation,
                 'capacity'        => $instance->care->number_place,
+                'numero'          => $instance->care->numero,
             ] : null,
             'driver'         => $instance->chauffer ? [
                 'id'    => $instance->chauffer->id,

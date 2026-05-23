@@ -28,7 +28,7 @@ class TicketController extends Controller
     public function verifyByQrCode(string $ticketCode): JsonResponse
     {
         $ticket = Ticket::where('code_qr', $ticketCode)
-            ->with(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'autre_personne'])
+            ->with(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe', 'autre_personne'])
             ->first();
 
         if (!$ticket) {
@@ -55,7 +55,7 @@ class TicketController extends Controller
             $ticket = Ticket::findOrFail($ticketId);
             \Log::info("Ticket found: {$ticket->numero_ticket}");
             
-            $ticket->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'autre_personne']);
+            $ticket->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe', 'autre_personne']);
 
             return response()->json([
                 'success' => true,
@@ -135,7 +135,7 @@ class TicketController extends Controller
         }
 
         $this->validationService->validate($ticket);
-        $ticket->refresh()->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver']);
+        $ticket->refresh()->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe']);
 
         return response()->json([
             'success' => true,
@@ -170,7 +170,7 @@ class TicketController extends Controller
             $this->validationService->block($ticket);
         }
 
-        $ticket->refresh()->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver']);
+        $ticket->refresh()->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe']);
 
         return response()->json([
             'success' => true,
@@ -347,8 +347,8 @@ class TicketController extends Controller
             'type' => $ticket->type->value,
             'statut' => $ticket->statut->value,
             'code_qr' => $ticket->code_qr,
-            'code_sms' => $ticket->code_sms,
             'valider_at' => $ticket->valider_at,
+            'classe' => $voyage?->classe?->name,
             'passenger_name' => $isAutre
                 ? ($ticket->autre_personne?->nom ?? 'N/A')
                 : ($ticket->user?->name ?? 'N/A'),

@@ -20,6 +20,7 @@ class CareManager extends Component
     public ?int $editingId = null;
 
     public string $immatrculation = '';
+    public string $numero = '';
     public string $number_place = '';
     public string $statut = '';
     public string $etat = '';
@@ -46,7 +47,7 @@ class CareManager extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['editingId', 'immatrculation', 'number_place', 'statut', 'etat', 'image']);
+        $this->reset(['editingId', 'immatrculation', 'numero', 'number_place', 'statut', 'etat', 'image']);
         $this->statut = StatutCare::Disponible->value;
         $this->showModal = true;
     }
@@ -56,6 +57,7 @@ class CareManager extends Component
         $care = Care::findOrFail($id);
         $this->editingId      = $id;
         $this->immatrculation = $care->immatrculation;
+        $this->numero         = $care->numero ?? '';
         $this->number_place   = $care->number_place;
         $this->statut         = $care->statut->value ?? '';
         $this->etat           = $care->etat ?? '';
@@ -66,6 +68,7 @@ class CareManager extends Component
     {
         $this->validate([
             'immatrculation' => 'required|string|max:100',
+            'numero'         => 'nullable|string|max:20',
             'number_place'   => 'required|integer|min:1',
             'statut'         => 'required|string',
             'etat'           => 'nullable|string|max:255',
@@ -74,6 +77,7 @@ class CareManager extends Component
 
         $data = [
             'immatrculation' => $this->immatrculation,
+            'numero'         => $this->numero ?: null,
             'number_place'   => $this->number_place,
             'statut'         => $this->statut,
             'etat'           => $this->etat ?: null,
@@ -92,7 +96,7 @@ class CareManager extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['editingId', 'immatrculation', 'number_place', 'statut', 'etat', 'image']);
+        $this->reset(['editingId', 'immatrculation', 'numero', 'number_place', 'statut', 'etat', 'image']);
     }
 
     public function delete(int $id): void
@@ -104,7 +108,10 @@ class CareManager extends Component
     public function render()
     {
         $cares = Care::withCount('documents')
-            ->when($this->search, fn($q) => $q->where('immatrculation', 'like', "%{$this->search}%"))
+            ->when($this->search, fn($q) => $q
+                ->where('immatrculation', 'like', "%{$this->search}%")
+                ->orWhere('numero', 'like', "%{$this->search}%")
+            )
             ->latest()
             ->paginate(15);
 

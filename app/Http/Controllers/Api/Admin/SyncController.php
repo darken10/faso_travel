@@ -72,7 +72,7 @@ class SyncController extends Controller
         return [
             'id'              => $instance->id,
             'numero_voyage'   => $voyage?->reference ?? $instance->id,
-            'departure_time'  => $instance->date . 'T' . $instance->heure,
+            'departure_time'  => $instance->date->format('Y-m-d') . 'T' . ($instance->heure ? $instance->heure->format('H:i:s') : '00:00:00'),
             'status'          => $this->mapStatut($instance->statut),
             'total_seats'     => $instance->nb_place,
             'boarded_count'   => $boarded,
@@ -80,6 +80,12 @@ class SyncController extends Controller
             'departure'       => ['id' => $trajet?->depart?->id ?? 0, 'name' => $trajet?->depart?->name ?? ''],
             'arrival'         => ['id' => $trajet?->arriver?->id ?? 0, 'name' => $trajet?->arriver?->name ?? ''],
             'compagnie'       => ['id' => $voyage?->compagnie?->id ?? 0, 'name' => $voyage?->compagnie?->name ?? ''],
+            'vehicle'         => $instance->care ? [
+                'id'              => $instance->care->id,
+                'immatriculation' => $instance->care->immatrculation,
+                'capacity'        => $instance->care->number_place,
+                'numero'          => $instance->care->numero,
+            ] : null,
             'updated_at'      => $instance->updated_at,
         ];
     }

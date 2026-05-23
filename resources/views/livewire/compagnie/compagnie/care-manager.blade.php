@@ -34,7 +34,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
         <input wire:model.live.debounce.300ms="search" type="text"
-               placeholder="Rechercher par immatriculation..."
+               placeholder="Rechercher par immatriculation ou numéro..."
                class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white shadow-sm">
     </div>
 
@@ -89,8 +89,14 @@
                     <div class="h-1 {{ $statusConfig['band'] }} opacity-60"></div>
 
                     <div class="p-4">
-                        {{-- Plate number --}}
+                        {{-- Plate number + bus number --}}
                         <div class="flex items-center gap-2 mb-3">
+                            @if($care->numero)
+                                <div class="bg-blue-600 rounded-lg px-3 py-1.5 text-center flex-shrink-0">
+                                    <p class="text-xs text-blue-200 leading-none mb-0.5">Bus</p>
+                                    <p class="font-bold text-white text-sm tracking-wider">{{ $care->numero }}</p>
+                                </div>
+                            @endif
                             <div class="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-center">
                                 <p class="text-xs text-gray-400 leading-none mb-0.5">Immatriculation</p>
                                 <p class="font-mono font-bold text-gray-800 text-sm tracking-wider">{{ $care->immatrculation }}</p>
@@ -168,7 +174,12 @@
                     </button>
                 </div>
                 <form wire:submit="save" class="px-6 py-5 space-y-4" enctype="multipart/form-data">
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">N° de bus</label>
+                            <input wire:model="numero" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Ex: 56, 12A">
+                            @error('numero') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Immatriculation *</label>
                             <input wire:model="immatrculation" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Ex: BF-1234-AB">

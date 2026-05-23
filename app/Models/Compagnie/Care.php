@@ -21,6 +21,7 @@ class Care extends Model
 
     protected $fillable = [
         'immatrculation',
+        'numero',
         'number_place',
         'statut',
         'etat',
