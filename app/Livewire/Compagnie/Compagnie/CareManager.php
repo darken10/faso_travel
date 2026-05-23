@@ -89,10 +89,10 @@ class CareManager extends Component
 
         if ($this->editingId) {
             Care::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Véhicule mis à jour.');
+            $this->dispatch('toast', message: 'Véhicule mis à jour avec succès.', type: 'success');
         } else {
             Care::create($data);
-            session()->flash('success', 'Véhicule créé.');
+            $this->dispatch('toast', message: 'Nouveau véhicule créé.', type: 'success');
         }
 
         $this->showModal = false;
@@ -102,7 +102,7 @@ class CareManager extends Component
     public function delete(int $id): void
     {
         Care::findOrFail($id)->delete();
-        session()->flash('success', 'Véhicule supprimé.');
+        $this->dispatch('toast', message: 'Véhicule supprimé.', type: 'warning');
     }
 
     public function render()

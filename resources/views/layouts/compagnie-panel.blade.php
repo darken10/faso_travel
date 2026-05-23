@@ -239,6 +239,7 @@
 
 <livewire:compagnie.document.document-slide-over />
 @stack('modals')
+<x-toast-stack />
 @livewireScripts
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
