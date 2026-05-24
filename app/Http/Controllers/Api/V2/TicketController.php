@@ -39,7 +39,7 @@ class TicketController extends Controller
     public function getUserTickets(): JsonResponse
     {
         $tickets = $this->ticketQueryService->getUserTickets();
-        return response()->json($tickets);
+        return response()->json(['success' => true, 'data' => $tickets]);
     }
 
     /**
@@ -48,7 +48,7 @@ class TicketController extends Controller
     public function getUserTicketDetails(string $ticketId): JsonResponse
     {
         $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
-        return response()->json($ticket);
+        return response()->json(['success' => true, 'data' => $ticket]);
     }
 
     /**
