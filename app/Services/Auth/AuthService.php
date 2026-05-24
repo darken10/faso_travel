@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Exceptions\AuthenticationException;
 use App\Mail\Auth\OtpMail;
+use Laravel\Sanctum\PersonalAccessToken;
 use Twilio\Rest\Client as TwilioClient;
 
 class AuthService
@@ -41,9 +42,10 @@ class AuthService
             'compagnie_id'       => $dto->compagnie_id,
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $accessToken  = $user->createToken('access_token', ['*'], now()->addDay())->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(30))->plainTextToken;
 
-        return ['user' => $user, 'token' => $token];
+        return ['user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
     }
 
     public function login(LoginDTO $dto): array
@@ -78,9 +80,35 @@ class AuthService
 
         // Révocation des anciens tokens pour éviter l'accumulation
         $user->tokens()->delete();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $accessToken  = $user->createToken('access_token', ['*'], now()->addDay())->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(30))->plainTextToken;
 
-        return ['user' => $user, 'token' => $token];
+        return ['user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
+    }
+
+    public function refresh(?string $rawToken): array
+    {
+        if (!$rawToken) {
+            throw new AuthenticationException('Refresh token manquant', 401);
+        }
+
+        $tokenModel = PersonalAccessToken::findToken($rawToken);
+
+        if (!$tokenModel || $tokenModel->name !== 'refresh_token' || $tokenModel->isExpired()) {
+            throw new AuthenticationException('Refresh token invalide ou expiré', 401);
+        }
+
+        /** @var User $user */
+        $user = $tokenModel->tokenable;
+
+        // Rotation : supprimer l'ancien refresh token + access tokens
+        $tokenModel->delete();
+        $user->tokens()->where('name', 'access_token')->delete();
+
+        $accessToken  = $user->createToken('access_token', ['*'], now()->addDay())->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(30))->plainTextToken;
+
+        return ['token' => $accessToken, 'refresh_token' => $refreshToken];
     }
 
     public function logout(): bool

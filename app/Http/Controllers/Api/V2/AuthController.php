@@ -34,9 +34,10 @@ class AuthController extends Controller
         $result = $this->authService->register(RegisterDTO::fromRequest($validated));
 
         return response()->json([
-            'success' => true,
-            'user'    => $result['user'],
-            'token'   => $result['token'],
+            'success'       => true,
+            'user'          => $result['user'],
+            'token'         => $result['token'],
+            'refresh_token' => $result['refresh_token'],
         ], 201);
     }
 
@@ -55,9 +56,25 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'success' => true,
-            'user'    => $result['user'],
-            'token'   => $result['token'],
+            'success'       => true,
+            'user'          => $result['user'],
+            'token'         => $result['token'],
+            'refresh_token' => $result['refresh_token'],
+        ]);
+    }
+
+    public function refresh(Request $request): JsonResponse
+    {
+        try {
+            $result = $this->authService->refresh($request->bearerToken());
+        } catch (\App\Exceptions\AuthenticationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 401);
+        }
+
+        return response()->json([
+            'success'       => true,
+            'token'         => $result['token'],
+            'refresh_token' => $result['refresh_token'],
         ]);
     }
 

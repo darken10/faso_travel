@@ -19,6 +19,7 @@ Route::prefix('v2')->group(function () {
     Route::prefix('/auth')->controller(AuthControllerV2::class)->middleware('throttle:10,1')->group(function () {
         Route::post('/register', 'register');
         Route::post('/login', 'login');
+        Route::post('/refresh', 'refresh')->withoutMiddleware('throttle:10,1')->middleware('throttle:30,1');
         Route::post('/logout', 'logout')->middleware('auth:sanctum')->withoutMiddleware('throttle:10,1');
         Route::post('/send-otp', 'sendOtp')->middleware('throttle:5,1');
         Route::post('/verify-otp', 'verifyOtp');
