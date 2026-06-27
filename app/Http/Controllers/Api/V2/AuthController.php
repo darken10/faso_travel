@@ -6,11 +6,13 @@ use App\DTOs\Auth\LoginDTO;
 use App\DTOs\Auth\RegisterDTO;
 use App\DTOs\Auth\ResetPasswordDTO;
 use App\DTOs\Auth\VerifyOtpDTO;
+use App\Enums\OtpChannelType;
 use App\Exceptions\AuthenticationException;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -20,15 +22,24 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
-            'email'                 => 'required|string|email|max:255|unique:users',
+            'email'                 => 'nullable|required_without:numero|string|email|max:255|unique:users',
             'password'              => 'required|string|min:8|confirmed',
             'first_name'            => 'nullable|string|max:255',
             'last_name'             => 'nullable|string|max:255',
             'sexe'                  => 'nullable|string',
-            'numero'                => 'nullable|integer',
-            'numero_identifiant'    => 'nullable|string|max:10',
+            'numero'                => 'nullable|required_without:email|integer',
+            'numero_identifiant'    => 'nullable|required_with:numero|string|max:10',
             'role'                  => 'nullable|string',
             'compagnie_id'          => 'nullable|exists:compagnies,id',
+            'verification_method'   => ['nullable', Rule::in(OtpChannelType::values())],
+        ], [
+            'email.required_without'  => 'L\'adresse email est requise si aucun numéro n\'est fourni.',
+            'email.email'             => 'L\'adresse email est invalide.',
+            'email.unique'            => 'Cette adresse email est déjà utilisée.',
+            'numero.required_without' => 'Le numéro de téléphone est requis si aucun email n\'est fourni.',
+            'password.required'       => 'Le mot de passe est requis.',
+            'password.min'            => 'Le mot de passe doit comporter au moins 8 caractères.',
+            'password.confirmed'      => 'La confirmation du mot de passe ne correspond pas.',
         ]);
 
         $result = $this->authService->register(RegisterDTO::fromRequest($validated));
@@ -113,35 +124,137 @@ class AuthController extends Controller
         return response()->json(['verified' => $result]);
     }
 
-    public function forgotPassword(Request $request): JsonResponse
+    // ── Vérification de compte (utilisateur authentifié) ────────────────────
+
+    /** Liste des canaux de vérification disponibles + canal par défaut. */
+    public function verificationChannels(Request $request): JsonResponse
+    {
+        return response()->json($this->authService->verificationChannels($request->user()));
+    }
+
+    /** (Re)envoi d'un OTP de vérification de compte via le canal choisi. */
+    public function sendVerificationOtp(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => 'required|string|email',
+            'channel' => ['nullable', Rule::in(OtpChannelType::values())],
         ]);
 
-        $sent = $this->authService->forgotPassword($validated['email']);
+        $channel = isset($validated['channel']) ? OtpChannelType::from($validated['channel']) : null;
 
-        if (!$sent) {
-            return response()->json(['error' => true, 'message' => "Impossible d'envoyer le lien de réinitialisation"], 400);
+        try {
+            $used = $this->authService->sendVerificationOtp($request->user(), $channel);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['sent' => true]);
+        return response()->json(['sent' => true, 'channel' => $used->value]);
+    }
+
+    /** Confirme l'OTP et marque le compte comme vérifié. */
+    public function verifyAccount(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'otp' => 'required|string|size:6',
+        ]);
+
+        $verified = $this->authService->verifyAccount($request->user(), $validated['otp']);
+
+        if (!$verified) {
+            return response()->json(['error' => true, 'message' => 'Code invalide ou expiré.'], 422);
+        }
+
+        return response()->json([
+            'success'  => true,
+            'verified' => true,
+            'user'     => $request->user()->refresh(),
+        ]);
+    }
+
+    // ── Mot de passe oublié ─────────────────────────────────────────────────
+
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        // Sur l'app mobile (header X-Client: mobile) → réinitialisation par OTP.
+        // Sur le web → comportement inchangé (lien de réinitialisation par email).
+        if (!$this->isMobile($request)) {
+            $validated = $request->validate(['email' => 'required|string|email']);
+
+            $sent = $this->authService->forgotPassword($validated['email']);
+
+            if (!$sent) {
+                return response()->json(['error' => true, 'message' => "Impossible d'envoyer le lien de réinitialisation"], 400);
+            }
+
+            return response()->json(['sent' => true]);
+        }
+
+        $validated = $request->validate([
+            'identifier' => 'required|string',
+            'channel'    => ['nullable', Rule::in(OtpChannelType::values())],
+        ]);
+
+        $user = $this->authService->findByIdentifier($validated['identifier']);
+
+        if (!$user) {
+            return response()->json(['error' => true, 'message' => 'Aucun compte ne correspond à cet identifiant.'], 404);
+        }
+
+        $channel = isset($validated['channel']) ? OtpChannelType::from($validated['channel']) : null;
+
+        try {
+            $used = $this->authService->sendPasswordResetOtp($user, $channel);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => true, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['sent' => true, 'channel' => $used->value]);
     }
 
     public function resetPassword(Request $request): JsonResponse
     {
+        // Web : flux par token inchangé. Mobile : flux par OTP.
+        if (!$this->isMobile($request)) {
+            $validated = $request->validate([
+                'email'    => 'required|string|email',
+                'token'    => 'required|string',
+                'password' => 'required|string|min:8',
+            ]);
+
+            $reset = $this->authService->resetPassword(ResetPasswordDTO::fromRequest($validated));
+
+            if (!$reset) {
+                return response()->json(['error' => true, 'message' => 'Impossible de réinitialiser le mot de passe'], 400);
+            }
+
+            return response()->json(['reset' => true]);
+        }
+
         $validated = $request->validate([
-            'email'    => 'required|string|email',
-            'token'    => 'required|string',
-            'password' => 'required|string|min:8',
+            'identifier' => 'required|string',
+            'otp'        => 'required|string|size:6',
+            'password'   => 'required|string|min:8|confirmed',
+        ], [
+            'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
         ]);
 
-        $reset = $this->authService->resetPassword(ResetPasswordDTO::fromRequest($validated));
+        $user = $this->authService->findByIdentifier($validated['identifier']);
+
+        if (!$user) {
+            return response()->json(['error' => true, 'message' => 'Aucun compte ne correspond à cet identifiant.'], 404);
+        }
+
+        $reset = $this->authService->resetPasswordWithOtp($user, $validated['otp'], $validated['password']);
 
         if (!$reset) {
-            return response()->json(['error' => true, 'message' => 'Impossible de réinitialiser le mot de passe'], 400);
+            return response()->json(['error' => true, 'message' => 'Code invalide ou expiré.'], 422);
         }
 
         return response()->json(['reset' => true]);
+    }
+
+    /** Détecte si la requête provient de l'app mobile. */
+    private function isMobile(Request $request): bool
+    {
+        return strtolower((string) $request->header('X-Client')) === 'mobile';
     }
 }

@@ -25,6 +25,13 @@ Route::prefix('v2')->group(function () {
         Route::post('/verify-otp', 'verifyOtp');
         Route::post('/forgot-password', 'forgotPassword')->middleware('throttle:5,1');
         Route::post('/reset-password', 'resetPassword');
+
+        // Vérification du compte (utilisateur authentifié)
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/verification/channels', 'verificationChannels')->withoutMiddleware('throttle:10,1');
+            Route::post('/verification/send', 'sendVerificationOtp')->withoutMiddleware('throttle:10,1')->middleware('throttle:5,1');
+            Route::post('/verification/confirm', 'verifyAccount');
+        });
     });
 
     // Routes utilisateur V2

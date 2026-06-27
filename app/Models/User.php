@@ -73,6 +73,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $appends = [
         'profile_photo_url',
+        'is_verified',
     ];
 
     /**
@@ -84,10 +85,27 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'statut' => StatutUser::class,
         ];
+    }
+
+    /**
+     * Le compte est considéré comme vérifié si l'email OU le téléphone l'est.
+     */
+    public function isVerified(): bool
+    {
+        return $this->email_verified_at !== null || $this->phone_verified_at !== null;
+    }
+
+    /**
+     * Accesseur exposé dans l'API : { ..., "is_verified": true }
+     */
+    public function getIsVerifiedAttribute(): bool
+    {
+        return $this->isVerified();
     }
 
     protected static function boot(): void

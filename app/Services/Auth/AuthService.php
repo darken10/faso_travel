@@ -20,12 +20,16 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Exceptions\AuthenticationException;
 use App\Mail\Auth\OtpMail;
+use App\Enums\OtpChannelType;
+use App\Services\Otp\OtpService;
 use Laravel\Sanctum\PersonalAccessToken;
 use Twilio\Rest\Client as TwilioClient;
 
 class AuthService
 {
     private const OTP_TTL_MINUTES = 10;
+
+    public function __construct(private readonly OtpService $otp) {}
 
     public function register(RegisterDTO $dto): array
     {
@@ -42,10 +46,50 @@ class AuthService
             'compagnie_id'       => $dto->compagnie_id,
         ]);
 
+        // Envoi de l'OTP de vérification via le canal choisi (ou le canal par défaut).
+        // On n'échoue pas l'inscription si l'envoi échoue : l'utilisateur pourra
+        // renvoyer le code depuis l'écran de vérification.
+        try {
+            $this->otp->send($user, $dto->verification_method, 'verification');
+        } catch (\Throwable $e) {
+            Log::warning('Envoi OTP inscription échoué', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+        }
+
         $accessToken  = $user->createToken('access_token', ['*'], now()->addDay())->plainTextToken;
         $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(30))->plainTextToken;
 
         return ['user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
+    }
+
+    // ── Vérification de compte (OTP) ────────────────────────────────────────
+
+    /** Canaux de vérification disponibles + canal par défaut pour l'utilisateur. */
+    public function verificationChannels(User $user): array
+    {
+        return [
+            'channels' => $this->otp->availableChannels($user),
+            'default'  => $this->otp->defaultChannel($user)->value,
+        ];
+    }
+
+    /** (Re)envoi d'un OTP de vérification de compte. */
+    public function sendVerificationOtp(User $user, ?OtpChannelType $channel): OtpChannelType
+    {
+        return $this->otp->send($user, $channel, 'verification');
+    }
+
+    /** Vérifie l'OTP et marque le compte (email ou téléphone) comme vérifié. */
+    public function verifyAccount(User $user, string $otp): bool
+    {
+        $channel = $this->otp->verify($user, $otp, 'verification');
+
+        if ($channel === null) {
+            return false;
+        }
+
+        $user->forceFill([$channel->verifiedColumn() => now()])->save();
+
+        return true;
     }
 
     public function login(LoginDTO $dto): array
@@ -212,5 +256,48 @@ class AuthService
         );
 
         return $status === Password::PASSWORD_RESET;
+    }
+
+    // ── Réinitialisation du mot de passe par OTP (app mobile) ───────────────
+
+    /** Retrouve un utilisateur par email ou numéro de téléphone. */
+    public function findByIdentifier(string $identifier): ?User
+    {
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            return User::where('email', $identifier)->first();
+        }
+
+        $digits = preg_replace('/\D/', '', $identifier);
+        $local  = strlen($digits) > 8 ? ltrim(substr($digits, -8), '0') : $digits;
+
+        return User::where('numero', $digits)
+            ->orWhere('numero', (int) $digits)
+            ->orWhere('numero', $local)
+            ->orWhere('numero', (int) $local)
+            ->first();
+    }
+
+    /** Envoi d'un OTP de réinitialisation de mot de passe. */
+    public function sendPasswordResetOtp(User $user, ?OtpChannelType $channel): OtpChannelType
+    {
+        return $this->otp->send($user, $channel, 'password_reset');
+    }
+
+    /** Vérifie l'OTP puis change le mot de passe. */
+    public function resetPasswordWithOtp(User $user, string $otp, string $password): bool
+    {
+        if ($this->otp->verify($user, $otp, 'password_reset') === null) {
+            return false;
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($password),
+        ])->setRememberToken(Str::random(60));
+
+        $user->save();
+
+        event(new PasswordReset($user));
+
+        return true;
     }
 }

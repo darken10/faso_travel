@@ -41,4 +41,8 @@ return [
         'simulation' => env('ORANGE_MONEY_SIMULATION', false),
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+    ],
+
 ];
