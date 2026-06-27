@@ -52,10 +52,11 @@ class PaymentController extends Controller
             'trip_type'       => 'required|in:one-way,round-trip',
             'is_for_self'     => 'required|boolean',
             'seat_number'     => 'nullable|integer|min:1',
-            'passenger_name'  => 'required_if:is_for_self,false|nullable|string|max:255',
-            'passenger_phone' => 'required_if:is_for_self,false|nullable|string|max:30',
-            'passenger_email' => 'nullable|email|max:255',
-            'relation'        => 'nullable|string|max:100',
+            'passenger_name'               => 'required_if:is_for_self,false|nullable|string|max:255',
+            'passenger_numero_identifiant' => 'nullable|string|max:10',
+            'passenger_phone'              => 'required_if:is_for_self,false|nullable|string|max:30',
+            'passenger_email'              => 'nullable|email|max:255',
+            'relation'                     => 'nullable|string|max:100',
         ]);
 
         $voyageInstance = VoyageInstance::with(['care', 'voyage'])->findOrFail($validated['trip_id']);
@@ -122,12 +123,19 @@ class PaymentController extends Controller
 
             if (!$validated['is_for_self']) {
                 $nameParts = array_pad(explode(' ', trim($validated['passenger_name'] ?? ''), 2), 2, '');
-                $ticketData['autre_personne']  = true;
-                $ticketData['first_name']      = $nameParts[0];
-                $ticketData['last_name']       = $nameParts[1];
-                $ticketData['email']           = $validated['passenger_email'] ?? null;
-                $ticketData['numero']          = $validated['passenger_phone'] ?? null;
-                $ticketData['lien_relation']   = $validated['relation'] ?? null;
+
+                // Le numéro est stocké en chiffres uniquement (colonne entière) ;
+                // l'indicatif (+226…) est conservé à part dans numero_identifiant.
+                $rawPhone   = preg_replace('/\D/', '', $validated['passenger_phone'] ?? '');
+                $localPhone = strlen($rawPhone) > 8 ? ltrim(substr($rawPhone, -8), '0') : $rawPhone;
+
+                $ticketData['autre_personne']    = true;
+                $ticketData['first_name']        = $nameParts[0];
+                $ticketData['last_name']         = $nameParts[1];
+                $ticketData['email']             = $validated['passenger_email'] ?? null;
+                $ticketData['numero']            = $localPhone !== '' ? (int) $localPhone : null;
+                $ticketData['numero_identifiant'] = $validated['passenger_numero_identifiant'] ?? '+226';
+                $ticketData['lien_relation']     = $validated['relation'] ?? null;
             }
 
             $ticket = $this->ticketService->createTicket($ticketData);

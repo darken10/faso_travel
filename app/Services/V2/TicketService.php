@@ -82,16 +82,18 @@ class TicketService
         // Si le ticket est pour une autre personne
         if (isset($data['autre_personne']) && $data['autre_personne']) {
             $autrePersonne = new AutrePersonne();
-            $autrePersonne->first_name     = $data['first_name'] ?? '';
-            $autrePersonne->last_name      = $data['last_name'] ?? '';
-            $autrePersonne->email          = $data['email'] ?? null;
-            $autrePersonne->numero         = $data['numero'] ?? null;
-            $autrePersonne->lien_relation  = $data['lien_relation'] ?? null;
+            $autrePersonne->first_name         = $data['first_name'] ?? '';
+            $autrePersonne->last_name          = $data['last_name'] ?? '';
+            $autrePersonne->email              = $data['email'] ?? null;
+            $autrePersonne->numero             = isset($data['numero']) ? (int) preg_replace('/\D/', '', (string) $data['numero']) : null;
+            $autrePersonne->numero_identifiant = $data['numero_identifiant'] ?? '+226';
+            $autrePersonne->lien_relation      = $data['lien_relation'] ?? null;
             $autrePersonne->save();
 
             $ticket->autre_personne_id = $autrePersonne->id;
+            $ticket->is_my_ticket      = false;
         }
-        
+
         $ticket->save();
         
         return $ticket->load(['voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'autre_personne']);

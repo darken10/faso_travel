@@ -28,6 +28,8 @@ class UserResource extends JsonResource
             'numero' => $this->numero,
             'numero_identifiant' => $this->numero_identifiant,
             'email_verified_at' => $this->email_verified_at,
+            'phone_verified_at' => $this->phone_verified_at,
+            'is_verified' => $this->resource->isVerified(),
             'two_factor_confirmed_at' => $this->two_factor_confirmed_at,
             'current_team_id' => $this->current_team_id,
             'profile_photo_path' => $this->profile_photo_path,
