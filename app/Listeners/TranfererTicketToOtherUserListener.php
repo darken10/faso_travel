@@ -32,9 +32,19 @@ class TranfererTicketToOtherUserListener
     {
         PayementEffectuerEvent::dispatch($event->ticket);
         $email = TicketHelpers::getEmailToSendMail($event->ticket);
-        $event->ticket->user->notify(new  TicketNotification($event->ticket,TypeNotification::TICKET_SENDED,"Ticket {$event->ticket->numero_ticket} tansferé" ));
 
-        Mail::to($email)->send(new TicketNotificationMail($event->ticket,TypeNotification::TICKET_RECEIVED,$email,"Reception de ticket {$event->ticket->numero_ticket} tansferé"));
+        // Notifie l'expéditeur que son ticket a bien été transféré
+        $event->sender?->notify(new TicketNotification($event->ticket, TypeNotification::TICKET_SENDED, "Ticket {$event->ticket->numero_ticket} transféré"));
+
+        // Envoie le ticket au destinataire (avec le nom de l'expéditeur dans le mail)
+        Mail::to($email)->send(new TicketNotificationMail(
+            $event->ticket,
+            TypeNotification::TICKET_RECEIVED,
+            $email,
+            "Réception du ticket {$event->ticket->numero_ticket}",
+            '',
+            $event->sender?->name,
+        ));
         /*
         Mail::to($event->ticket->user->email)->send(new TransfertTicketToOrherUserMyMail($event->ticket));*/
     }

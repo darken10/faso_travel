@@ -20,9 +20,22 @@ class TicketNotificationMail extends Mailable
         public Ticket           $ticket,
         public TypeNotification $type,
         public string           $recipient,
-        public string           $title   = '',
-        public string           $message = '',
+        public string           $title      = '',
+        public string           $message    = '',
+        public ?string          $senderName = null,
     ) {}
+
+    /** Nom à afficher pour le passager / destinataire du ticket. */
+    private function recipientName(): string
+    {
+        if ($this->ticket->is_my_ticket) {
+            return $this->ticket->user?->name ?? '';
+        }
+
+        return $this->ticket->autre_personne?->name
+            ?? $this->ticket->user?->name
+            ?? '';
+    }
 
     /**
      * @throws \Exception
@@ -46,7 +59,12 @@ class TicketNotificationMail extends Mailable
             $message->addPart($dataPart);
         });
 
-        $viewData = ['ticket' => $this->ticket, 'qrImage' => 'cid:' . $cid];
+        $viewData = [
+            'ticket'        => $this->ticket,
+            'qrImage'       => 'cid:' . $cid,
+            'recipientName' => $this->recipientName(),
+            'senderName'    => $this->senderName,
+        ];
 
         return match ($this->type) {
             TypeNotification::TICKET_MISE_PAUSE  => $this->view('emails.mise-pause-ticket-email', $viewData),

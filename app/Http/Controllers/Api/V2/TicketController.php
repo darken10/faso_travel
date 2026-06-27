@@ -91,12 +91,16 @@ class TicketController extends Controller
     public function transferTicket(Request $request, string $ticketId): JsonResponse
     {
         $validated = $request->validate([
-            'recipient_phone' => 'required|string|max:30',
-            'recipient_name'  => 'required|string|max:255',
-            'password'        => 'required|string',
+            'recipient_phone'              => 'required|string|max:30',
+            'recipient_numero_identifiant' => 'nullable|string|max:10',
+            'recipient_name'               => 'required|string|max:255',
+            'password'                     => 'required|string',
         ]);
 
         $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
+
+        // Expéditeur (avant toute réattribution de propriété)
+        $sender = Auth::user();
 
         // Ownership check
         if (!$ticket->is_my_ticket && $ticket->transferer_a_user_id !== null) {
@@ -121,22 +125,45 @@ class TicketController extends Controller
             ], 422);
         }
 
-        // Determine recipient: registered user (by phone) or new AutrePersonne
-        $recipient = User::where('numero', $validated['recipient_phone'])->first();
+        // Normalise le numéro : chiffres uniquement, on garde le numéro local (8 derniers).
+        $rawPhone   = preg_replace('/\D/', '', $validated['recipient_phone']);
+        $localPhone = strlen($rawPhone) > 8 ? ltrim(substr($rawPhone, -8), '0') : $rawPhone;
+        $indicatif  = $validated['recipient_numero_identifiant'] ?? '+226';
+
+        // Recherche d'un utilisateur enregistré par numéro (plusieurs formes possibles).
+        $recipient = User::where('numero', $rawPhone)
+            ->orWhere('numero', (int) $rawPhone)
+            ->orWhere('numero', $localPhone)
+            ->orWhere('numero', (int) $localPhone)
+            ->first();
+
+        // On ne transfère pas un ticket à soi-même.
+        if ($recipient && $recipient->id === Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous ne pouvez pas transférer un ticket à vous-même.',
+            ], 422);
+        }
 
         DB::beginTransaction();
         try {
             if ($recipient) {
-                $ticket->is_my_ticket         = false;
+                // Option A — réattribution de propriété : le ticket devient celui du destinataire.
+                $ticket->user_id              = $recipient->id;
+                $ticket->is_my_ticket         = true;
+                $ticket->autre_personne_id    = null;
                 $ticket->transferer_at        = now();
                 $ticket->transferer_a_user_id = $recipient->id;
                 $ticket->save();
             } else {
-                $nameParts    = array_pad(explode(' ', trim($validated['recipient_name']), 2), 2, '');
+                // Destinataire non inscrit : on garde le ticket chez l'acheteur,
+                // rattaché à une AutrePersonne.
+                $nameParts     = array_pad(explode(' ', trim($validated['recipient_name']), 2), 2, '');
                 $autrePersonne = AutrePersonne::create([
-                    'nom'     => $nameParts[0],
-                    'prenom'  => $nameParts[1],
-                    'contact' => $validated['recipient_phone'],
+                    'first_name'         => $nameParts[0],
+                    'last_name'          => $nameParts[1],
+                    'numero'             => $localPhone !== '' ? (int) $localPhone : null,
+                    'numero_identifiant' => $indicatif,
                 ]);
                 $ticket->autre_personne_id    = $autrePersonne->id;
                 $ticket->is_my_ticket         = false;
@@ -156,7 +183,7 @@ class TicketController extends Controller
         }
 
         try {
-            TranfererTicketToOtherUserEvent::dispatch($ticket->fresh());
+            TranfererTicketToOtherUserEvent::dispatch($ticket->fresh(), $sender);
         } catch (\Throwable $e) {
             Log::warning('[TicketV2] Transfer event failed: ' . $e->getMessage());
         }

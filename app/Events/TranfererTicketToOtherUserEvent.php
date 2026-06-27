@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Ticket\Ticket;
+use App\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -20,7 +21,7 @@ class TranfererTicketToOtherUserEvent
     /**
      * Create a new event instance.
      */
-    public function __construct(public Ticket $ticket)
+    public function __construct(public Ticket $ticket, public ?User $sender = null)
     {
         //
     }
