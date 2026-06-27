@@ -84,10 +84,14 @@ class TicketService
             $autrePersonne = new AutrePersonne();
             $autrePersonne->first_name         = $data['first_name'] ?? '';
             $autrePersonne->last_name          = $data['last_name'] ?? '';
+            $autrePersonne->sexe               = $data['sexe'] ?? null;
             $autrePersonne->email              = $data['email'] ?? null;
-            $autrePersonne->numero             = isset($data['numero']) ? (int) preg_replace('/\D/', '', (string) $data['numero']) : null;
+            $autrePersonne->numero             = isset($data['numero']) && $data['numero'] !== null
+                ? (int) preg_replace('/\D/', '', (string) $data['numero'])
+                : null;
             $autrePersonne->numero_identifiant = $data['numero_identifiant'] ?? '+226';
             $autrePersonne->lien_relation      = $data['lien_relation'] ?? null;
+            $autrePersonne->note               = $data['note'] ?? null;
             $autrePersonne->save();
 
             $ticket->autre_personne_id = $autrePersonne->id;

@@ -40,11 +40,12 @@ class BuyVoyageController extends Controller
 
             'passenger.first_name' => 'required_if:isForSelf,false|string|max:255',
             'passenger.last_name' => 'required_if:isForSelf,false|string|max:255',
-            'passenger.email' => 'required_if:isForSelf,false|string|max:255',
-            'passenger.sexe' => 'required_if:isForSelf,false|string|max:255',
-            'passenger.numero' => 'required_if:isForSelf,false|string|max:255',
-            'passenger.numero_identifiant' => 'required_if:isForSelf,false|string|max:255',
+            'passenger.sexe' => 'required_if:isForSelf,false|string|in:Homme,Femme,Autre',
             'passenger.lien_relation' => 'required_if:isForSelf,false|string|max:255',
+            'passenger.email' => 'nullable|string|email|max:255',
+            'passenger.numero' => 'nullable|string|max:255',
+            'passenger.numero_identifiant' => 'nullable|string|max:255',
+            'passenger.note' => 'nullable|string|max:500',
 
             'a_bagage' => 'nullable|boolean',
             'bagages_data' => 'nullable|array',

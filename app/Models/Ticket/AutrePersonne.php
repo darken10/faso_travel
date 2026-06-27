@@ -22,6 +22,7 @@ class AutrePersonne extends Model
       'numero',
       'numero_identifiant',
       'lien_relation',
+      'note',
     ];
 
     protected static function boot(): void

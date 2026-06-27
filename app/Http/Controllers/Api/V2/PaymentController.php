@@ -9,6 +9,8 @@ use App\Enums\StatutTicket;
 use App\Enums\StatutPayement;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
+use App\Enums\LienRelationAutrePersonneTicket;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -52,11 +54,19 @@ class PaymentController extends Controller
             'trip_type'       => 'required|in:one-way,round-trip',
             'is_for_self'     => 'required|boolean',
             'seat_number'     => 'nullable|integer|min:1',
-            'passenger_name'               => 'required_if:is_for_self,false|nullable|string|max:255',
-            'passenger_numero_identifiant' => 'nullable|string|max:10',
-            'passenger_phone'              => 'required_if:is_for_self,false|nullable|string|max:30',
+            'passenger_first_name'         => 'required_if:is_for_self,false|nullable|string|max:255',
+            'passenger_last_name'          => 'required_if:is_for_self,false|nullable|string|max:255',
+            'passenger_sexe'               => 'required_if:is_for_self,false|nullable|string|in:Homme,Femme,Autre',
+            'passenger_lien_relation'      => ['required_if:is_for_self,false', 'nullable', 'string', Rule::in(\App\Enums\LienRelationAutrePersonneTicket::values())],
             'passenger_email'              => 'nullable|email|max:255',
-            'relation'                     => 'nullable|string|max:100',
+            'passenger_numero_identifiant' => 'nullable|string|max:10',
+            'passenger_phone'              => 'nullable|string|max:30',
+            'passenger_note'               => 'nullable|string|max:500',
+        ], [
+            'passenger_first_name.required_if'    => 'Le prénom du passager est requis.',
+            'passenger_last_name.required_if'     => 'Le nom du passager est requis.',
+            'passenger_sexe.required_if'          => 'Le sexe du passager est requis.',
+            'passenger_lien_relation.required_if' => 'Le lien avec le passager est requis.',
         ]);
 
         $voyageInstance = VoyageInstance::with(['care', 'voyage'])->findOrFail($validated['trip_id']);
@@ -122,20 +132,20 @@ class PaymentController extends Controller
             ];
 
             if (!$validated['is_for_self']) {
-                $nameParts = array_pad(explode(' ', trim($validated['passenger_name'] ?? ''), 2), 2, '');
-
                 // Le numéro est stocké en chiffres uniquement (colonne entière) ;
                 // l'indicatif (+226…) est conservé à part dans numero_identifiant.
                 $rawPhone   = preg_replace('/\D/', '', $validated['passenger_phone'] ?? '');
                 $localPhone = strlen($rawPhone) > 8 ? ltrim(substr($rawPhone, -8), '0') : $rawPhone;
 
-                $ticketData['autre_personne']    = true;
-                $ticketData['first_name']        = $nameParts[0];
-                $ticketData['last_name']         = $nameParts[1];
-                $ticketData['email']             = $validated['passenger_email'] ?? null;
-                $ticketData['numero']            = $localPhone !== '' ? (int) $localPhone : null;
+                $ticketData['autre_personne']     = true;
+                $ticketData['first_name']         = $validated['passenger_first_name'] ?? '';
+                $ticketData['last_name']          = $validated['passenger_last_name'] ?? '';
+                $ticketData['sexe']               = $validated['passenger_sexe'] ?? null;
+                $ticketData['email']              = $validated['passenger_email'] ?? null;
+                $ticketData['numero']             = $localPhone !== '' ? (int) $localPhone : null;
                 $ticketData['numero_identifiant'] = $validated['passenger_numero_identifiant'] ?? '+226';
-                $ticketData['lien_relation']     = $validated['relation'] ?? null;
+                $ticketData['lien_relation']      = $validated['passenger_lien_relation'] ?? null;
+                $ticketData['note']               = $validated['passenger_note'] ?? null;
             }
 
             $ticket = $this->ticketService->createTicket($ticketData);
