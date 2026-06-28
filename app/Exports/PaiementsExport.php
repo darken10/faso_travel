@@ -18,7 +18,7 @@ class PaiementsExport implements FromQuery, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['Date', 'N° Ticket', 'Client', 'Trajet', 'Montant (XOF)', 'Moyen', 'Agent'];
+        return ['Date', 'N° Ticket', 'Client', 'Trajet', 'Montant net (XOF)', 'Code promo', 'Réduction (XOF)', 'Moyen', 'Agent'];
     }
 
     /** @param \App\Models\Ticket\Payement $p */
@@ -36,6 +36,8 @@ class PaiementsExport implements FromQuery, WithHeadings, WithMapping
             $client,
             ($vi?->voyage?->trajet?->depart?->name ?? '—') . ' → ' . ($vi?->voyage?->trajet?->arriver?->name ?? '—'),
             (int) $p->montant,
+            $t?->promoCode?->code ?? '',
+            (int) ($t?->reduction ?? 0),
             $p->moyen_payment?->value ?? (string) $p->moyen_payment,
             $t?->user?->name ?? '—',
         ];

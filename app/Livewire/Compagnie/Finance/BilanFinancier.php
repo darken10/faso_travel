@@ -8,6 +8,7 @@ use App\Helper\QueryHelpers;
 use App\Models\Finance\CategorieDepense;
 use App\Models\Finance\Depense;
 use App\Models\Finance\Recette;
+use App\Models\Ticket\Ticket;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -68,6 +69,13 @@ class BilanFinancier extends Component
         $totalDepenses = Depense::where('compagnie_id', $compagnieId)->sum('montant');
         $solde = $totalRecettes - $totalDepenses;
 
+        // Réductions accordées via codes promo (informatif : la recette ci-dessus est
+        // déjà nette, on expose la remise et la recette brute correspondante).
+        $totalReductionsPromo = (int) Ticket::withoutGlobalScopes()
+            ->whereHas('voyageInstance.voyage', fn ($q) => $q->where('compagnie_id', $compagnieId))
+            ->whereIn('statut', [StatutTicket::Payer, StatutTicket::Valider])
+            ->sum('reduction');
+
         // This month
         $recettesMois = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
                 ->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->sum('montant')
@@ -81,7 +89,8 @@ class BilanFinancier extends Component
             'doughnutData',
             'totalRecettes', 'totalDepenses', 'solde',
             'recettesMois', 'depensesMois',
-            'totalTicketRecettes', 'totalManualRecettes'
+            'totalTicketRecettes', 'totalManualRecettes',
+            'totalReductionsPromo'
         ));
     }
 }

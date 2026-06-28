@@ -3,6 +3,8 @@
 namespace App\Livewire\Compagnie\Finance;
 
 use App\Models\Finance\PromoCode;
+use App\Models\Ticket\Ticket;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -99,6 +101,46 @@ class PromoManager extends Component
     {
         PromoCode::where('compagnie_id', Auth::user()->compagnie_id)->findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Code promo supprimé.');
+    }
+
+    public function exportPdf()
+    {
+        $compagnieId = Auth::user()->compagnie_id;
+
+        $promos = PromoCode::where('compagnie_id', $compagnieId)
+            ->when($this->search, fn ($q) => $q->where('code', 'like', '%' . strtoupper($this->search) . '%'))
+            ->latest()
+            ->get();
+
+        // Utilisations réelles + réduction cumulée par code promo (une seule requête).
+        $stats = Ticket::withoutGlobalScopes()
+            ->whereIn('promo_code_id', $promos->pluck('id'))
+            ->selectRaw('promo_code_id, COUNT(*) as utilisations, COALESCE(SUM(reduction), 0) as reduction')
+            ->groupBy('promo_code_id')
+            ->get()
+            ->keyBy('promo_code_id');
+
+        $rows = $promos->map(fn ($p) => [
+            'code'         => $p->code,
+            'type'         => $p->type,
+            'valeur'       => $p->valeur,
+            'periode'      => ($p->date_debut?->format('d/m/Y') ?? '—') . ' → ' . ($p->date_fin?->format('d/m/Y') ?? '∞'),
+            'active'       => $p->active,
+            'usage_limit'  => $p->usage_limit,
+            'utilisations' => (int) ($stats[$p->id]->utilisations ?? 0),
+            'reduction'    => (int) ($stats[$p->id]->reduction ?? 0),
+        ]);
+
+        $totalUtilisations = (int) $rows->sum('utilisations');
+        $totalReduction    = (int) $rows->sum('reduction');
+        $compagnie         = Auth::user()->compagnie;
+
+        $pdf = Pdf::loadView('exports.promos', compact('rows', 'totalUtilisations', 'totalReduction', 'compagnie'));
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'codes-promo-' . now()->format('Y-m-d') . '.pdf',
+        );
     }
 
     public function render()

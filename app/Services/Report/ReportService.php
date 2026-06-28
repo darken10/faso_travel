@@ -38,6 +38,13 @@ class ReportService
         $revenueBilletterie = $tickets->sum(fn ($t) => $t->payements->sum('montant'));
         $ticketsCount       = $tickets->count();
 
+        // Réductions accordées via codes promo sur la période.
+        // NB : revenueBilletterie est déjà NET (Payement.montant est le montant
+        // réellement encaissé, après remise) ; on expose la remise pour la transparence
+        // et on en déduit la recette brute (avant remise).
+        $reductionsPromo = (int) $tickets->sum('reduction');
+        $ticketsAvecPromo = $tickets->whereNotNull('promo_code_id')->count();
+
         // ── Top trajets (nb tickets + recette + remplissage) ───────────────────
         $topTrajets = $tickets
             ->groupBy(fn ($t) => ($t->voyageInstance?->voyage?->trajet?->depart?->name ?? '—')
@@ -91,6 +98,9 @@ class ReportService
             'start'                => $start,
             'end'                  => $end,
             'revenueBilletterie'   => (int) $revenueBilletterie,
+            'reductionsPromo'      => $reductionsPromo,
+            'revenueBrut'          => (int) $revenueBilletterie + $reductionsPromo,
+            'ticketsAvecPromo'     => $ticketsAvecPromo,
             'recettesManuelles'    => $recettesManuelles,
             'totalRecettes'        => $totalRecettes,
             'totalDepenses'        => $totalDepenses,
@@ -112,7 +122,7 @@ class ReportService
             ->whereBetween('created_at', [$start->copy()->startOfDay(), $end->copy()->endOfDay()])
             ->where('statut', StatutPayement::Complete->value)
             ->with([
-                'ticket.user', 'ticket.autre_personne',
+                'ticket.user', 'ticket.autre_personne', 'ticket.promoCode',
                 'ticket.voyageInstance.voyage.trajet.depart',
                 'ticket.voyageInstance.voyage.trajet.arriver',
             ])

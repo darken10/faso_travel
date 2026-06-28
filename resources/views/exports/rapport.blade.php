@@ -40,9 +40,15 @@
     </table>
     <table style="width:100%; font-size:11px; margin-bottom:6px;">
         <tr>
-            <td>Billetterie : <strong>{{ number_format($data['revenueBilletterie'], 0, ',', ' ') }} F</strong></td>
+            <td>Billetterie (net) : <strong>{{ number_format($data['revenueBilletterie'], 0, ',', ' ') }} F</strong></td>
             <td>Recettes manuelles : <strong>{{ number_format($data['recettesManuelles'], 0, ',', ' ') }} F</strong></td>
         </tr>
+        @if(($data['reductionsPromo'] ?? 0) > 0)
+        <tr>
+            <td>Réductions promo accordées : <strong style="color:#7c3aed;">−{{ number_format($data['reductionsPromo'], 0, ',', ' ') }} F</strong> ({{ $data['ticketsAvecPromo'] }} ticket{{ $data['ticketsAvecPromo'] > 1 ? 's' : '' }})</td>
+            <td>Recette brute (avant remise) : <strong>{{ number_format($data['revenueBrut'], 0, ',', ' ') }} F</strong></td>
+        </tr>
+        @endif
     </table>
 
     {{-- Top trajets --}}

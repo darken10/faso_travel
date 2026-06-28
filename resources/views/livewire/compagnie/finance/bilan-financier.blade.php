@@ -15,6 +15,12 @@
             <p class="text-xs text-gray-500 mb-1">Total recettes</p>
             <p class="text-2xl font-bold text-green-600">{{ number_format($totalRecettes, 0, ',', ' ') }} <span class="text-sm font-normal text-gray-400">F</span></p>
             <p class="text-xs text-gray-400 mt-1">Tickets: {{ number_format($totalTicketRecettes, 0, ',', ' ') }} F · Manuel: {{ number_format($totalManualRecettes, 0, ',', ' ') }} F</p>
+            @if($totalReductionsPromo > 0)
+                <p class="text-xs text-purple-500 mt-1">
+                    <span class="font-medium">−{{ number_format($totalReductionsPromo, 0, ',', ' ') }} F</span> de réductions promo
+                    <span class="text-gray-400">· brut {{ number_format($totalTicketRecettes + $totalReductionsPromo, 0, ',', ' ') }} F</span>
+                </p>
+            @endif
         </div>
         <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <p class="text-xs text-gray-500 mb-1">Total dépenses</p>
