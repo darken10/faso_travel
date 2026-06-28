@@ -113,6 +113,38 @@
                             </div>
                         </div>
 
+                        {{-- Plan des sièges --}}
+                        @if($voyage_instance_id && $totalSeats > 0)
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">Choisir la chaise *</label>
+                                    <div class="flex items-center gap-3 text-xs text-gray-500">
+                                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-100 border border-gray-300"></span> Libre</span>
+                                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-600"></span> Choisie</span>
+                                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-300"></span> Occupée</span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    @for($n = 1; $n <= $totalSeats; $n++)
+                                        @php $isOccupied = in_array($n, $occupiedSeats, true); $isSelected = $numero_chaise === $n; @endphp
+                                        <button type="button"
+                                            @if(!$isOccupied) wire:click="selectSeat({{ $n }})" @endif
+                                            @disabled($isOccupied)
+                                            class="aspect-square flex items-center justify-center rounded-lg text-xs font-semibold transition-colors
+                                                {{ $isOccupied
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    : ($isSelected ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-400') }}">
+                                            {{ $n }}
+                                        </button>
+                                    @endfor
+                                </div>
+                                @error('numero_chaise') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                                @if($numero_chaise)
+                                    <p class="text-xs text-gray-500 mt-2">Chaise sélectionnée : <span class="font-semibold text-blue-600">n°{{ $numero_chaise }}</span></p>
+                                @endif
+                            </div>
+                        @endif
+
                         @if($prix > 0)
                             <div class="bg-blue-50 rounded-xl p-4 flex items-center justify-between">
                                 <span class="text-sm text-blue-700 font-medium">Prix du ticket</span>

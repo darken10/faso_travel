@@ -249,6 +249,7 @@ class VenteTicket extends Component
         $this->monnaie = 0;
         $this->montant_recu = 0;
         $this->voyage_instance_id = null;
+        $this->numero_chaise = null;
         $this->client_nom = '';
         $this->client_prenom = '';
         $this->client_telephone = '';
@@ -270,6 +271,13 @@ class VenteTicket extends Component
         $ticketVendu = $this->ticketVenduId ? Ticket::find($this->ticketVenduId) : null;
         $typeTickets = TypeTicket::cases();
 
-        return view('livewire.compagnie.ticket.vente-ticket', compact('instances', 'caisse', 'ticketVendu', 'typeTickets'));
+        // Plan des sièges du voyage sélectionné.
+        $selectedInstance = $this->voyage_instance_id ? VoyageInstance::find($this->voyage_instance_id) : null;
+        $totalSeats = $selectedInstance ? (int) $selectedInstance->nb_place : 0;
+        $occupiedSeats = $this->occupiedSeats();
+
+        return view('livewire.compagnie.ticket.vente-ticket', compact(
+            'instances', 'caisse', 'ticketVendu', 'typeTickets', 'totalSeats', 'occupiedSeats'
+        ));
     }
 }
