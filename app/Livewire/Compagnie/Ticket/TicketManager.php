@@ -141,11 +141,12 @@ class TicketManager extends Component
                           ->orWhereHas('user', fn ($u) =>
                               $u->where('first_name', 'like', '%' . $this->search . '%')
                                 ->orWhere('last_name', 'like', '%' . $this->search . '%')
-                                ->orWhere('phone', 'like', '%' . $this->search . '%')
+                                ->orWhere('numero', 'like', '%' . $this->search . '%')
                           )
                           ->orWhereHas('autre_personne', fn ($ap) =>
                               $ap->where('first_name', 'like', '%' . $this->search . '%')
                                  ->orWhere('last_name', 'like', '%' . $this->search . '%')
+                                 ->orWhere('numero', 'like', '%' . $this->search . '%')
                           )
                 )
             )

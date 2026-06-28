@@ -45,10 +45,10 @@
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
 
         {{-- Filtres --}}
-        <div class="px-4 py-3 border-b border-gray-100 space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="px-4 py-3 border-b border-gray-100">
+            <div class="flex items-center gap-3 overflow-x-auto">
                 {{-- Recherche --}}
-                <div class="relative lg:col-span-2">
+                <div class="relative flex-1 min-w-[180px]">
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input wire:model.live.debounce.300ms="search"
                            type="text"
@@ -58,41 +58,35 @@
 
                 {{-- Filtre statut --}}
                 <select wire:model.live="statutFilter"
-                        class="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        class="shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
                     <option value="">Tous les statuts</option>
                     @foreach($statuts as $s)
                         <option value="{{ $s->value }}">{{ $s->value }}</option>
                     @endforeach
                 </select>
 
+                {{-- Dates --}}
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs text-gray-500">Du</span>
+                    <input wire:model.live="dateFrom" type="date" class="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <span class="text-xs text-gray-500">au</span>
+                    <input wire:model.live="dateTo" type="date" class="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
+
                 {{-- Nombre par page --}}
                 <select wire:model.live="perPage"
-                        class="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    <option value="15">15 par page</option>
-                    <option value="25">25 par page</option>
-                    <option value="50">50 par page</option>
-                    <option value="100">100 par page</option>
+                        class="shrink-0 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="15">15 / page</option>
+                    <option value="25">25 / page</option>
+                    <option value="50">50 / page</option>
+                    <option value="100">100 / page</option>
                 </select>
-            </div>
 
-            {{-- Filtre dates --}}
-            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-medium text-gray-500 whitespace-nowrap">Du</label>
-                    <input wire:model.live="dateFrom" type="date"
-                           class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-medium text-gray-500 whitespace-nowrap">Au</label>
-                    <input wire:model.live="dateTo" type="date"
-                           class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                </div>
                 @if($hasFilters)
-                <button wire:click="resetFilters"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    Réinitialiser les filtres
-                </button>
+                    <button wire:click="resetFilters" title="Réinitialiser les filtres"
+                            class="shrink-0 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 @endif
             </div>
         </div>
