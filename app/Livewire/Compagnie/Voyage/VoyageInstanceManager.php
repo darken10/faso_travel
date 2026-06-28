@@ -22,6 +22,8 @@ class VoyageInstanceManager extends Component
     use WithPagination;
 
     public string $search = '';
+    /** Filtre temporel de la liste : upcoming | past | all */
+    public string $periode = 'upcoming';
     public bool $showModal = false;
     public ?string $editingId = null;
 
@@ -57,6 +59,11 @@ class VoyageInstanceManager extends Component
     public string  $alertReason    = '';
 
     public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPeriode(): void
     {
         $this->resetPage();
     }
@@ -291,12 +298,19 @@ class VoyageInstanceManager extends Component
     {
         $compagnieId = auth()->user()->compagnie_id;
 
+        // Expression date+heure de l'instance, pour comparer au moment présent.
+        $dateHeure = "STR_TO_DATE(CONCAT(date,' ',TIME_FORMAT(heure,'%H:%i:%s')), '%Y-%m-%d %H:%i:%s')";
+
         $instances = VoyageInstance::query()
             ->whereHas('voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
             ->with(['voyage.trajet.depart', 'voyage.trajet.arriver', 'care', 'chauffer'])
             ->when($this->search, fn($q) => $q->whereHas('voyage.trajet.depart', fn($r) => $r->where('name', 'like', "%{$this->search}%"))
                 ->orWhereHas('voyage.trajet.arriver', fn($r) => $r->where('name', 'like', "%{$this->search}%")))
-            ->orderByRaw('(date >= CURDATE()) DESC, date ASC')
+            // Filtre temporel : à venir (défaut), passé, ou tous.
+            ->when($this->periode === 'upcoming', fn($q) => $q->whereRaw("{$dateHeure} >= NOW()"))
+            ->when($this->periode === 'past', fn($q) => $q->whereRaw("{$dateHeure} < NOW()"))
+            // À venir : la plus proche d'abord ; passé : la plus récente d'abord.
+            ->orderByRaw($this->periode === 'past' ? "{$dateHeure} DESC" : "{$dateHeure} ASC")
             ->paginate(15);
 
         $voyages   = Voyage::withoutGlobalScopes()->where('compagnie_id', $compagnieId)->with(['trajet.depart', 'trajet.arriver'])->get();

@@ -124,6 +124,17 @@
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Rechercher (ville départ ou arrivée)..." class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
             </div>
+
+            {{-- Filtre temporel : à venir / passé / tous --}}
+            <div class="mt-3 inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+                @foreach (['upcoming' => 'À venir', 'past' => 'Passés', 'all' => 'Tous'] as $val => $label)
+                    <button type="button" wire:click="$set('periode', '{{ $val }}')"
+                        class="px-3 py-1.5 text-sm font-medium rounded-md transition
+                            {{ $periode === $val ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
         </div>
         <table class="w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200">

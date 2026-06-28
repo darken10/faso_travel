@@ -18,9 +18,3 @@ Schedule::command('voyages:generate-instances --days=7')
 Schedule::command('tickets:clean-expired --hours=24')
     ->hourly()
     ->withoutOverlapping();
-
-// Synchronise les places disponibles (chaque nuit à 23h)
-Schedule::command('voyages:sync-seats')
-    ->dailyAt('23:00')
-    ->withoutOverlapping()
-    ->runInBackground();
