@@ -194,12 +194,15 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/voyages',   \App\Livewire\Compagnie\Voyage\VoyageManager::class)->name('voyages');
     Route::get('/voyages/create',          \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.create');
     Route::get('/voyages/{voyageId}/edit', \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.edit');
+    Route::get('/voyages/{voyageId}',      \App\Livewire\Compagnie\Voyage\VoyageShow::class)->name('voyages.show');
     Route::get('/classes',   \App\Livewire\Compagnie\Voyage\ClasseManager::class)->name('classes');
     Route::get('/instances', \App\Livewire\Compagnie\Voyage\VoyageInstanceManager::class)->name('instances');
+    Route::get('/instances/{instanceId}', \App\Livewire\Compagnie\Voyage\VoyageInstanceShow::class)->name('instances.show');
 
     // ─── Guichet ──────────────────────────────────────────────────────────
     Route::get('/vente-ticket',       \App\Livewire\Compagnie\Ticket\VenteTicket::class)->name('vente-ticket');
     Route::get('/tickets',            \App\Livewire\Compagnie\Ticket\TicketManager::class)->name('tickets');
+    Route::get('/tickets/{ticketId}', \App\Livewire\Compagnie\Ticket\TicketShow::class)->name('tickets.show');
     Route::get('/caisse',             \App\Livewire\Compagnie\Caisse\GestionCaisse::class)->name('caisse');
     Route::get('/caisse/{caisse}',    \App\Livewire\Compagnie\Caisse\DetailCaisse::class)->name('caisse.detail');
     Route::get('/caisses-historique', \App\Livewire\Compagnie\Caisse\HistoriqueCaisses::class)->name('caisses-historique');
@@ -207,7 +210,9 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     // ─── Ressources ───────────────────────────────────────────────────────
     Route::get('/gares',     \App\Livewire\Compagnie\Compagnie\GareManager::class)->name('gares');
     Route::get('/cares',     \App\Livewire\Compagnie\Compagnie\CareManager::class)->name('cares');
+    Route::get('/cares/{careId}', \App\Livewire\Compagnie\Compagnie\CareShow::class)->name('cares.show');
     Route::get('/chauffeurs', \App\Livewire\Compagnie\Compagnie\ChauffeurManager::class)->name('chauffeurs');
+    Route::get('/chauffeurs/{chauffeurId}', \App\Livewire\Compagnie\Compagnie\ChauffeurShow::class)->name('chauffeurs.show');
     Route::get('/users',     \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users');
 
     // ─── Contenu ──────────────────────────────────────────────────────────

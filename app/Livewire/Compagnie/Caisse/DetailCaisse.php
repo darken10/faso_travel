@@ -17,7 +17,7 @@ class DetailCaisse extends Component
     public function render()
     {
         $tickets = $this->caisse->tickets()
-            ->with(['autrePersonne', 'voyageInstance.voyage.trajet'])
+            ->with(['autre_personne', 'voyageInstance.voyage.trajet'])
             ->latest()
             ->paginate(15);
 

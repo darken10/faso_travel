@@ -73,7 +73,7 @@
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-4 py-3 font-mono text-xs font-semibold text-gray-700">{{ $ticket->numero_ticket }}</td>
                         <td class="px-4 py-3 text-gray-800">
-                            {{ $ticket->autrePersonne?->first_name }} {{ $ticket->autrePersonne?->last_name }}
+                            {{ $ticket->autre_personne?->name ?? $ticket->user?->name ?? '—' }}
                         </td>
                         <td class="px-4 py-3 text-gray-500 text-xs">
                             {{ $ticket->voyageInstance?->voyage?->trajet?->depart?->name }} → {{ $ticket->voyageInstance?->voyage?->trajet?->arriver?->name }}
