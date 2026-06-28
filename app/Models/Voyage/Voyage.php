@@ -98,8 +98,12 @@ class Voyage extends Model
     {
         parent::boot();
         static::creating(function ($voyage) {
-            $voyage->user_id = Auth::id();
-            $voyage->compagnie_id = $voyage->user->compagnie_id;
+            // En contexte authentifié (web/API), on rattache au gérant courant.
+            // Sinon (tests/seeders), on conserve les valeurs fournies explicitement.
+            if (Auth::check()) {
+                $voyage->user_id = Auth::id();
+                $voyage->compagnie_id = $voyage->user->compagnie_id;
+            }
             // Par défaut, le voyage entre en vigueur aujourd'hui.
             $voyage->date_debut = $voyage->date_debut ?: now()->toDateString();
         });

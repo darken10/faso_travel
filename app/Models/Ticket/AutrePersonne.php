@@ -30,7 +30,9 @@ class AutrePersonne extends Model
         parent::boot();
         static::creating(callback: function (AutrePersonne $autrePersonne) {
             $autrePersonne->name = Str::upper($autrePersonne->first_name) .' '. $autrePersonne->last_name;
-            $autrePersonne->user_id = auth()->user()->id;
+            if (auth()->check()) {
+                $autrePersonne->user_id = auth()->id();
+            }
         });
     }
 

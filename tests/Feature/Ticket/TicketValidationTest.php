@@ -4,20 +4,42 @@ namespace Tests\Feature\Ticket;
 
 use App\Enums\StatutTicket;
 use App\Enums\TypeTicket;
+use App\Events\Admin\TicketValiderEvent;
+use App\Events\Ticket\TicketActiveEvent;
+use App\Events\Ticket\TicketBlockerEvent;
+use App\Events\Ticket\TicketPauseEvent;
 use App\Helper\TicketValidation;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class TicketValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // On teste les transitions d'état du helper, pas les effets de bord
+        // (emails/notifications/broadcast déclenchés par ces events).
+        Event::fake([
+            TicketValiderEvent::class,
+            TicketActiveEvent::class,
+            TicketPauseEvent::class,
+            TicketBlockerEvent::class,
+        ]);
+    }
+
     private function loginAgent(): User
     {
-        $agent = User::factory()->create();
+        // L'agent doit appartenir à une compagnie : le hook creating de Voyage
+        // rattache les voyages créés à compagnie_id de l'utilisateur authentifié.
+        $compagnie = \App\Models\Compagnie\Compagnie::factory()->create();
+        $agent = User::factory()->create(['compagnie_id' => $compagnie->id]);
         Auth::login($agent);
         return $agent;
     }

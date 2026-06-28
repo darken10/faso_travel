@@ -2,6 +2,8 @@
 
 namespace Database\Factories\Compagnie;
 
+use App\Enums\StatutCare;
+use App\Models\Compagnie\Compagnie;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +19,11 @@ class CareFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'immatrculation' => strtoupper(fake()->bothify('##-???-##')),
+            'numero'         => fake()->numberBetween(1, 999),
+            'number_place'   => fake()->numberBetween(30, 70),
+            'statut'         => StatutCare::Disponible,
+            'compagnie_id'   => Compagnie::factory(),
         ];
     }
 }

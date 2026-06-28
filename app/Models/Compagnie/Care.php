@@ -35,7 +35,9 @@ class Care extends Model
         parent::boot();
 
         static::creating(callback: function (Care $care) {
-            $care->compagnie_id = Auth::user()->compagnie_id;
+            if (Auth::check()) {
+                $care->compagnie_id = Auth::user()->compagnie_id;
+            }
         });
     }
 

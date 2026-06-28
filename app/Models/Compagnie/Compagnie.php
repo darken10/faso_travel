@@ -40,7 +40,9 @@ class Compagnie extends Model
         parent::boot();
 
         static::creating(callback: function (Compagnie $compagnie) {
-            $compagnie->user()->associate(Auth::user());
+            if (Auth::check()) {
+                $compagnie->user()->associate(Auth::user());
+            }
         });
     }
 

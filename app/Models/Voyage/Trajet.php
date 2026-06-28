@@ -35,7 +35,9 @@ class Trajet extends Model
     {
         parent::boot();
         static::creating(function ($model) {
-            $model->user_id = auth()->id();
+            if (auth()->check()) {
+                $model->user_id = auth()->id();
+            }
         });
     }
 

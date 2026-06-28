@@ -38,7 +38,7 @@ class TicketCreationTest extends TestCase
         $this->assertDatabaseHas('tickets', [
             'user_id'            => $user->id,
             'voyage_instance_id' => $voyageInstance->id,
-            'statut'             => StatutTicket::EnAttente->value,
+            'statut'             => StatutTicket::Payer->value,
         ]);
     }
 
@@ -50,8 +50,9 @@ class TicketCreationTest extends TestCase
         $headers = ['Authorization' => 'Bearer ' . $token];
         $payload = ['voyage_instance_id' => $voyageInstance->id, 'type' => 'one-way', 'is_for_self' => true];
 
+        // 1re création → 201 ; 2e tentative identique → 200 (ticket existant renvoyé, pas de doublon)
         $this->withHeaders($headers)->postJson('/api/v2/tickets', $payload)->assertStatus(201);
-        $this->withHeaders($headers)->postJson('/api/v2/tickets', $payload)->assertStatus(201);
+        $this->withHeaders($headers)->postJson('/api/v2/tickets', $payload)->assertStatus(200);
 
         $this->assertDatabaseCount('tickets', 1);
     }
@@ -111,6 +112,6 @@ class TicketCreationTest extends TestCase
             ->getJson('/api/v2/tickets');
 
         $response->assertOk();
-        $this->assertCount(3, $response->json());
+        $this->assertCount(3, $response->json('data'));
     }
 }

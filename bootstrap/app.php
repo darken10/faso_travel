@@ -75,6 +75,18 @@ return Application::configure(basePath: dirname(__DIR__))
                     $response['message'] = 'Ressource demandée introuvable';
                 }
 
+                // Règles métier violées (ex. annuler un ticket déjà validé)
+                if ($e instanceof \DomainException) {
+                    $statusCode = 400;
+                }
+
+                // Arguments invalides (ex. siège hors limites / déjà pris)
+                if ($e instanceof \InvalidArgumentException) {
+                    $statusCode = 422;
+                }
+
+                $response['status'] = $statusCode;
+
                 return response()->json($response, $statusCode);
             }
         });
