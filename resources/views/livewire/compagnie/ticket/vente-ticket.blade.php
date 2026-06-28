@@ -152,10 +152,42 @@
                             </div>
                         @endif
 
+                        {{-- Code promo --}}
                         @if($prix > 0)
-                            <div class="bg-blue-50 rounded-xl p-4 flex items-center justify-between">
-                                <span class="text-sm text-blue-700 font-medium">Prix du ticket</span>
-                                <span class="text-2xl font-bold text-blue-600">{{ number_format($prix, 0, ',', ' ') }} F</span>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Code promo (facultatif)</label>
+                                <div class="flex gap-2">
+                                    <input wire:model="promoCode" type="text" placeholder="Ex: NOEL25"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                    @if($promoReduction > 0)
+                                        <button type="button" wire:click="retirerPromo" class="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50">Retirer</button>
+                                    @else
+                                        <button type="button" wire:click="appliquerPromo" class="px-4 py-2 text-sm font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-900">Appliquer</button>
+                                    @endif
+                                </div>
+                                @if($promoMessage)<p class="text-xs text-red-600 mt-1">{{ $promoMessage }}</p>@endif
+                            </div>
+
+                            <div class="bg-blue-50 rounded-xl p-4 space-y-1">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-600">Prix du ticket</span>
+                                    <span class="text-gray-800 {{ $promoReduction > 0 ? 'line-through text-gray-400' : 'font-semibold' }}">{{ number_format($prix, 0, ',', ' ') }} F</span>
+                                </div>
+                                @if($promoReduction > 0)
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-green-700">Réduction</span>
+                                        <span class="text-green-700 font-medium">-{{ number_format($promoReduction, 0, ',', ' ') }} F</span>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-1 border-t border-blue-100">
+                                        <span class="text-sm text-blue-700 font-medium">À payer</span>
+                                        <span class="text-2xl font-bold text-blue-600">{{ number_format($this->montantAPayer, 0, ',', ' ') }} F</span>
+                                    </div>
+                                @else
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-blue-700 font-medium">À payer</span>
+                                        <span class="text-2xl font-bold text-blue-600">{{ number_format($prix, 0, ',', ' ') }} F</span>
+                                    </div>
+                                @endif
                             </div>
                         @endif
                     </div>
@@ -199,11 +231,16 @@
                     <div class="space-y-4">
                         <div class="bg-blue-50 rounded-xl p-4 flex items-center justify-between mb-2">
                             <span class="text-sm text-blue-700 font-medium">Montant à encaisser</span>
-                            <span class="text-2xl font-bold text-blue-600">{{ number_format($prix, 0, ',', ' ') }} F</span>
+                            <div class="text-right">
+                                @if($promoReduction > 0)
+                                    <span class="text-xs text-gray-400 line-through block">{{ number_format($prix, 0, ',', ' ') }} F</span>
+                                @endif
+                                <span class="text-2xl font-bold text-blue-600">{{ number_format($this->montantAPayer, 0, ',', ' ') }} F</span>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Montant reçu *</label>
-                            <input wire:model.live="montant_recu" type="number" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="{{ $prix }}">
+                            <input wire:model.live="montant_recu" type="number" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="{{ $this->montantAPayer }}">
                             @error('montant_recu') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                         </div>
                         @if($monnaie > 0)

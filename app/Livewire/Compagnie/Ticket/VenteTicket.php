@@ -30,6 +30,12 @@ class VenteTicket extends Component
     public $prix = 0;
     public ?int $numero_chaise = null;
 
+    // Code promo
+    public string $promoCode = '';
+    public ?int $promoId = null;
+    public int $promoReduction = 0;
+    public string $promoMessage = '';
+
     // Step 2
     public string $client_nom = '';
     public string $client_prenom = '';
@@ -62,7 +68,56 @@ class VenteTicket extends Component
     public function updatedVoyageInstanceId(): void
     {
         $this->numero_chaise = null; // le plan des sièges change selon le voyage
+        $this->resetPromo();
         $this->computePrix();
+    }
+
+    private function resetPromo(): void
+    {
+        $this->promoId = null;
+        $this->promoReduction = 0;
+        $this->promoMessage = '';
+    }
+
+    /** Montant net à payer (prix - réduction). */
+    public function getMontantAPayerProperty(): int
+    {
+        return max(0, (int) $this->prix - $this->promoReduction);
+    }
+
+    public function appliquerPromo(): void
+    {
+        $this->resetPromo();
+        $code = strtoupper(trim($this->promoCode));
+        if ($code === '') {
+            return;
+        }
+
+        $promo = \App\Models\Finance\PromoCode::where('compagnie_id', Auth::user()->compagnie_id)
+            ->where('code', $code)
+            ->first();
+
+        if (!$promo) {
+            $this->promoMessage = 'Code promo introuvable.';
+            return;
+        }
+
+        $prix = (int) $this->prix;
+        if (!$promo->isValide($prix)) {
+            $this->promoMessage = $promo->raisonInvalide($prix);
+            return;
+        }
+
+        $this->promoId = $promo->id;
+        $this->promoReduction = $promo->reductionPour($prix);
+        $this->promoMessage = '';
+        $this->dispatch('toast', type: 'success', message: 'Code promo appliqué : -' . number_format($this->promoReduction, 0, ',', ' ') . ' F');
+    }
+
+    public function retirerPromo(): void
+    {
+        $this->promoCode = '';
+        $this->resetPromo();
     }
 
     /** Sièges occupés (tickets non annulés) de l'instance sélectionnée. */
@@ -92,6 +147,7 @@ class VenteTicket extends Component
 
     public function updatedTypeTicket(): void
     {
+        $this->resetPromo();
         $this->computePrix();
     }
 
@@ -139,7 +195,7 @@ class VenteTicket extends Component
 
     public function updatedMontantRecu(): void
     {
-        $this->monnaie = max(0, (float) $this->montant_recu - (float) $this->prix);
+        $this->monnaie = max(0, (float) $this->montant_recu - (float) $this->montantAPayer);
     }
 
     public function vendreTicket(): void
@@ -159,8 +215,8 @@ class VenteTicket extends Component
             return;
         }
 
-        if ($this->montant_recu < $this->prix) {
-            $this->addError('montant_recu', 'Le montant reçu est inférieur au prix du ticket.');
+        if ($this->montant_recu < $this->montantAPayer) {
+            $this->addError('montant_recu', 'Le montant reçu est inférieur au prix à payer.');
             return;
         }
 
@@ -199,8 +255,18 @@ class VenteTicket extends Component
             }
 
             $typeTicket = TypeTicket::from($this->type_ticket);
-            $prix = $voyageInstance->getPrix($typeTicket);
+            $prix = (int) $voyageInstance->getPrix($typeTicket);
             $caisse = Caisse::sessionOuverte();
+
+            // Revalide le code promo et calcule la réduction au moment de la vente.
+            $reduction = 0;
+            $promo = $this->promoId ? \App\Models\Finance\PromoCode::find($this->promoId) : null;
+            if ($promo && $promo->compagnie_id === Auth::user()->compagnie_id && $promo->isValide($prix)) {
+                $reduction = $promo->reductionPour($prix);
+            } else {
+                $promo = null;
+            }
+            $montantNet = max(0, $prix - $reduction);
 
             $ticket = Ticket::create([
                 'user_id'             => Auth::id(),
@@ -217,14 +283,20 @@ class VenteTicket extends Component
                 'autre_personne_id'   => $autrePersonne->id,
                 'a_bagage'            => false,
                 'caisse_id'           => $caisse?->id,
+                'promo_code_id'       => $promo?->id,
+                'reduction'           => $reduction ?: null,
             ]);
 
             Payement::create([
                 'ticket_id'     => $ticket->id,
-                'montant'       => $prix,
+                'montant'       => $montantNet,
                 'statut'        => StatutPayement::Complete->value,
                 'moyen_payment' => MoyenPayment::ESPECE->value,
             ]);
+
+            if ($promo) {
+                $promo->increment('used_count');
+            }
 
             DB::commit();
 
@@ -232,7 +304,7 @@ class VenteTicket extends Component
             $ticket->refresh();
 
             $this->ticketVenduId = $ticket->id;
-            $this->monnaie = $this->montant_recu - $prix;
+            $this->monnaie = $this->montant_recu - $montantNet;
             $this->step = 4; // confirmation step
 
         } catch (\Exception $e) {
@@ -250,6 +322,8 @@ class VenteTicket extends Component
         $this->montant_recu = 0;
         $this->voyage_instance_id = null;
         $this->numero_chaise = null;
+        $this->promoCode = '';
+        $this->resetPromo();
         $this->client_nom = '';
         $this->client_prenom = '';
         $this->client_telephone = '';

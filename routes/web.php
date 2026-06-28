@@ -233,4 +233,5 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/depenses',   \App\Livewire\Compagnie\Finance\DepenseManager::class)->name('depenses');
     Route::get('/recettes',   \App\Livewire\Compagnie\Finance\RecetteManager::class)->name('recettes');
     Route::get('/categories', \App\Livewire\Compagnie\Finance\CategorieManager::class)->name('categories');
+    Route::get('/promos',     \App\Livewire\Compagnie\Finance\PromoManager::class)->name('promos');
 });

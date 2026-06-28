@@ -49,6 +49,8 @@ class Ticket extends Model
         "rembourse_at",
         "rembourse_par_id",
         "rembourse_montant",
+        "promo_code_id",
+        "reduction",
     ];
 
     protected $with = [

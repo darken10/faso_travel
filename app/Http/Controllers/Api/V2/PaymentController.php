@@ -62,6 +62,7 @@ class PaymentController extends Controller
             'passenger_numero_identifiant' => 'nullable|string|max:10',
             'passenger_phone'              => 'nullable|string|max:30',
             'passenger_note'               => 'nullable|string|max:500',
+            'promo_code'                   => 'nullable|string|max:50',
         ], [
             'passenger_first_name.required_if'    => 'Le prénom du passager est requis.',
             'passenger_last_name.required_if'     => 'Le nom du passager est requis.',
@@ -72,6 +73,21 @@ class PaymentController extends Controller
         $voyageInstance = VoyageInstance::with(['care', 'voyage'])->findOrFail($validated['trip_id']);
         $tripType = $validated['trip_type'] === 'round-trip' ? TypeTicket::AllerRetour : TypeTicket::AllerSimple;
         $amount   = (int) $voyageInstance->getPrix($tripType);
+
+        // ── Code promo (facultatif) : appliqué avant la charge ──────────────────
+        $promo = null;
+        $reduction = 0;
+        if (!empty($validated['promo_code'])) {
+            $promo = \App\Models\Finance\PromoCode::where('compagnie_id', $voyageInstance->voyage->compagnie_id)
+                ->where('code', strtoupper(trim($validated['promo_code'])))
+                ->first();
+            if ($promo && $promo->isValide($amount)) {
+                $reduction = $promo->reductionPour($amount);
+                $amount = max(0, $amount - $reduction);
+            } else {
+                $promo = null; // code invalide → ignoré
+            }
+        }
 
         // ── Étape 1 : Valider le paiement Orange Money ──────────────────────────
         $orangeHelper = new OrangePayementHelper(
@@ -149,6 +165,12 @@ class PaymentController extends Controller
             }
 
             $ticket = $this->ticketService->createTicket($ticketData);
+
+            // Applique la réduction promo sur le ticket.
+            if ($promo) {
+                $ticket->update(['promo_code_id' => $promo->id, 'reduction' => $reduction]);
+                $promo->increment('used_count');
+            }
 
             // Enregistrer le paiement
             Payement::create([

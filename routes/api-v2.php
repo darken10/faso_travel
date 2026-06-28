@@ -99,6 +99,10 @@ Route::prefix('v2')->group(function () {
         Route::post('/reservation/{id}', 'reservation')->name('reservation');
     });
 
+    // Validation de code promo
+    Route::post('/promo/validate', [\App\Http\Controllers\Api\V2\PromoController::class, 'validatePromo'])
+        ->middleware('auth:sanctum')->name('api.v2.promo.validate');
+
     Route::get('/payement/mode-list', [VoyageControllerV2::class, 'getPaymentModesList'])->name('api.v2.payment.modes.list');
 
     // Routes paiements V2

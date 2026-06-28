@@ -51,7 +51,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'numero_identifiant',
         'numero',
         'role',
-        'compagnie_id'
+        'compagnie_id',
+        'loyalty_points',
+        'loyalty_lifetime_points',
     ];
 
     /**
