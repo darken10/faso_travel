@@ -17,10 +17,16 @@
                 <p class="text-sm text-gray-500">{{ $recettes->total() }} enregistrement{{ $recettes->total() > 1 ? 's' : '' }}</p>
             </div>
         </div>
+        <div class="flex items-center gap-2">
+        <button wire:click="export" class="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Excel
+        </button>
         <button wire:click="openCreate" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouvelle recette
         </button>
+        </div>
     </div>
 
     <div class="mb-4 bg-green-50 border border-green-100 rounded-xl px-4 py-3 flex items-center justify-between">

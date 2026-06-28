@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Compagnie\Finance;
 
+use App\Exports\DepensesExport;
 use App\Models\Finance\CategorieDepense;
 use App\Models\Finance\Depense;
 use Illuminate\Support\Facades\Auth;
@@ -9,6 +10,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 #[Layout('layouts.compagnie-panel')]
 class DepenseManager extends Component
@@ -108,6 +110,18 @@ class DepenseManager extends Component
     {
         Depense::findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Dépense supprimée.');
+    }
+
+    public function export()
+    {
+        $compagnieId = Auth::user()->compagnie_id;
+        $query = Depense::where('compagnie_id', $compagnieId)
+            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
+            ->when($this->categorieFilter, fn ($q) => $q->where('categorie_depense_id', $this->categorieFilter))
+            ->with('categorie')
+            ->latest('date_depense');
+
+        return Excel::download(new DepensesExport($query), 'depenses-' . now()->format('Y-m-d') . '.xlsx');
     }
 
     public function render()

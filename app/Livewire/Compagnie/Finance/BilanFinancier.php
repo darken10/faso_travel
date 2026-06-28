@@ -32,7 +32,7 @@ class BilanFinancier extends Component
 
             $chartLabels[] = $date->translatedFormat('M Y');
 
-            $ticketRevenue = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, StatutTicket::Valider)
+            $ticketRevenue = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->sum('montant');
@@ -61,7 +61,7 @@ class BilanFinancier extends Component
             ->get();
 
         // --- Totals ---
-        $totalTicketRecettes = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, StatutTicket::Valider)
+        $totalTicketRecettes = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
             ->sum('montant');
         $totalManualRecettes = Recette::where('compagnie_id', $compagnieId)->sum('montant');
         $totalRecettes = $totalTicketRecettes + $totalManualRecettes;
@@ -69,7 +69,7 @@ class BilanFinancier extends Component
         $solde = $totalRecettes - $totalDepenses;
 
         // This month
-        $recettesMois = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, StatutTicket::Valider)
+        $recettesMois = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
                 ->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->sum('montant')
             + Recette::where('compagnie_id', $compagnieId)
                 ->whereMonth('date_recette', now()->month)->whereYear('date_recette', now()->year)->sum('montant');

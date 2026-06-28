@@ -4,9 +4,11 @@ namespace App\Livewire\Compagnie\Rapport;
 
 use App\Exports\PaiementsExport;
 use App\Exports\RapportTrajetsExport;
+use App\Mail\RapportMail;
 use App\Services\Report\ReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Maatwebsite\Excel\Facades\Excel;
@@ -87,6 +89,29 @@ class RapportManager extends Component
             new RapportTrajetsExport($data['topTrajets']),
             'rapport-trajets-' . $start->format('Y-m-d') . '_' . $end->format('Y-m-d') . '.xlsx',
         );
+    }
+
+    public function envoyerEmail()
+    {
+        [$start, $end] = $this->range();
+        $user = auth()->user();
+
+        if (empty($user->email)) {
+            $this->dispatch('toast', type: 'error', message: 'Aucune adresse email sur votre compte.');
+            return;
+        }
+
+        try {
+            $data = app(ReportService::class)->data($this->compagnieId(), $start, $end);
+            $compagnie = $user->compagnie;
+            $pdf = Pdf::loadView('exports.rapport', compact('data', 'compagnie'))->output();
+            $label = 'Période ' . $start->format('d/m/Y') . ' → ' . $end->format('d/m/Y');
+
+            Mail::to($user->email)->send(new RapportMail($compagnie, $data, $label, $pdf));
+            $this->dispatch('toast', type: 'success', message: 'Rapport envoyé à ' . $user->email);
+        } catch (\Throwable $e) {
+            $this->dispatch('toast', type: 'error', message: "Échec de l'envoi : " . $e->getMessage());
+        }
     }
 
     public function render()

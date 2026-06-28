@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Compagnie\Finance;
 
+use App\Exports\RecettesExport;
 use App\Models\Finance\Recette;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 #[Layout('layouts.compagnie-panel')]
 class RecetteManager extends Component
@@ -105,6 +107,16 @@ class RecetteManager extends Component
     {
         Recette::findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Recette supprimée.');
+    }
+
+    public function export()
+    {
+        $compagnieId = Auth::user()->compagnie_id;
+        $query = Recette::where('compagnie_id', $compagnieId)
+            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
+            ->latest('date_recette');
+
+        return Excel::download(new RecettesExport($query), 'recettes-' . now()->format('Y-m-d') . '.xlsx');
     }
 
     public function render()

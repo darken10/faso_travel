@@ -67,6 +67,11 @@
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Performance par trajet (Excel)
             </button>
+            <button wire:click="envoyerEmail" wire:loading.attr="disabled" wire:target="envoyerEmail" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span wire:loading.remove wire:target="envoyerEmail">M'envoyer par email</span>
+                <span wire:loading wire:target="envoyerEmail">Envoi…</span>
+            </button>
         </div>
     </div>
 

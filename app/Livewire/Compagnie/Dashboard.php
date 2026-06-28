@@ -30,7 +30,7 @@ class Dashboard extends Component
         $ticketsBloques = QueryHelpers::AllTicketOfMyCompagnie(StatutTicket::Bloquer)->count();
 
         // ── Finance ──
-        $recetteTickets    = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, StatutTicket::Valider)->sum('montant');
+        $recetteTickets    = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])->sum('montant');
         $recetteManuelles  = Recette::where('compagnie_id', $compagnieId)->sum('montant');
         $totalRecettes     = $recetteTickets + $recetteManuelles;
         $totalDepenses     = Depense::where('compagnie_id', $compagnieId)->sum('montant');
@@ -41,7 +41,7 @@ class Dashboard extends Component
             ->whereYear('date_depense', now()->year)
             ->sum('montant');
 
-        $recettesMois = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, StatutTicket::Valider)
+        $recettesMois = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->sum('montant')
@@ -62,7 +62,7 @@ class Dashboard extends Component
 
             $chartLabels[] = $date->translatedFormat('M Y');
 
-            $ticketRev = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, StatutTicket::Valider)
+            $ticketRev = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
                 ->whereMonth('created_at', $month)
                 ->whereYear('created_at', $year)
                 ->sum('montant');

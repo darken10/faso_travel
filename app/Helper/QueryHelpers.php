@@ -82,9 +82,12 @@ class QueryHelpers
         return $query;
     }
 
+    /**
+     * @param  StatutTicket|array<int, StatutTicket>|null  $statutTicket  Un statut ou une liste de statuts de ticket.
+     */
     public static function AllPaymentsOfMyCompagnie(
-        ?StatutPayement $statutPayement = StatutPayement::Complete,
-        ?StatutTicket   $statutTicket = null
+        ?StatutPayement      $statutPayement = StatutPayement::Complete,
+        StatutTicket|array|null $statutTicket = null
     ): Builder {
         $compagnieId = self::compagnieId();
 
@@ -102,7 +105,10 @@ class QueryHelpers
         }
 
         if ($statutTicket !== null) {
-            $query->whereHas('ticket', fn($q) => $q->where('statut', $statutTicket));
+            $statuts = collect(is_array($statutTicket) ? $statutTicket : [$statutTicket])
+                ->map(fn($s) => $s instanceof StatutTicket ? $s->value : $s)
+                ->all();
+            $query->whereHas('ticket', fn($q) => $q->whereIn('statut', $statuts));
         }
 
         return $query;

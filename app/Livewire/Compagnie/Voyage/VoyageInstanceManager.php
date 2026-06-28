@@ -10,12 +10,14 @@ use App\Models\Compagnie\Chauffer;
 use App\Models\Voyage\Classe;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
+use App\Exports\InstancesExport;
 use App\Notifications\Ticket\TicketNotification;
 use App\Services\Voyage\VoyageInstanceService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 #[Layout('layouts.compagnie-panel')]
 class VoyageInstanceManager extends Component
@@ -337,27 +339,36 @@ class VoyageInstanceManager extends Component
         $this->dispatch('toast', type: 'success', message: 'Instance supprimée.');
     }
 
+    /** Requête filtrée des instances (réutilisée par la liste et l'export). */
+    private function filteredInstances()
+    {
+        $compagnieId = auth()->user()->compagnie_id;
+        $dateHeure = "STR_TO_DATE(CONCAT(date,' ',TIME_FORMAT(heure,'%H:%i:%s')), '%Y-%m-%d %H:%i:%s')";
+
+        return VoyageInstance::query()
+            ->whereHas('voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
+            ->with(['voyage.trajet.depart', 'voyage.trajet.arriver', 'care', 'chauffer'])
+            ->withCount(['tickets as occupied_count' => fn($q) => $q->where('statut', '!=', StatutTicket::Annuler)])
+            ->when($this->search, fn($q) => $q->whereHas('voyage.trajet.depart', fn($r) => $r->where('name', 'like', "%{$this->search}%"))
+                ->orWhereHas('voyage.trajet.arriver', fn($r) => $r->where('name', 'like', "%{$this->search}%")))
+            ->when($this->periode === 'upcoming', fn($q) => $q->whereRaw("{$dateHeure} >= NOW()"))
+            ->when($this->periode === 'past', fn($q) => $q->whereRaw("{$dateHeure} < NOW()"))
+            ->when($this->dateDebut, fn($q) => $q->whereDate('date', '>=', $this->dateDebut))
+            ->when($this->dateFin, fn($q) => $q->whereDate('date', '<=', $this->dateFin))
+            ->orderByRaw($this->periode === 'past' ? "{$dateHeure} DESC" : "{$dateHeure} ASC");
+    }
+
+    /** Export Excel du planning des voyages (instances filtrées). */
+    public function exportPlanning()
+    {
+        return Excel::download(new InstancesExport($this->filteredInstances()), 'planning-voyages-' . now()->format('Y-m-d') . '.xlsx');
+    }
+
     public function render()
     {
         $compagnieId = auth()->user()->compagnie_id;
 
-        // Expression date+heure de l'instance, pour comparer au moment présent.
-        $dateHeure = "STR_TO_DATE(CONCAT(date,' ',TIME_FORMAT(heure,'%H:%i:%s')), '%Y-%m-%d %H:%i:%s')";
-
-        $instances = VoyageInstance::query()
-            ->whereHas('voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
-            ->with(['voyage.trajet.depart', 'voyage.trajet.arriver', 'care', 'chauffer'])
-            ->when($this->search, fn($q) => $q->whereHas('voyage.trajet.depart', fn($r) => $r->where('name', 'like', "%{$this->search}%"))
-                ->orWhereHas('voyage.trajet.arriver', fn($r) => $r->where('name', 'like', "%{$this->search}%")))
-            // Filtre temporel : à venir (défaut), passé, ou tous.
-            ->when($this->periode === 'upcoming', fn($q) => $q->whereRaw("{$dateHeure} >= NOW()"))
-            ->when($this->periode === 'past', fn($q) => $q->whereRaw("{$dateHeure} < NOW()"))
-            // Filtre par plage de dates (sur la date de l'instance).
-            ->when($this->dateDebut, fn($q) => $q->whereDate('date', '>=', $this->dateDebut))
-            ->when($this->dateFin, fn($q) => $q->whereDate('date', '<=', $this->dateFin))
-            // À venir : la plus proche d'abord ; passé : la plus récente d'abord.
-            ->orderByRaw($this->periode === 'past' ? "{$dateHeure} DESC" : "{$dateHeure} ASC")
-            ->paginate(15);
+        $instances = $this->filteredInstances()->paginate(15);
 
         $voyages   = Voyage::withoutGlobalScopes()->where('compagnie_id', $compagnieId)->with(['trajet.depart', 'trajet.arriver'])->get();
         $cares     = Care::orderBy('immatrculation')->get();
