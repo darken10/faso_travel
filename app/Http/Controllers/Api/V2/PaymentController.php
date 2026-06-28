@@ -186,6 +186,15 @@ class PaymentController extends Controller
 
             DB::commit();
 
+            // Points de fidélité au client (acheteur) pour cet achat.
+            try {
+                if ($user = $request->user()) {
+                    app(\App\Services\Loyalty\LoyaltyService::class)->award($user, (int) $amount, $ticket);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('[PaymentV2] attribution points fidélité échouée : ' . $e->getMessage());
+            }
+
             // Reload full relations needed for PDF generation and email
             $ticket->load([
                 'voyageInstance.voyage.trajet.depart',

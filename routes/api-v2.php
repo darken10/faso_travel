@@ -44,6 +44,7 @@ Route::prefix('v2')->group(function () {
         Route::get('/travel-history', 'getTravelHistory')->name('travel-history');
         Route::get('/favorite-routes', 'getFavoriteRoutes')->name('favorite-routes');
         Route::get('/stats', 'getUserStats')->name('stats');
+        Route::get('/loyalty', 'getLoyalty')->name('loyalty');
     });
 
     // Routes articles V2

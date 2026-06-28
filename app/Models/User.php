@@ -129,6 +129,17 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(\App\Models\PushToken::class);
     }
 
+    function loyaltyTransactions(): HasMany
+    {
+        return $this->hasMany(\App\Models\LoyaltyTransaction::class)->latest();
+    }
+
+    /** Palier de fidélité (calculé sur les points cumulés). */
+    public function getLoyaltyTierAttribute(): string
+    {
+        return \App\Enums\LoyaltyTier::pour((int) $this->loyalty_lifetime_points)->value;
+    }
+
     /** Tokens Expo pour le canal de notification push. */
     public function routeNotificationForExpo(): array
     {

@@ -149,6 +149,11 @@ class Ticket extends Model
         return $this->voyageInstance->voyage->classe;
     }
 
+    function promoCode(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Finance\PromoCode::class, 'promo_code_id');
+    }
+
     function autre_personne(): BelongsTo
     {
         return $this->belongsTo(AutrePersonne::class);

@@ -51,6 +51,21 @@ class UserController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /** Synthèse fidélité + historique des points. */
+    public function getLoyalty(Request $request)
+    {
+        $user = $request->user();
+        $summary = app(\App\Services\Loyalty\LoyaltyService::class)->summary($user);
+
+        $transactions = $user->loyaltyTransactions()->take(50)->get()->map(fn ($t) => [
+            'points'     => $t->points,
+            'reason'     => $t->reason,
+            'created_at' => $t->created_at?->toIso8601String(),
+        ]);
+
+        return response()->json(array_merge($summary, ['transactions' => $transactions]));
+    }
+
     /**
      * Update user profile
      */

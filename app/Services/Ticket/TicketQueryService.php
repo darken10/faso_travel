@@ -17,6 +17,7 @@ class TicketQueryService
         'voyageInstance.care',
         'autre_personne',
         'payements',
+        'promoCode',
     ];
 
     public function getUserTickets(): \Illuminate\Database\Eloquent\Collection
