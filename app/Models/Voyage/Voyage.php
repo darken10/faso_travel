@@ -43,6 +43,10 @@ class Voyage extends Model
         'is_quotidient',
         'classe_id',
         'nb_pace',
+        'date_debut',
+        'date_fin',
+        'care_id',
+        'chauffer_id',
     ];
 
     protected $with = [
@@ -61,6 +65,8 @@ class Voyage extends Model
         'heure' => 'datetime',
         'days'=> 'array',
         'temps'=>'datetime',
+        'date_debut' => 'date',
+        'date_fin' => 'date',
     ];
 
 
@@ -94,6 +100,8 @@ class Voyage extends Model
         static::creating(function ($voyage) {
             $voyage->user_id = Auth::id();
             $voyage->compagnie_id = $voyage->user->compagnie_id;
+            // Par défaut, le voyage entre en vigueur aujourd'hui.
+            $voyage->date_debut = $voyage->date_debut ?: now()->toDateString();
         });
     }
 
@@ -156,6 +164,18 @@ class Voyage extends Model
     function care()
     {
         return $this->hasOne(Care::class)->latestOfMany();
+    }
+
+    /** Véhicule par défaut choisi à la création du voyage (utilisé par l'affectation auto). */
+    function vehicule(): BelongsTo
+    {
+        return $this->belongsTo(Care::class, 'care_id');
+    }
+
+    /** Chauffeur par défaut choisi à la création du voyage. */
+    function chauffer(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Compagnie\Chauffer::class, 'chauffer_id');
     }
 
     function days():BelongsToMany

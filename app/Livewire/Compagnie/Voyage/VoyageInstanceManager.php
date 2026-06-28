@@ -24,6 +24,9 @@ class VoyageInstanceManager extends Component
     public string $search = '';
     /** Filtre temporel de la liste : upcoming | past | all */
     public string $periode = 'upcoming';
+    /** Filtre par plage de dates (sur la date de l'instance) */
+    public string $dateDebut = '';
+    public string $dateFin = '';
     public bool $showModal = false;
     public ?string $editingId = null;
 
@@ -65,6 +68,23 @@ class VoyageInstanceManager extends Component
 
     public function updatingPeriode(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatingDateDebut(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDateFin(): void
+    {
+        $this->resetPage();
+    }
+
+    public function resetDateFilters(): void
+    {
+        $this->dateDebut = '';
+        $this->dateFin = '';
         $this->resetPage();
     }
 
@@ -309,6 +329,9 @@ class VoyageInstanceManager extends Component
             // Filtre temporel : à venir (défaut), passé, ou tous.
             ->when($this->periode === 'upcoming', fn($q) => $q->whereRaw("{$dateHeure} >= NOW()"))
             ->when($this->periode === 'past', fn($q) => $q->whereRaw("{$dateHeure} < NOW()"))
+            // Filtre par plage de dates (sur la date de l'instance).
+            ->when($this->dateDebut, fn($q) => $q->whereDate('date', '>=', $this->dateDebut))
+            ->when($this->dateFin, fn($q) => $q->whereDate('date', '<=', $this->dateFin))
             // À venir : la plus proche d'abord ; passé : la plus récente d'abord.
             ->orderByRaw($this->periode === 'past' ? "{$dateHeure} DESC" : "{$dateHeure} ASC")
             ->paginate(15);

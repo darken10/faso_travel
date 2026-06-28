@@ -125,15 +125,31 @@
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Rechercher (ville départ ou arrivée)..." class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
             </div>
 
-            {{-- Filtre temporel : à venir / passé / tous --}}
-            <div class="mt-3 inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
-                @foreach (['upcoming' => 'À venir', 'past' => 'Passés', 'all' => 'Tous'] as $val => $label)
-                    <button type="button" wire:click="$set('periode', '{{ $val }}')"
-                        class="px-3 py-1.5 text-sm font-medium rounded-md transition
-                            {{ $periode === $val ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">
-                        {{ $label }}
-                    </button>
-                @endforeach
+            {{-- Filtres : période + plage de dates --}}
+            <div class="mt-3 flex flex-wrap items-end gap-3">
+                <div class="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+                    @foreach (['upcoming' => 'À venir', 'past' => 'Passés', 'all' => 'Tous'] as $val => $label)
+                        <button type="button" wire:click="$set('periode', '{{ $val }}')"
+                            class="px-3 py-1.5 text-sm font-medium rounded-md transition
+                                {{ $periode === $val ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900' }}">
+                            {{ $label }}
+                        </button>
+                    @endforeach
+                </div>
+
+                <div class="flex items-end gap-2">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Du</label>
+                        <input wire:model.live="dateDebut" type="date" class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">Au</label>
+                        <input wire:model.live="dateFin" type="date" class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    @if ($dateDebut || $dateFin)
+                        <button type="button" wire:click="resetDateFilters" class="px-2.5 py-1.5 text-sm text-gray-500 hover:text-red-600" title="Réinitialiser les dates">✕</button>
+                    @endif
+                </div>
             </div>
         </div>
         <table class="w-full text-sm">

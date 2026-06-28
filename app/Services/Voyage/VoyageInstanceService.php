@@ -5,7 +5,6 @@ namespace App\Services\Voyage;
 use App\Enums\JoursSemain;
 use App\Enums\StatutVoyageInstance;
 use App\Models\Compagnie\Care;
-use App\Models\Compagnie\Chauffer;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use App\Helper\VoyagesInstanceHelpers;
@@ -77,6 +76,14 @@ class VoyageInstanceService
             $dateStr    = $dateVoyage->toDateString();
 
             foreach ($voyages as $voyage) {
+                // Respect de la période de validité du voyage.
+                if ($voyage->date_debut && $dateVoyage->lt($voyage->date_debut->copy()->startOfDay())) {
+                    continue;
+                }
+                if ($voyage->date_fin && $dateVoyage->gt($voyage->date_fin->copy()->startOfDay())) {
+                    continue;
+                }
+
                 $daysArray = is_array($voyage->days) ? $voyage->days : [];
 
                 $matchesToday = $voyage->is_quotidient
@@ -103,7 +110,7 @@ class VoyageInstanceService
                 }
 
                 $heure = $voyage->heure?->format('H:i:s');
-                [$careId, $chaufferId, $nbPlace] = $this->assignResources($voyage, $dateStr, $heure);
+                [$careId, $chaufferId, $nbPlace] = $this->assignResources($voyage);
 
                 VoyageInstance::create([
                     'voyage_id'   => $voyage->id,
@@ -125,50 +132,23 @@ class VoyageInstanceService
     }
 
     /**
-     * Affecte automatiquement un véhicule et un chauffeur libres pour ce
-     * créneau (date + heure), en évitant les conflits. Retourne aussi le
-     * nombre de places déduit du véhicule choisi.
+     * Affecte le véhicule et le chauffeur choisis sur le voyage. Si aucun
+     * véhicule n'est défini, on retombe sur ceux liés au voyage (pivot).
+     * Retourne aussi le nombre de places déduit du véhicule.
      *
      * @return array{0: int|null, 1: string|null, 2: int}  [care_id, chauffer_id, nb_place]
      */
-    private function assignResources(Voyage $voyage, string $dateStr, ?string $heure): array
+    private function assignResources(Voyage $voyage): array
     {
-        // Véhicules candidats : ceux liés au voyage, sinon ceux de la compagnie.
-        $cares = $voyage->cares->isNotEmpty()
-            ? $voyage->cares
-            : Care::where('compagnie_id', $voyage->compagnie_id)->get();
+        $care = $voyage->care_id
+            ? Care::find($voyage->care_id)
+            : $voyage->cares->last();
 
-        $chosenCare = null;
-        foreach ($cares as $care) {
-            $busy = VoyageInstance::whereDate('date', $dateStr)
-                ->where('heure', $heure)
-                ->where('care_id', $care->id)
-                ->exists();
-            if (!$busy) {
-                $chosenCare = $care;
-                break;
-            }
-        }
-        // Tous occupés → on retombe sur le dernier véhicule du voyage.
-        $chosenCare ??= $cares->last();
+        $chaufferId = $voyage->chauffer_id;
 
-        // Chauffeurs de la compagnie, libres sur ce créneau.
-        $chaufferId = null;
-        $chauffeurs = Chauffer::where('compagnie_id', $voyage->compagnie_id)->get();
-        foreach ($chauffeurs as $chauffeur) {
-            $busy = VoyageInstance::whereDate('date', $dateStr)
-                ->where('heure', $heure)
-                ->where('chauffer_id', $chauffeur->id)
-                ->exists();
-            if (!$busy) {
-                $chaufferId = $chauffeur->id;
-                break;
-            }
-        }
+        $nbPlace = $voyage->nb_pace ?: ($care?->number_place ?? 0);
 
-        $nbPlace = $voyage->nb_pace ?: ($chosenCare?->number_place ?? 0);
-
-        return [$chosenCare?->id, $chaufferId, $nbPlace];
+        return [$care?->id, $chaufferId, $nbPlace];
     }
 
     public function getVoyageInstanceWithBasicRelations(string $id)

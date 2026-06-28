@@ -192,6 +192,8 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     // ─── Voyage ───────────────────────────────────────────────────────────
     Route::get('/trajets',   \App\Livewire\Compagnie\Voyage\TrajetManager::class)->name('trajets');
     Route::get('/voyages',   \App\Livewire\Compagnie\Voyage\VoyageManager::class)->name('voyages');
+    Route::get('/voyages/create',          \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.create');
+    Route::get('/voyages/{voyageId}/edit', \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.edit');
     Route::get('/classes',   \App\Livewire\Compagnie\Voyage\ClasseManager::class)->name('classes');
     Route::get('/instances', \App\Livewire\Compagnie\Voyage\VoyageInstanceManager::class)->name('instances');
 
