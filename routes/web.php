@@ -202,6 +202,12 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     // ─── Guichet ──────────────────────────────────────────────────────────
     Route::get('/vente-ticket',       \App\Livewire\Compagnie\Ticket\VenteTicket::class)->name('vente-ticket');
     Route::get('/tickets',            \App\Livewire\Compagnie\Ticket\TicketManager::class)->name('tickets');
+    Route::get('/tickets/{ticketId}/print', function (int $ticketId) {
+        $ticket = \App\Models\Ticket\Ticket::withoutGlobalScopes()
+            ->whereHas('voyageInstance.voyage', fn ($q) => $q->where('compagnie_id', auth()->user()->compagnie_id))
+            ->findOrFail($ticketId);
+        return app(\App\Services\Ticket\PdfService::class)->stream($ticket, 'ticket-' . $ticket->numero_ticket . '.pdf');
+    })->name('tickets.print');
     Route::get('/tickets/{ticketId}', \App\Livewire\Compagnie\Ticket\TicketShow::class)->name('tickets.show');
     Route::get('/caisse',             \App\Livewire\Compagnie\Caisse\GestionCaisse::class)->name('caisse');
     Route::get('/caisse/{caisse}',    \App\Livewire\Compagnie\Caisse\DetailCaisse::class)->name('caisse.detail');
