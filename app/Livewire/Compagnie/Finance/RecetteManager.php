@@ -97,14 +97,14 @@ class RecetteManager extends Component
         }
 
         $this->showModal = false;
-        session()->flash('success', $this->editingId ? 'Recette mise à jour.' : 'Recette enregistrée.');
+        $this->dispatch('toast', type: 'success', message: $this->editingId ? 'Recette mise à jour.' : 'Recette enregistrée.');
         $this->reset(['editingId', 'libelle', 'montant', 'date_recette', 'source', 'reference', 'note']);
     }
 
     public function delete(int $id): void
     {
         Recette::findOrFail($id)->delete();
-        session()->flash('success', 'Recette supprimée.');
+        $this->dispatch('toast', type: 'success', message: 'Recette supprimée.');
     }
 
     public function render()

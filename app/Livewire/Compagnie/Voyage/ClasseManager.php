@@ -58,10 +58,10 @@ class ClasseManager extends Component
 
         if ($this->editingId) {
             Classe::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Classe mise à jour.');
+            $this->dispatch('toast', type: 'success', message: 'Classe mise à jour.');
         } else {
             Classe::create($data);
-            session()->flash('success', 'Classe créée.');
+            $this->dispatch('toast', type: 'success', message: 'Classe créée.');
         }
 
         $this->showModal = false;
@@ -72,11 +72,11 @@ class ClasseManager extends Component
     {
         $classe = Classe::findOrFail($id);
         if ($classe->is_default) {
-            session()->flash('error', 'Impossible de supprimer une classe par défaut.');
+            $this->dispatch('toast', type: 'error', message: 'Impossible de supprimer une classe par défaut.');
             return;
         }
         $classe->delete();
-        session()->flash('success', 'Classe supprimée.');
+        $this->dispatch('toast', type: 'success', message: 'Classe supprimée.');
     }
 
     public function openConforts(int $classeId): void

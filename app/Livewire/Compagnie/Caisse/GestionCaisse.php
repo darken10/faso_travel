@@ -28,13 +28,13 @@ class GestionCaisse extends Component
 
         $existing = Caisse::sessionOuverte();
         if ($existing) {
-            session()->flash('error', 'Vous avez déjà une caisse ouverte. Fermez-la d\'abord.');
+            $this->dispatch('toast', type: 'error', message: 'Vous avez déjà une caisse ouverte. Fermez-la d\'abord.');
             return;
         }
 
         $compagnieId = Auth::user()->compagnie_id;
         if (!$compagnieId) {
-            session()->flash('error', 'Votre compte n\'est pas associé à une compagnie.');
+            $this->dispatch('toast', type: 'error', message: 'Votre compte n\'est pas associé à une compagnie.');
             return;
         }
 
@@ -49,7 +49,7 @@ class GestionCaisse extends Component
 
         $this->montant_ouverture = 0;
         $this->note_ouverture = '';
-        session()->flash('success', 'Caisse ouverte ! Vous pouvez commencer les ventes.');
+        $this->dispatch('toast', type: 'success', message: 'Caisse ouverte ! Vous pouvez commencer les ventes.');
     }
 
     public function fermerCaisse(): void
@@ -61,7 +61,7 @@ class GestionCaisse extends Component
 
         $caisse = Caisse::sessionOuverte();
         if (!$caisse) {
-            session()->flash('error', 'Aucune caisse ouverte à fermer.');
+            $this->dispatch('toast', type: 'error', message: 'Aucune caisse ouverte à fermer.');
             return;
         }
 
@@ -75,7 +75,7 @@ class GestionCaisse extends Component
 
         $this->montant_fermeture = 0;
         $this->note_fermeture = '';
-        session()->flash('success', 'Caisse fermée avec succès.');
+        $this->dispatch('toast', type: 'success', message: 'Caisse fermée avec succès.');
     }
 
     public function render()

@@ -22,7 +22,7 @@ class VoyageManager extends Component
     public function delete(int $id): void
     {
         Voyage::findOrFail($id)->delete();
-        session()->flash('success', 'Voyage supprimé.');
+        $this->dispatch('toast', type: 'success', message: 'Voyage supprimé.');
     }
 
     public function render()

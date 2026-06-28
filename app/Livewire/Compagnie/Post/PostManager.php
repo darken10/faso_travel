@@ -20,7 +20,7 @@ class PostManager extends Component
     public function delete(int $id): void
     {
         Post::withoutGlobalScopes()->findOrFail($id)->delete();
-        session()->flash('success', 'Article supprimé.');
+        $this->dispatch('toast', type: 'success', message: 'Article supprimé.');
     }
 
     public function render()

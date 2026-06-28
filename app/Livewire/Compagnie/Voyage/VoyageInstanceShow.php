@@ -78,7 +78,7 @@ class VoyageInstanceShow extends Component
         ]);
 
         $this->showAssignModal = false;
-        session()->flash('success', 'Affectation enregistrée.');
+        $this->dispatch('toast', type: 'success', message: 'Affectation enregistrée.');
     }
 
     // ── Alerte annulation / retard ─────────────────────────────────────────────
@@ -128,7 +128,7 @@ class VoyageInstanceShow extends Component
         }
 
         $this->showAlertModal = false;
-        session()->flash('success', $isAnnule
+        $this->dispatch('toast', type: 'success', message: $isAnnule
             ? "Instance annulée · {$tickets->count()} ticket(s) mis en pause et client(s) notifié(s)."
             : "Instance signalée comme retardée · {$tickets->count()} client(s) notifié(s).");
     }

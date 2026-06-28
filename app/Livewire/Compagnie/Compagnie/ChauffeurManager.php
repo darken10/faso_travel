@@ -113,10 +113,10 @@ class ChauffeurManager extends Component
 
         if ($this->editingId) {
             Chauffer::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Chauffeur mis à jour.');
+            $this->dispatch('toast', type: 'success', message: 'Chauffeur mis à jour.');
         } else {
             Chauffer::create($data);
-            session()->flash('success', 'Chauffeur ajouté.');
+            $this->dispatch('toast', type: 'success', message: 'Chauffeur ajouté.');
         }
 
         $this->showModal = false;
@@ -134,7 +134,7 @@ class ChauffeurManager extends Component
             Storage::disk('public')->delete($c->photo);
         }
         $c->delete();
-        session()->flash('success', 'Chauffeur supprimé.');
+        $this->dispatch('toast', type: 'success', message: 'Chauffeur supprimé.');
     }
 
     public function render()

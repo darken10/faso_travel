@@ -91,7 +91,7 @@ class UserManager extends Component
                 'name'               => $this->first_name . ' ' . $this->last_name,
             ]);
             $user->roles()->sync($this->selectedRoles);
-            session()->flash('success', 'Utilisateur mis à jour.');
+            $this->dispatch('toast', type: 'success', message: 'Utilisateur mis à jour.');
         } else {
             $password = Str::random(12);
             $user = User::create([
@@ -119,7 +119,7 @@ class UserManager extends Component
             $companyName = Auth::user()->compagnie?->name ?? 'Votre entreprise';
             Mail::to($user->email)->send(new CompanyAccountActivationMail($user, $activation, $companyName));
 
-            session()->flash('success', 'Utilisateur créé. Un email d\'activation a été envoyé.');
+            $this->dispatch('toast', type: 'success', message: 'Utilisateur créé. Un email d\'activation a été envoyé.');
         }
 
         $this->showModal = false;
@@ -130,13 +130,13 @@ class UserManager extends Component
     public function bloquer(int $id): void
     {
         User::findOrFail($id)->update(['statut' => StatutUser::Bloquer->value]);
-        session()->flash('success', 'Utilisateur bloqué.');
+        $this->dispatch('toast', type: 'success', message: 'Utilisateur bloqué.');
     }
 
     public function debloquer(int $id): void
     {
         User::findOrFail($id)->update(['statut' => StatutUser::Active->value]);
-        session()->flash('success', 'Utilisateur débloqué.');
+        $this->dispatch('toast', type: 'success', message: 'Utilisateur débloqué.');
     }
 
     public function render()

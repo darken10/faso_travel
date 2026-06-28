@@ -64,7 +64,7 @@ class CategorieManager extends Component
         }
 
         $this->showModal = false;
-        session()->flash('success', $this->editingId ? 'Catégorie mise à jour.' : 'Catégorie créée.');
+        $this->dispatch('toast', type: 'success', message: $this->editingId ? 'Catégorie mise à jour.' : 'Catégorie créée.');
         $this->reset(['editingId', 'nom', 'description']);
     }
 
@@ -72,11 +72,11 @@ class CategorieManager extends Component
     {
         $cat = CategorieDepense::findOrFail($id);
         if ($cat->depenses()->count() > 0) {
-            session()->flash('error', 'Impossible de supprimer : cette catégorie est utilisée par des dépenses.');
+            $this->dispatch('toast', type: 'error', message: 'Impossible de supprimer : cette catégorie est utilisée par des dépenses.');
             return;
         }
         $cat->delete();
-        session()->flash('success', 'Catégorie supprimée.');
+        $this->dispatch('toast', type: 'success', message: 'Catégorie supprimée.');
     }
 
     public function render()

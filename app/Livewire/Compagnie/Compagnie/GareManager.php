@@ -105,10 +105,10 @@ class GareManager extends Component
 
         if ($this->editingId) {
             Gare::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Gare mise à jour.');
+            $this->dispatch('toast', type: 'success', message: 'Gare mise à jour.');
         } else {
             Gare::create($data);
-            session()->flash('success', 'Gare créée.');
+            $this->dispatch('toast', type: 'success', message: 'Gare créée.');
         }
 
         $this->showModal = false;
@@ -119,11 +119,11 @@ class GareManager extends Component
     {
         $gare = Gare::findOrFail($id);
         if ($gare->is_default) {
-            session()->flash('error', 'Impossible de supprimer une gare par défaut.');
+            $this->dispatch('toast', type: 'error', message: 'Impossible de supprimer une gare par défaut.');
             return;
         }
         $gare->delete();
-        session()->flash('success', 'Gare supprimée.');
+        $this->dispatch('toast', type: 'success', message: 'Gare supprimée.');
     }
 
     public function render()

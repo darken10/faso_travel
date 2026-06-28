@@ -100,14 +100,14 @@ class DepenseManager extends Component
         }
 
         $this->showModal = false;
-        session()->flash('success', $this->editingId ? 'Dépense mise à jour.' : 'Dépense enregistrée.');
+        $this->dispatch('toast', type: 'success', message: $this->editingId ? 'Dépense mise à jour.' : 'Dépense enregistrée.');
         $this->reset(['editingId', 'libelle', 'montant', 'date_depense', 'categorie_depense_id', 'reference', 'note']);
     }
 
     public function delete(int $id): void
     {
         Depense::findOrFail($id)->delete();
-        session()->flash('success', 'Dépense supprimée.');
+        $this->dispatch('toast', type: 'success', message: 'Dépense supprimée.');
     }
 
     public function render()

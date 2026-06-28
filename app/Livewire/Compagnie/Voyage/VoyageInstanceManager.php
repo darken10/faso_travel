@@ -133,7 +133,7 @@ class VoyageInstanceManager extends Component
         $result      = $service->createForCompagnie($compagnieId, $this->genJours);
 
         $this->showGenModal = false;
-        session()->flash('success',
+        $this->dispatch('toast', type: 'success', message:
             "{$result['created']} instance(s) créée(s) · {$result['skipped']} déjà existante(s) ignorée(s)."
         );
     }
@@ -180,7 +180,7 @@ class VoyageInstanceManager extends Component
         ]);
 
         $this->showAssignModal = false;
-        session()->flash('success', 'Affectation enregistrée.');
+        $this->dispatch('toast', type: 'success', message: 'Affectation enregistrée.');
     }
 
     // ── Alerte annulation / retard ───────────────────────────────────────────
@@ -232,7 +232,7 @@ class VoyageInstanceManager extends Component
         }
 
         $this->showAlertModal = false;
-        session()->flash('success', $isAnnule
+        $this->dispatch('toast', type: 'success', message: $isAnnule
             ? "Instance annulée · {$tickets->count()} ticket(s) mis en pause et client(s) notifié(s)."
             : "Instance signalée comme retardée · {$tickets->count()} client(s) notifié(s)."
         );
@@ -298,10 +298,10 @@ class VoyageInstanceManager extends Component
 
         if ($this->editingId) {
             VoyageInstance::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Instance mise à jour.');
+            $this->dispatch('toast', type: 'success', message: 'Instance mise à jour.');
         } else {
             VoyageInstance::create($data);
-            session()->flash('success', 'Instance créée.');
+            $this->dispatch('toast', type: 'success', message: 'Instance créée.');
         }
 
         $this->showModal = false;
@@ -311,7 +311,7 @@ class VoyageInstanceManager extends Component
     public function delete(string $id): void
     {
         VoyageInstance::findOrFail($id)->delete();
-        session()->flash('success', 'Instance supprimée.');
+        $this->dispatch('toast', type: 'success', message: 'Instance supprimée.');
     }
 
     public function render()

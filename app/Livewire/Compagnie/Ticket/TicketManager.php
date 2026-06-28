@@ -95,9 +95,9 @@ class TicketManager extends Component
 
         try {
             TicketValidation::valider($ticket);
-            session()->flash('success', 'Ticket validé avec succès.');
+            $this->dispatch('toast', type: 'success', message: 'Ticket validé avec succès.');
         } catch (\Throwable $e) {
-            session()->flash('error', 'Erreur lors de la validation : ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'Erreur lors de la validation : ' . $e->getMessage());
         }
     }
 
@@ -107,9 +107,9 @@ class TicketManager extends Component
 
         try {
             TicketValidation::bloque($ticket);
-            session()->flash('success', 'Ticket bloqué.');
+            $this->dispatch('toast', type: 'success', message: 'Ticket bloqué.');
         } catch (\Throwable $e) {
-            session()->flash('error', 'Erreur : ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'Erreur : ' . $e->getMessage());
         }
     }
 
@@ -119,9 +119,9 @@ class TicketManager extends Component
 
         try {
             TicketValidation::active($ticket);
-            session()->flash('success', 'Ticket réactivé.');
+            $this->dispatch('toast', type: 'success', message: 'Ticket réactivé.');
         } catch (\Throwable $e) {
-            session()->flash('error', 'Erreur : ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'Erreur : ' . $e->getMessage());
         }
     }
 

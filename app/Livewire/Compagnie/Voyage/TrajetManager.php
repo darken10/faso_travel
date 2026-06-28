@@ -116,10 +116,10 @@ class TrajetManager extends Component
 
         if ($this->editingId) {
             Trajet::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Trajet mis à jour.');
+            $this->dispatch('toast', type: 'success', message: 'Trajet mis à jour.');
         } else {
             Trajet::create($data);
-            session()->flash('success', 'Trajet créé.');
+            $this->dispatch('toast', type: 'success', message: 'Trajet créé.');
         }
 
         $this->showModal = false;
@@ -134,7 +134,7 @@ class TrajetManager extends Component
     public function delete(int $id): void
     {
         Trajet::findOrFail($id)->delete();
-        session()->flash('success', 'Trajet supprimé.');
+        $this->dispatch('toast', type: 'success', message: 'Trajet supprimé.');
     }
 
     public function render()

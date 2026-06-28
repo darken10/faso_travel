@@ -188,7 +188,7 @@ class DocumentManager extends Component
             ]);
         }
 
-        session()->flash('success', $this->editingId ? 'Document mis à jour.' : 'Document ajouté.');
+        $this->dispatch('toast', type: 'success', message: $this->editingId ? 'Document mis à jour.' : 'Document ajouté.');
         $this->showModal = false;
         $this->reset([
             'editingId', 'titre', 'description', 'documentable_type', 'documentable_id',
@@ -202,7 +202,7 @@ class DocumentManager extends Component
         $doc = Document::findOrFail($id);
         Storage::disk('public')->delete($doc->file_path);
         $doc->delete();
-        session()->flash('success', 'Document supprimé.');
+        $this->dispatch('toast', type: 'success', message: 'Document supprimé.');
     }
 
     // ── Données pour le formulaire ────────────────────────────────────────────

@@ -27,7 +27,7 @@ class VenteTicket extends Component
     // Step 1
     public ?string $voyage_instance_id = null;
     public string $type_ticket = '';
-    public float $prix = 0;
+    public $prix = 0;
 
     // Step 2
     public string $client_nom = '';
@@ -35,8 +35,8 @@ class VenteTicket extends Component
     public string $client_telephone = '';
 
     // Step 3
-    public float $montant_recu = 0;
-    public float $monnaie = 0;
+    public $montant_recu = 0;
+    public $monnaie = 0;
 
     // Result
     public ?int $ticketVenduId = null;
@@ -86,7 +86,7 @@ class VenteTicket extends Component
     public function nextStep(): void
     {
         if (! Caisse::sessionOuverte()) {
-            session()->flash('error', 'Vous devez ouvrir une caisse avant de pouvoir vendre un ticket.');
+            $this->dispatch('toast', type: 'error', message: 'Vous devez ouvrir une caisse avant de pouvoir vendre un ticket.');
             return;
         }
 
@@ -108,7 +108,7 @@ class VenteTicket extends Component
 
     public function updatedMontantRecu(): void
     {
-        $this->monnaie = max(0, $this->montant_recu - $this->prix);
+        $this->monnaie = max(0, (float) $this->montant_recu - (float) $this->prix);
     }
 
     public function vendreTicket(): void
@@ -123,7 +123,7 @@ class VenteTicket extends Component
         ]);
 
         if (! Caisse::sessionOuverte()) {
-            session()->flash('error', 'Aucune caisse ouverte. Ouvrez une caisse avant de vendre un ticket.');
+            $this->dispatch('toast', type: 'error', message: 'Aucune caisse ouverte. Ouvrez une caisse avant de vendre un ticket.');
             $this->step = 1;
             return;
         }
@@ -193,7 +193,7 @@ class VenteTicket extends Component
         } catch (\Exception $e) {
             DB::rollBack();
             report($e);
-            session()->flash('error', 'Une erreur est survenue. Veuillez réessayer.');
+            $this->dispatch('toast', type: 'error', message: 'Une erreur est survenue. Veuillez réessayer.');
         }
     }
 
