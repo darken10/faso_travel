@@ -21,6 +21,7 @@
         "laravel/tinker": "^2.9",
         "ligdicash/ligdicash": "^1.0",
         "livewire/livewire": "^3.5",
+        "maatwebsite/excel": "^3.1",
         "pusher/pusher-php-server": "^7.2",
         "spatie/browsershot": "^4.3",
         "twilio/sdk": "^8.4"

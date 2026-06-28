@@ -8,6 +8,7 @@ use App\Models\Compagnie\Care;
 use App\Models\Compagnie\Chauffer;
 use App\Models\Voyage\VoyageInstance;
 use App\Notifications\Ticket\TicketNotification;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -46,6 +47,22 @@ class VoyageInstanceShow extends Component
         ])
             ->whereHas('voyage', fn ($q) => $q->where('compagnie_id', $compagnieId))
             ->findOrFail($this->instanceId);
+    }
+
+    /** Export PDF du manifeste d'embarquement. */
+    public function exportManifeste()
+    {
+        $instance = $this->instance();
+        $passengers = $instance->tickets
+            ->filter(fn ($t) => $t->statut !== StatutTicket::Annuler)
+            ->sortBy('numero_chaise');
+
+        $pdf = Pdf::loadView('exports.manifeste', compact('instance', 'passengers'));
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'manifeste-' . \Carbon\Carbon::parse($instance->date)->format('Y-m-d') . '.pdf',
+        );
     }
 
     // ── Affectation ───────────────────────────────────────────────────────────

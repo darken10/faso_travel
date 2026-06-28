@@ -11,7 +11,13 @@
             </p>
         </div>
         @php $isOpen = $caisse->isOuverte(); @endphp
-        <x-panel.badge :color="$isOpen ? 'green' : 'gray'" size="xs" class="ml-auto">{{ $isOpen ? 'Ouverte' : 'Fermée' }}</x-panel.badge>
+        <div class="ml-auto flex items-center gap-2">
+            <button wire:click="exportPdf" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">
+                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                Rapport PDF
+            </button>
+            <x-panel.badge :color="$isOpen ? 'green' : 'gray'" size="xs">{{ $isOpen ? 'Ouverte' : 'Fermée' }}</x-panel.badge>
+        </div>
     </div>
 
     {{-- Stats --}}

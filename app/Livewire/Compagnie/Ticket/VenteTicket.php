@@ -28,6 +28,7 @@ class VenteTicket extends Component
     public ?string $voyage_instance_id = null;
     public string $type_ticket = '';
     public $prix = 0;
+    public ?int $numero_chaise = null;
 
     // Step 2
     public string $client_nom = '';
@@ -60,7 +61,33 @@ class VenteTicket extends Component
 
     public function updatedVoyageInstanceId(): void
     {
+        $this->numero_chaise = null; // le plan des sièges change selon le voyage
         $this->computePrix();
+    }
+
+    /** Sièges occupés (tickets non annulés) de l'instance sélectionnée. */
+    public function occupiedSeats(): array
+    {
+        if (!$this->voyage_instance_id) {
+            return [];
+        }
+        $instance = VoyageInstance::find($this->voyage_instance_id);
+        if (!$instance) {
+            return [];
+        }
+        return $instance->tickets()
+            ->where('statut', '!=', StatutTicket::Annuler)
+            ->pluck('numero_chaise')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+    }
+
+    public function selectSeat(int $n): void
+    {
+        if (in_array($n, $this->occupiedSeats(), true)) {
+            return; // siège déjà pris
+        }
+        $this->numero_chaise = $n;
     }
 
     public function updatedTypeTicket(): void
@@ -93,6 +120,10 @@ class VenteTicket extends Component
         if ($this->step === 1) {
             $this->validateOnly('voyage_instance_id');
             $this->validateOnly('type_ticket');
+            if (!$this->numero_chaise) {
+                $this->addError('numero_chaise', 'Veuillez choisir une chaise.');
+                return;
+            }
         }
         if ($this->step === 2) {
             $this->validateOnly('client_nom');
@@ -145,11 +176,25 @@ class VenteTicket extends Component
             ]);
 
             $voyageInstance = VoyageInstance::findOrFail($this->voyage_instance_id);
-            $placesDisponibles = $voyageInstance->chaiseDispo();
 
-            if (empty($placesDisponibles)) {
+            // Vérifie qu'une chaise est choisie et toujours libre.
+            if (!$this->numero_chaise) {
                 DB::rollBack();
-                $this->addError('voyage_instance_id', 'Ce voyage n\'a plus de places disponibles.');
+                $this->step = 1;
+                $this->addError('numero_chaise', 'Veuillez choisir une chaise.');
+                return;
+            }
+
+            $dejaPris = $voyageInstance->tickets()
+                ->where('statut', '!=', StatutTicket::Annuler)
+                ->where('numero_chaise', $this->numero_chaise)
+                ->exists();
+
+            if ($dejaPris) {
+                DB::rollBack();
+                $this->numero_chaise = null;
+                $this->step = 1;
+                $this->dispatch('toast', type: 'error', message: 'Cette chaise vient d\'être prise. Choisissez-en une autre.');
                 return;
             }
 
@@ -165,7 +210,7 @@ class VenteTicket extends Component
                 'type'                => $typeTicket->value,
                 'statut'              => StatutTicket::Payer->value,
                 'numero_ticket'       => TicketHelpers::generateTicketNumber(),
-                'numero_chaise'       => TicketHelpers::getNumeroChaise($voyageInstance),
+                'numero_chaise'       => $this->numero_chaise,
                 'code_sms'            => TicketHelpers::generateTicketCodeSms(),
                 'code_qr'             => TicketHelpers::generateTicketCodeQr(),
                 'is_my_ticket'        => false,

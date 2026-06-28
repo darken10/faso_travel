@@ -12,6 +12,7 @@ use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use App\Notifications\Ticket\TicketNotification;
 use App\Services\Voyage\VoyageInstanceService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -135,6 +136,28 @@ class VoyageInstanceManager extends Component
         $this->showGenModal = false;
         $this->dispatch('toast', type: 'success', message:
             "{$result['created']} instance(s) créée(s) · {$result['skipped']} déjà existante(s) ignorée(s)."
+        );
+    }
+
+    /** Manifeste d'embarquement PDF d'une seule instance. */
+    public function exportManifeste(string $id)
+    {
+        $instance = VoyageInstance::with([
+            'voyage.trajet.depart', 'voyage.trajet.arriver', 'voyage.compagnie',
+            'care', 'chauffer', 'tickets.user', 'tickets.autre_personne',
+        ])
+            ->whereHas('voyage', fn ($q) => $q->where('compagnie_id', auth()->user()->compagnie_id))
+            ->findOrFail($id);
+
+        $passengers = $instance->tickets
+            ->filter(fn ($t) => $t->statut !== StatutTicket::Annuler)
+            ->sortBy('numero_chaise');
+
+        $pdf = Pdf::loadView('exports.manifeste', compact('instance', 'passengers'));
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'manifeste-' . \Carbon\Carbon::parse($instance->date)->format('Y-m-d') . '.pdf',
         );
     }
 

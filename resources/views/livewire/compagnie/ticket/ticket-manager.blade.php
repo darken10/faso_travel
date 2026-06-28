@@ -35,11 +35,19 @@
                 <p class="text-sm text-gray-500">{{ $tickets->total() }} résultat{{ $tickets->total() > 1 ? 's' : '' }}</p>
             </div>
         </div>
+        <div class="flex items-center gap-2">
+        <button wire:click="export" wire:loading.attr="disabled" wire:target="export"
+           class="inline-flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span wire:loading.remove wire:target="export">Exporter Excel</span>
+            <span wire:loading wire:target="export">Export…</span>
+        </button>
         <a href="{{ route('panel.compagnie.vente-ticket') }}"
            class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             Vendre un ticket
         </a>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

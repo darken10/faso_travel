@@ -3,6 +3,7 @@
 namespace App\Livewire\Compagnie\Ticket;
 
 use App\Enums\StatutTicket;
+use App\Exports\TicketsExport;
 use App\Helper\TicketValidation;
 use App\Models\Ticket\Ticket;
 use Carbon\Carbon;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 #[Layout('layouts.compagnie-panel')]
 class TicketManager extends Component
@@ -87,6 +89,14 @@ class TicketManager extends Component
     {
         $this->reset(['search', 'statutFilter', 'dateFrom', 'dateTo']);
         $this->resetPage();
+    }
+
+    public function export()
+    {
+        return Excel::download(
+            new TicketsExport($this->baseQuery()->latest()),
+            'tickets-' . now()->format('Y-m-d') . '.xlsx',
+        );
     }
 
     public function valider(int $id): void
