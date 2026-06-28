@@ -37,7 +37,8 @@ class VoyageInstance extends Model
         "chauffer_id",
         'statut',
         'prix',
-        'classe_id'
+        'classe_id',
+        'rappel_depart_at',
     ];
 
     protected $with = [
@@ -84,6 +85,7 @@ class VoyageInstance extends Model
             "date" => "datetime",
             'heure' => 'datetime',
             'statut' => StatutVoyageInstance::class,
+            'rappel_depart_at' => 'datetime',
         ];
     }
 

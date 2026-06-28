@@ -26,6 +26,31 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    /** Enregistre/actualise le token push Expo de l'appareil. */
+    public function registerPushToken(Request $request)
+    {
+        $validated = $request->validate([
+            'token'    => 'required|string|max:255',
+            'platform' => 'nullable|string|in:ios,android',
+        ]);
+
+        \App\Models\PushToken::updateOrCreate(
+            ['token' => $validated['token']],
+            ['user_id' => Auth::id(), 'platform' => $validated['platform'] ?? null],
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    /** Supprime le token push (à la déconnexion). */
+    public function deletePushToken(Request $request)
+    {
+        $validated = $request->validate(['token' => 'required|string']);
+        \App\Models\PushToken::where('token', $validated['token'])->where('user_id', Auth::id())->delete();
+
+        return response()->json(['success' => true]);
+    }
+
     /**
      * Update user profile
      */

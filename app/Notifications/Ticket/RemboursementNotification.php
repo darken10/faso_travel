@@ -15,7 +15,16 @@ class RemboursementNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return ['database', 'mail', \App\Notifications\Channels\ExpoChannel::class];
+    }
+
+    public function toExpo(object $notifiable): array
+    {
+        return [
+            'title' => 'Ticket remboursé',
+            'body'  => "Votre ticket {$this->ticket->numero_ticket} a été remboursé (" . number_format($this->montant, 0, ',', ' ') . ' XOF).',
+            'data'  => ['type' => 'remboursement', 'ticket_id' => $this->ticket->id],
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage

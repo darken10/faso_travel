@@ -26,3 +26,8 @@ Schedule::command('reports:send daily')->dailyAt('20:00')->withoutOverlapping();
 Schedule::command('reports:send weekly')->weeklyOn(1, '07:00')->withoutOverlapping();
 // Mensuel : le 1er à 7h (mois précédent)
 Schedule::command('reports:send monthly')->monthlyOn(1, '07:00')->withoutOverlapping();
+
+// Rappels de départ (push/email) : ~2h avant le départ, vérifié toutes les 15 min
+Schedule::command('notifications:departure-reminders --hours=2')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();

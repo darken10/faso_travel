@@ -122,6 +122,17 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Post::class);
     }
 
+    function pushTokens(): HasMany
+    {
+        return $this->hasMany(\App\Models\PushToken::class);
+    }
+
+    /** Tokens Expo pour le canal de notification push. */
+    public function routeNotificationForExpo(): array
+    {
+        return $this->pushTokens()->pluck('token')->all();
+    }
+
     function comments():HasMany{
         return $this->hasMany(Comment::class);
     }

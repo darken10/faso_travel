@@ -34,7 +34,20 @@ class TicketNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database','mail'];
+        return ['database', 'mail', \App\Notifications\Channels\ExpoChannel::class];
+    }
+
+    /** Représentation push Expo. */
+    public function toExpo(object $notifiable): array
+    {
+        return [
+            'title' => $this->title,
+            'body'  => $this->message ?: $this->title,
+            'data'  => [
+                'type'      => $this->type->value,
+                'ticket_id' => $this->ticket->id,
+            ],
+        ];
     }
 
     /**

@@ -38,6 +38,8 @@ Route::prefix('v2')->group(function () {
     Route::prefix('/user')->middleware('auth:sanctum')->controller(UserControllerV2::class)->name('api.v2.user.')->group(function () {
         Route::get('/profile', 'getProfile')->name('profile');
         Route::put('/profile', 'updateProfile')->name('update-profile');
+        Route::post('/push-token', 'registerPushToken')->name('push-token.register');
+        Route::delete('/push-token', 'deletePushToken')->name('push-token.delete');
         Route::post('/profile/photo', 'updateProfilePicture')->name('update-photo');
         Route::get('/travel-history', 'getTravelHistory')->name('travel-history');
         Route::get('/favorite-routes', 'getFavoriteRoutes')->name('favorite-routes');
