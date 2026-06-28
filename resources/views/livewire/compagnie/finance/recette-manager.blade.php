@@ -8,11 +8,16 @@
     @endif
 
     <div class="flex items-center justify-between mb-6">
-        <div>
-            <h2 class="text-xl font-bold text-gray-800">Recettes manuelles</h2>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $recettes->total() }} enregistrements</p>
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800">Recettes manuelles</h1>
+                <p class="text-sm text-gray-500">{{ $recettes->total() }} enregistrement{{ $recettes->total() > 1 ? 's' : '' }}</p>
+            </div>
         </div>
-        <button wire:click="openCreate" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+        <button wire:click="openCreate" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouvelle recette
         </button>

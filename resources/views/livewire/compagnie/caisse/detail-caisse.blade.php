@@ -1,11 +1,11 @@
 <div>
     <div class="flex items-center gap-3 mb-6">
-        <a href="{{ route('panel.compagnie.caisse') }}" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        <a href="{{ route('panel.compagnie.caisse') }}" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </a>
         <div>
-            <h2 class="text-xl font-bold text-gray-800">Détail de la caisse</h2>
-            <p class="text-sm text-gray-500 mt-0.5">
+            <h1 class="text-xl font-semibold text-gray-800">Détail de la caisse</h1>
+            <p class="text-sm text-gray-500">
                 {{ $caisse->opened_at?->format('d/m/Y à H:i') }}
                 @if($caisse->closed_at) — Fermée le {{ $caisse->closed_at?->format('d/m/Y à H:i') }} @endif
             </p>

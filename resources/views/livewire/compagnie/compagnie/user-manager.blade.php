@@ -9,12 +9,17 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between mb-6">
-        <div>
-            <h2 class="text-xl font-bold text-gray-800">Utilisateurs</h2>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $users->total() }} membres</p>
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.7"/></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800">Utilisateurs</h1>
+                <p class="text-sm text-gray-500">{{ $users->total() }} membre{{ $users->total() > 1 ? 's' : '' }}</p>
+            </div>
         </div>
         <button wire:click="openCreate"
-                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>

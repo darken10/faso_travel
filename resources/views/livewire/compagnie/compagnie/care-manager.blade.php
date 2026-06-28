@@ -1,12 +1,17 @@
 <div>
     {{-- Header --}}
     <div class="flex items-center justify-between mb-6">
-        <div>
-            <h2 class="text-xl font-bold text-gray-800">Véhicules (Cares)</h2>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $cares->total() }} véhicules enregistrés</p>
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 0a2 2 0 00-2 2v6a1 1 0 001 1h1m0-9V5a1 1 0 011-1h6a1 1 0 011 1v2m-8 9h8m0 0h1a1 1 0 001-1V9a2 2 0 00-2-2m1 9a1 1 0 102 0 1 1 0 00-2 0zM7 16a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800">Véhicules</h1>
+                <p class="text-sm text-gray-500">{{ $cares->total() }} véhicule{{ $cares->total() > 1 ? 's' : '' }} enregistré{{ $cares->total() > 1 ? 's' : '' }}</p>
+            </div>
         </div>
         <button wire:click="openCreate"
-                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>

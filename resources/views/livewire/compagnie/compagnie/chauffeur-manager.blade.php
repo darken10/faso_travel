@@ -1,9 +1,14 @@
 <div>
     {{-- En-tête --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-            <h2 class="text-xl font-bold text-gray-800">Chauffeurs</h2>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $chauffeurs->total() }} chauffeur(s) enregistré(s)</p>
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800">Chauffeurs</h1>
+                <p class="text-sm text-gray-500">{{ $chauffeurs->total() }} chauffeur{{ $chauffeurs->total() > 1 ? 's' : '' }} enregistré{{ $chauffeurs->total() > 1 ? 's' : '' }}</p>
+            </div>
         </div>
         <div class="flex items-center gap-3">
             <div class="relative">

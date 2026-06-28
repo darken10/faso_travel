@@ -14,12 +14,17 @@
     @endif
 
     <div class="flex items-center justify-between mb-6">
-        <div>
-            <h2 class="text-xl font-bold text-gray-800">Gares</h2>
-            <p class="text-sm text-gray-500 mt-0.5">{{ $gares->total() }} gares enregistrées</p>
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800">Gares</h1>
+                <p class="text-sm text-gray-500">{{ $gares->total() }} gare{{ $gares->total() > 1 ? 's' : '' }} enregistrée{{ $gares->total() > 1 ? 's' : '' }}</p>
+            </div>
         </div>
         <button wire:click="openCreate"
-                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouvelle gare
         </button>

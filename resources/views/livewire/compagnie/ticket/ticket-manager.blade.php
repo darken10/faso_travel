@@ -26,12 +26,17 @@
 
     {{-- ── En-tête & bouton vente ─────────────────────────────────────────────── --}}
     <div class="flex items-center justify-between mb-4">
-        <div>
-            <h2 class="text-lg font-bold text-gray-800">Tickets</h2>
-            <p class="text-xs text-gray-400 mt-0.5">{{ $tickets->total() }} résultat{{ $tickets->total() > 1 ? 's' : '' }}</p>
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-semibold text-gray-800">Tickets</h1>
+                <p class="text-sm text-gray-500">{{ $tickets->total() }} résultat{{ $tickets->total() > 1 ? 's' : '' }}</p>
+            </div>
         </div>
         <a href="{{ route('panel.compagnie.vente-ticket') }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm">
+           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             Vendre un ticket
         </a>
