@@ -18,3 +18,11 @@ Schedule::command('voyages:generate-instances --days=7')
 Schedule::command('tickets:clean-expired --hours=24')
     ->hourly()
     ->withoutOverlapping();
+
+// ── Rapports automatiques par email aux gérants ──────────────────────────────
+// Journalier : chaque soir à 20h (activité du jour)
+Schedule::command('reports:send daily')->dailyAt('20:00')->withoutOverlapping();
+// Hebdomadaire : lundi 7h (semaine écoulée)
+Schedule::command('reports:send weekly')->weeklyOn(1, '07:00')->withoutOverlapping();
+// Mensuel : le 1er à 7h (mois précédent)
+Schedule::command('reports:send monthly')->monthlyOn(1, '07:00')->withoutOverlapping();

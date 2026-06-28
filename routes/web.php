@@ -228,6 +228,7 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/documents', \App\Livewire\Compagnie\Document\DocumentManager::class)->name('documents');
 
     // ─── Comptabilité ─────────────────────────────────────────────────────
+    Route::get('/rapports',   \App\Livewire\Compagnie\Rapport\RapportManager::class)->name('rapports');
     Route::get('/bilan',      \App\Livewire\Compagnie\Finance\BilanFinancier::class)->name('bilan');
     Route::get('/depenses',   \App\Livewire\Compagnie\Finance\DepenseManager::class)->name('depenses');
     Route::get('/recettes',   \App\Livewire\Compagnie\Finance\RecetteManager::class)->name('recettes');
