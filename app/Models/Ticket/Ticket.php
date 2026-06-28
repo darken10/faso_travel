@@ -45,7 +45,10 @@ class Ticket extends Model
         "transferer_at", "valider_by_id", "valider_at", "transferer_a_user_id",
         "retour_validate_at",
         "voyage_instance_id",
-        "caisse_id"
+        "caisse_id",
+        "rembourse_at",
+        "rembourse_par_id",
+        "rembourse_montant",
     ];
 
     protected $with = [
@@ -85,6 +88,7 @@ class Ticket extends Model
             'date'         => 'date',
             'bagages'      => 'array',
             'statut'       => StatutTicket::class,
+            'rembourse_at' => 'datetime',
         ];
     }
 

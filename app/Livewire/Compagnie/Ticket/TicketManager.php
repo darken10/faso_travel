@@ -61,6 +61,12 @@ class TicketManager extends Component
                 $this->confirmButtonLabel = 'Réactiver',
                 $this->confirmButtonClass = 'bg-blue-600 hover:bg-blue-700 text-white',
             ],
+            'rembourser' => [
+                $this->confirmTitle       = 'Rembourser ce ticket',
+                $this->confirmMessage     = 'Confirmer le remboursement ? Le ticket sera annulé et le client notifié.',
+                $this->confirmButtonLabel = 'Rembourser',
+                $this->confirmButtonClass = 'bg-purple-600 hover:bg-purple-700 text-white',
+            ],
             default => null,
         };
 
@@ -74,10 +80,11 @@ class TicketManager extends Component
         }
 
         match ($this->confirmAction) {
-            'valider' => $this->valider($this->confirmTicketId),
-            'bloquer' => $this->bloquer($this->confirmTicketId),
-            'activer' => $this->activer($this->confirmTicketId),
-            default   => null,
+            'valider'    => $this->valider($this->confirmTicketId),
+            'bloquer'    => $this->bloquer($this->confirmTicketId),
+            'activer'    => $this->activer($this->confirmTicketId),
+            'rembourser' => $this->rembourser($this->confirmTicketId),
+            default      => null,
         };
 
         $this->showConfirmModal = false;
@@ -133,6 +140,34 @@ class TicketManager extends Component
         } catch (\Throwable $e) {
             $this->dispatch('toast', type: 'error', message: 'Erreur : ' . $e->getMessage());
         }
+    }
+
+    public function rembourser(int $id): void
+    {
+        $ticket = Ticket::with('user', 'payements')->findOrFail($id);
+
+        // Remboursable uniquement si en pause (voyage annulé) ou déjà annulé non remboursé.
+        if ($ticket->statut !== StatutTicket::Pause) {
+            $this->dispatch('toast', type: 'error', message: 'Seul un ticket en pause (voyage annulé) peut être remboursé.');
+            return;
+        }
+
+        $montant = (int) $ticket->payements->sum('montant');
+
+        $ticket->update([
+            'statut'            => StatutTicket::Annuler->value,
+            'rembourse_at'      => now(),
+            'rembourse_par_id'  => Auth::id(),
+            'rembourse_montant' => $montant,
+        ]);
+
+        try {
+            $ticket->user?->notify(new \App\Notifications\Ticket\RemboursementNotification($ticket, $montant));
+        } catch (\Throwable) {
+            // une notif en échec ne doit pas bloquer le remboursement
+        }
+
+        $this->dispatch('toast', type: 'success', message: 'Ticket remboursé (' . number_format($montant, 0, ',', ' ') . ' XOF) et client notifié.');
     }
 
     private function baseQuery()

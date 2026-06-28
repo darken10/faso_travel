@@ -1,4 +1,118 @@
 <div>
+    {{-- ═══ Aujourd'hui (temps réel) ═══ --}}
+    <div class="mb-6">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Aujourd'hui</h3>
+
+        {{-- Alertes --}}
+        @if($caissesNonCloturees > 0 || $departsSousRemplis > 0)
+            <div class="flex flex-wrap gap-3 mb-4">
+                @if($caissesNonCloturees > 0)
+                    <a href="{{ route('panel.compagnie.caisses-historique') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-red-50 border border-red-200 text-red-700 hover:bg-red-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        {{ $caissesNonCloturees }} caisse(s) non clôturée(s)
+                    </a>
+                @endif
+                @if($departsSousRemplis > 0)
+                    <a href="{{ route('panel.compagnie.instances') }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {{ $departsSousRemplis }} départ(s) sous-rempli(s) (&lt;30%, 48h)
+                    </a>
+                @endif
+            </div>
+        @endif
+
+        <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Ventes du jour</p>
+                <p class="text-2xl font-bold text-blue-600 mt-1">{{ number_format($ventesJour, 0, ',', ' ') }}</p>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Recette du jour</p>
+                <p class="text-2xl font-bold text-green-600 mt-1">{{ number_format($recetteJour, 0, ',', ' ') }} <span class="text-sm font-medium text-gray-400">F</span></p>
+            </div>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 col-span-2 lg:col-span-1">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Remplissage à venir (7j)</p>
+                <div class="flex items-center gap-3 mt-2">
+                    <p class="text-2xl font-bold text-gray-800">{{ $tauxRemplissage }}%</p>
+                    <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-blue-600 rounded-full" style="width: {{ $tauxRemplissage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Mon activité (agent) --}}
+    <div class="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl shadow-sm p-5 text-white">
+            <p class="text-xs uppercase tracking-wide opacity-80">Mes ventes du jour</p>
+            <p class="text-3xl font-bold mt-1">{{ number_format($mesVentesJour, 0, ',', ' ') }}</p>
+            <a href="{{ route('panel.compagnie.vente-ticket') }}" class="inline-flex items-center gap-1 mt-3 text-sm font-medium bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg transition-colors">
+                Vendre un ticket
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </a>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+            <p class="text-xs uppercase tracking-wide text-gray-500">Ma caisse</p>
+            @if($maCaisse)
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Ouverte</span>
+                    <span class="text-xs text-gray-400">depuis {{ $maCaisse->opened_at?->format('d/m H:i') }}</span>
+                </div>
+                <p class="text-2xl font-bold text-gray-800 mt-2">{{ number_format($maCaisse->totalVentes(), 0, ',', ' ') }} <span class="text-sm font-medium text-gray-400">F</span></p>
+                <a href="{{ route('panel.compagnie.caisse.detail', $maCaisse) }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium mt-2 inline-block">Voir ma caisse →</a>
+            @else
+                <p class="text-sm text-gray-500 mt-2">Aucune caisse ouverte.</p>
+                <a href="{{ route('panel.compagnie.caisse') }}" class="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg">Ouvrir une caisse</a>
+            @endif
+        </div>
+    </div>
+
+    {{-- Prochains départs --}}
+    <div class="mb-6 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-700">Prochains départs</h3>
+            <a href="{{ route('panel.compagnie.instances') }}" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Tout voir →</a>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200 text-gray-500">
+                <tr>
+                    <th class="px-4 py-2.5 text-left font-medium">Date / Heure</th>
+                    <th class="px-4 py-2.5 text-left font-medium">Trajet</th>
+                    <th class="px-4 py-2.5 text-left font-medium">Véhicule</th>
+                    <th class="px-4 py-2.5 text-left font-medium">Occupation</th>
+                    <th class="px-4 py-2.5 text-right font-medium"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                @forelse($prochainsDeparts as $d)
+                    @php $rate = $d->nb_place > 0 ? round($d->occupied_count / $d->nb_place * 100) : 0; @endphp
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-gray-700">
+                            <span class="font-medium">{{ \Carbon\Carbon::parse($d->date)->format('d/m') }}</span>
+                            <span class="text-gray-500">{{ \Carbon\Carbon::parse($d->heure)->format('H\hi') }}</span>
+                        </td>
+                        <td class="px-4 py-3 font-medium text-gray-800">{{ $d->voyage?->trajet?->depart?->name }} → {{ $d->voyage?->trajet?->arriver?->name }}</td>
+                        <td class="px-4 py-3 text-gray-600">{{ $d->care?->immatrculation ?? '—' }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-700 whitespace-nowrap">{{ $d->occupied_count }}/{{ $d->nb_place }}</span>
+                                <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full {{ $rate < 30 ? 'bg-amber-500' : 'bg-blue-600' }}" style="width: {{ $rate }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{{ route('panel.compagnie.instances.show', ['instanceId' => $d->id]) }}" class="text-indigo-600 hover:text-indigo-800 font-medium">Voir</a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Aucun départ à venir.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
     {{-- Stat cards: Activité --}}
     <div class="mb-6">
         <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Activité</h3>

@@ -104,6 +104,17 @@
                 @endforelse
             </div>
 
+            {{-- Remboursement --}}
+            @if($ticket->rembourse_at)
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-5">
+                    <h2 class="text-sm font-semibold text-purple-700 uppercase tracking-wide mb-2">Remboursement</h2>
+                    <p class="text-sm text-purple-800">
+                        Remboursé le {{ \Illuminate\Support\Carbon::parse($ticket->rembourse_at)->format('d/m/Y à H:i') }}
+                        — <strong>{{ number_format($ticket->rembourse_montant ?? 0, 0, ',', ' ') }} XOF</strong>.
+                    </p>
+                </div>
+            @endif
+
             {{-- Transfert --}}
             @if($ticket->transferer_at)
                 <div class="bg-purple-50 border border-purple-200 rounded-xl p-5">
