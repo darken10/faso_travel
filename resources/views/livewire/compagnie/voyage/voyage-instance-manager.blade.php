@@ -125,14 +125,15 @@
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <div class="px-4 py-3 border-b border-gray-100">
-            <div class="relative">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Rechercher (ville départ ou arrivée)..." class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-            </div>
+            <div class="flex items-center gap-3 overflow-x-auto">
+                {{-- Recherche --}}
+                <div class="relative flex-1 min-w-[160px]">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input wire:model.live.debounce.300ms="search" type="text" placeholder="Rechercher une ville…" class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
 
-            {{-- Filtres : période + plage de dates --}}
-            <div class="mt-3 flex flex-wrap items-end gap-3">
-                <div class="inline-flex rounded-lg border border-gray-200 p-0.5 bg-gray-50">
+                {{-- Période --}}
+                <div class="inline-flex shrink-0 rounded-lg border border-gray-200 p-0.5 bg-gray-50">
                     @foreach (['upcoming' => 'À venir', 'past' => 'Passés', 'all' => 'Tous'] as $val => $label)
                         <button type="button" wire:click="$set('periode', '{{ $val }}')"
                             class="px-3 py-1.5 text-sm font-medium rounded-md transition
@@ -142,17 +143,16 @@
                     @endforeach
                 </div>
 
-                <div class="flex items-end gap-2">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Du</label>
-                        <input wire:model.live="dateDebut" type="date" class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Au</label>
-                        <input wire:model.live="dateFin" type="date" class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    </div>
+                {{-- Plage de dates --}}
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs text-gray-500">Du</span>
+                    <input wire:model.live="dateDebut" type="date" class="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <span class="text-xs text-gray-500">au</span>
+                    <input wire:model.live="dateFin" type="date" class="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
                     @if ($dateDebut || $dateFin)
-                        <button type="button" wire:click="resetDateFilters" class="px-2.5 py-1.5 text-sm text-gray-500 hover:text-red-600" title="Réinitialiser les dates">✕</button>
+                        <button type="button" wire:click="resetDateFilters" class="p-1.5 text-gray-400 hover:text-red-600" title="Réinitialiser les dates">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     @endif
                 </div>
             </div>
