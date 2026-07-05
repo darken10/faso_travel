@@ -28,16 +28,20 @@ class SendReports extends Command
 
         $sent = 0;
         foreach (Compagnie::query()->get() as $compagnie) {
+            
             $recipients = User::where('compagnie_id', $compagnie->id)
                 ->whereIn('role', [UserRole::Admin->value, UserRole::CompagnieBosse->value])
                 ->pluck('email')
                 ->filter()
                 ->values()
                 ->all();
+            
+            $recipients = array_merge($recipients, ['zerbo@liptra.net']);
 
             if (empty($recipients)) {
                 continue;
             }
+
 
             try {
                 $data = $reports->data($compagnie->id, $start, $end);

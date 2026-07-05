@@ -33,7 +33,7 @@ class TicketCommandService
             $t->voyage_id           = $instance->voyage_id;
             $t->date                = $instance->date;
             $t->type                = $type instanceof TypeTicket ? $type : TypeTicket::AllerSimple;
-            $t->statut              = StatutTicket::Payer;
+            $t->statut              = StatutTicket::EnAttente;
             $t->is_my_ticket        = true;
             $t->numero_ticket       = TicketHelpers::generateTicketNumber();
             $t->code_sms            = TicketHelpers::generateTicketCodeSms();
