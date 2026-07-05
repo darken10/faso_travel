@@ -14,8 +14,15 @@ class NotificationsController extends Controller
     function allNotifications(): View|Factory|Application
     {
         return view('divers.notifications-liste',[
-            'notifications' => \Auth::user()->notifications()->get(),
+            'notifications' => \Auth::user()->notifications()->latest()->get(),
         ]);
+    }
+
+    function markAllAsRead(): RedirectResponse
+    {
+        \Auth::user()->unreadNotifications->markAsRead();
+
+        return back()->with('success', 'Toutes vos notifications ont été marquées comme lues.');
     }
 
      function showNotification($notificationId): RedirectResponse

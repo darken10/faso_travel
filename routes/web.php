@@ -125,6 +125,7 @@ Route::domain('app.'.$domain)->group(function () {
     // ─── Notifications ────────────────────────────────────────────────────
     Route::middleware('auth')->group(function () {
         Route::get('/notifications',               [NotificationsController::class, 'allNotifications'])->name('user.notifications');
+        Route::post('/notifications/lire-tout',    [NotificationsController::class, 'markAllAsRead'])->name('user.notifications.read-all');
         Route::get('/notifications/{notificationId}', [NotificationsController::class, 'showNotification'])->name('user.notifications.show');
     });
 
