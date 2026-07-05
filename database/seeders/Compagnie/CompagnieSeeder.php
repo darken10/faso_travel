@@ -17,9 +17,9 @@ class CompagnieSeeder extends Seeder
     public function run(): void
     {
         $compagnies = [
-            [ 'name' => 'Saramaya Transport', 'sigle' => 'SARAMAYA', 'slogant' => 'Toujours plus rapide', 'description' => 'Un description bref Saramaya', 'logo_uri' => '', 'user_id' => 1, ],
-            [ 'name' => 'Elitice Transport', 'sigle' => 'ELITISE', 'slogant' => 'Toujours dans le confort', 'description' => 'Un description bref Elitis', 'logo_uri' => '', 'user_id' => 1, ],
-            [ 'name' => 'Rayimo Transport', 'sigle' => 'RAYIMO', 'slogant' => 'Le confort et la rapiditer est au rendez-vous', 'description' => 'Un description bref Rayimo', 'logo_uri' => '', 'user_id' => 1, ],
+            [ 'name' => 'Saramaya Transport', 'sigle' => 'SARAMAYA', 'slogant' => 'Toujours plus rapide', 'description' => 'Un description bref Saramaya', 'logo_uri' => '', 'user_id' => null, ],
+            [ 'name' => 'Elitice Transport', 'sigle' => 'ELITISE', 'slogant' => 'Toujours dans le confort', 'description' => 'Un description bref Elitis', 'logo_uri' => '', 'user_id' => null, ],
+            [ 'name' => 'Rayimo Transport', 'sigle' => 'RAYIMO', 'slogant' => 'Le confort et la rapiditer est au rendez-vous', 'description' => 'Un description bref Rayimo', 'logo_uri' => '', 'user_id' => null, ],
         ];
 
         $users = [
@@ -91,6 +91,11 @@ class CompagnieSeeder extends Seeder
                         if ($roleModel) {
                             $user->roles()->attach($roleModel);
                         }
+                    }
+
+                    // Le premier admin de la compagnie devient son propriétaire.
+                    if (!$compagnie->user_id && in_array('company_admin', $userData['roles'], true)) {
+                        $compagnie->update(['user_id' => $user->id]);
                     }
                 }
             }
