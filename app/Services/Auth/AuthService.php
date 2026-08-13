@@ -58,7 +58,7 @@ class AuthService
         $accessToken  = $user->createToken('access_token', ['*'], now()->addDay())->plainTextToken;
         $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(30))->plainTextToken;
 
-        return ['user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
+        return ['success' => true, 'user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
     }
 
     // ── Vérification de compte (OTP) ────────────────────────────────────────
@@ -124,10 +124,10 @@ class AuthService
 
         // Révocation des anciens tokens pour éviter l'accumulation
         $user->tokens()->delete();
-        $accessToken  = $user->createToken('access_token', ['*'], now()->addDay())->plainTextToken;
-        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(30))->plainTextToken;
+        $accessToken  = $user->createToken('access_token', ['*'], now()->addDay(30))->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(60))->plainTextToken;
 
-        return ['user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
+        return ['success' => true, 'user' => $user, 'token' => $accessToken, 'refresh_token' => $refreshToken];
     }
 
     public function refresh(?string $rawToken): array
