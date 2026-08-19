@@ -58,9 +58,9 @@ class TicketPdfTest extends TestCase
         preg_match('/MediaBox\s*\[([^\]]+)\]/', $pdf, $box);
         [, , $width, $height] = preg_split('/\s+/', trim($box[1]));
 
-        // 240 mm × 101 mm — et surtout pas un A4 paysage (842 × 595 pt).
+        // 240 mm × 116 mm — et surtout pas un A4 paysage (842 × 595 pt).
         $this->assertEqualsWithDelta(680.31, (float) $width, 0.5);
-        $this->assertEqualsWithDelta(286.30, (float) $height, 0.5);
+        $this->assertEqualsWithDelta(330.00, (float) $height, 0.5);
     }
 
     public function test_ticket_pdf_still_fits_one_page_with_very_long_labels(): void

@@ -44,12 +44,12 @@ final class PdfService
     }
 
     /**
-     * Format billet : 240 mm × 101 mm en points (1 mm = 2.834645 pt).
-     * Hauteur calée sur le contenu réel : ~271 pt en nominal, ~280 pt avec les
-     * libellés les plus longs. Le reliquat se fond dans le gris du pied de page
-     * appliqué sur <body>.
+     * Format billet : 240 mm × 116 mm en points (1 mm = 2.834645 pt).
+     * Hauteur calée sur le contenu réel, marge comprise pour les libellés les
+     * plus longs. Le reliquat se fond dans le gris du pied de page appliqué
+     * sur <body>. Couvert par TicketPdfTest.
      */
-    private const PAPER = [0.0, 0.0, 680.31, 286.30];
+    private const PAPER = [0.0, 0.0, 680.31, 330.00];
 
     private function build(Ticket $ticket): DomPdfDocument
     {
@@ -88,14 +88,12 @@ final class PdfService
             'logo'        => $this->companyLogo($ticket),
             'company'     => mb_strtoupper($ticket->compagnie()->name, 'UTF-8'),
             'passenger'   => mb_strtoupper($this->passengerName($ticket), 'UTF-8'),
-            'classe'      => $ticket->classe()?->name ?? '—',
+            'classe'      => $this->classeLabel($ticket->classe()?->name),
             'vehicle'     => $instance->care?->immatrculation ?? '—',
             'isRoundTrip' => $ticket->type === TypeTicket::AllerRetour,
 
             'depCity'     => $departure,
             'arrCity'     => $arrival,
-            'depCode'     => $this->cityCode($departure),
-            'arrCode'     => $this->cityCode($arrival),
             'depStation'  => $this->stationLabel($instance->gareDepart()?->name),
             'arrStation'  => $this->stationLabel($instance->gareArrive()?->name),
 
@@ -138,10 +136,17 @@ final class PdfService
         return $ticket->user?->name ?? '';
     }
 
-    /** Code 3 lettres sans accent : « Dédougou » → « DED ». */
-    private function cityCode(string $city): string
+    /**
+     * Les classes sont souvent nommées « Classe Économique » en base : on retire
+     * le préfixe pour ne pas afficher « Classe Classe Économique ».
+     */
+    private function classeLabel(?string $classe): string
     {
-        return mb_strtoupper(mb_substr(Str::ascii($city), 0, 3), 'UTF-8');
+        if (!$classe) {
+            return '—';
+        }
+
+        return trim(preg_replace('/^classe\s+/i', '', $classe)) ?: $classe;
     }
 
     private function frenchDate(Carbon $date): string
