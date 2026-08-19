@@ -225,6 +225,13 @@ class TicketController extends Controller
     {
         $ticket = $this->ticketQueryService->getUserTicketById($ticketId);
 
+        if ($ticket->statut !== StatutTicket::Pause) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seul un ticket en pause peut être réactivé.',
+            ], 422);
+        }
+
         $trajetId    = $ticket->voyageInstance->voyage->trajet_id;
         $compagnieId = $ticket->voyageInstance->voyage->compagnie_id;
 
@@ -233,19 +240,26 @@ class TicketController extends Controller
             ->where('id', '!=', $ticket->voyage_instance_id)
             ->avenir()
             ->orderBy('date')
+            ->orderBy('heure')
             ->get();
 
-        $result = $instances->map(function (VoyageInstance $instance) {
-            $occupied     = Ticket::where('voyage_instance_id', $instance->id)
-                ->where('statut', '!=', StatutTicket::Annuler)
-                ->count();
-            $total        = $instance->nb_place ?: ($instance->care?->number_place ?? 50);
-            $available    = max(0, $total - $occupied);
+        // Une seule requête agrégée pour toutes les instances, au lieu d'un COUNT par instance.
+        $occupiedByInstance = Ticket::whereIn('voyage_instance_id', $instances->pluck('id'))
+            ->where('statut', '!=', StatutTicket::Annuler)
+            ->selectRaw('voyage_instance_id, COUNT(*) as total')
+            ->groupBy('voyage_instance_id')
+            ->pluck('total', 'voyage_instance_id');
+
+        $result = $instances->map(function (VoyageInstance $instance) use ($occupiedByInstance) {
+            $total     = $instance->nb_place ?: ($instance->care?->number_place ?? 50);
+            $occupied  = (int) ($occupiedByInstance[$instance->id] ?? 0);
+            $available = max(0, $total - $occupied);
 
             return [
-                'id'              => $instance->id,
+                'id'              => (string) $instance->id,
                 'date'            => $instance->date?->format('Y-m-d'),
                 'heure'           => $instance->heure?->format('H:i'),
+                'total_seats'     => $total,
                 'available_seats' => $available,
                 'price'           => $instance->getPrix(TypeTicket::AllerSimple),
             ];

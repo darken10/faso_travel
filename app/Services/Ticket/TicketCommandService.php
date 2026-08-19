@@ -77,21 +77,36 @@ class TicketCommandService
             throw new \DomainException('Seul un ticket en pause peut être réactivé.');
         }
 
-        $maxSeats = $newInstance->nb_place ?? $newInstance->care?->number_place ?? 50;
+        if ((string) $newInstance->id === (string) $ticket->voyage_instance_id) {
+            throw new \DomainException('Veuillez choisir un voyage différent de celui du ticket.');
+        }
+
+        $this->assertInstanceIsEquivalent($ticket, $newInstance);
+
+        if ($newInstance->getHeureDepart()->isPast()) {
+            throw new \DomainException('Ce voyage est déjà parti.');
+        }
+
+        // Même résolution que le plan des sièges exposé par l'API (VoyageService::getTripSeats),
+        // sinon une instance avec nb_place = 0 rendrait tous les sièges affichés invalides.
+        $maxSeats = $newInstance->nb_place ?: ($newInstance->care?->number_place ?? 50);
         if ($seatNumber < 1 || $seatNumber > $maxSeats) {
             throw new \InvalidArgumentException("Le numéro de siège {$seatNumber} est invalide.");
         }
 
-        $taken = Ticket::where('voyage_instance_id', $newInstance->id)
-            ->where('numero_chaise', $seatNumber)
-            ->whereNotIn('statut', [StatutTicket::Annuler])
-            ->exists();
-
-        if ($taken) {
-            throw new \InvalidArgumentException('Ce siège est déjà occupé.');
-        }
-
         DB::transaction(function () use ($ticket, $newInstance, $seatNumber) {
+            // Verrou pessimiste : sans lui, deux réactivations concurrentes passent toutes
+            // les deux le test de disponibilité et occupent le même siège.
+            $taken = Ticket::where('voyage_instance_id', $newInstance->id)
+                ->where('numero_chaise', $seatNumber)
+                ->whereNotIn('statut', [StatutTicket::Annuler])
+                ->lockForUpdate()
+                ->exists();
+
+            if ($taken) {
+                throw new \InvalidArgumentException('Ce siège vient d\'être occupé. Veuillez en choisir un autre.');
+            }
+
             $ticket->voyage_instance_id = $newInstance->id;
             $ticket->voyage_id          = $newInstance->voyage_id;
             $ticket->date               = $newInstance->date;
@@ -99,5 +114,25 @@ class TicketCommandService
             $ticket->statut             = StatutTicket::Payer;
             $ticket->save();
         });
+    }
+
+    /**
+     * Le voyage de destination doit être équivalent à celui du ticket : même trajet
+     * et même compagnie. Sans ce contrôle, le client peut poster n'importe quel
+     * voyage_instance_id et déplacer son ticket vers un trajet qu'il n'a pas payé.
+     */
+    private function assertInstanceIsEquivalent(Ticket $ticket, VoyageInstance $newInstance): void
+    {
+        $current = $ticket->voyageInstance?->voyage;
+        $target  = $newInstance->voyage;
+
+        if (!$current || !$target) {
+            throw new \DomainException('Voyage introuvable pour ce ticket.');
+        }
+
+        if ((string) $target->trajet_id !== (string) $current->trajet_id
+            || (string) $target->compagnie_id !== (string) $current->compagnie_id) {
+            throw new \DomainException('Ce voyage ne correspond pas au trajet initial du ticket.');
+        }
     }
 }
