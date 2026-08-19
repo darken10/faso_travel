@@ -236,4 +236,7 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/categories', \App\Livewire\Compagnie\Finance\CategorieManager::class)->name('categories');
     Route::get('/promos',     \App\Livewire\Compagnie\Finance\PromoManager::class)->name('promos');
     Route::get('/promos/{promoId}', \App\Livewire\Compagnie\Finance\PromoShow::class)->name('promos.show');
+
+    // ─── Configuration ────────────────────────────────────────────────────
+    Route::get('/parametres', \App\Livewire\Compagnie\Parametre\ParametreManager::class)->name('parametres');
 });

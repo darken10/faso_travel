@@ -7,6 +7,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use App\Policies\CompagniePolicy;
+use App\Policies\CompagnieSettingPolicy;
 use App\Policies\TicketPolicy;
 use App\Policies\VoyageInstancePolicy;
 use App\Policies\VoyagePolicy;
@@ -30,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
         JsonResource::withoutWrapping();
 
         $this->registerPolicies();
+        $this->registerGates();
         $this->configureRateLimiting();
     }
 
@@ -39,6 +41,19 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Voyage::class, VoyagePolicy::class);
         Gate::policy(VoyageInstance::class, VoyageInstancePolicy::class);
         Gate::policy(Compagnie::class, CompagniePolicy::class);
+    }
+
+    /**
+     * Le paramétrage porte sur le modèle Compagnie, déjà associé à CompagniePolicy :
+     * ses autorisations sont donc exposées sous forme d'abilities nommées.
+     */
+    private function registerGates(): void
+    {
+        Gate::define('compagnie-settings.viewAny',       [CompagnieSettingPolicy::class, 'viewAny']);
+        Gate::define('compagnie-settings.view',          [CompagnieSettingPolicy::class, 'view']);
+        Gate::define('compagnie-settings.update',        [CompagnieSettingPolicy::class, 'update']);
+        Gate::define('compagnie-settings.updateAdvanced', [CompagnieSettingPolicy::class, 'updateAdvanced']);
+        Gate::define('compagnie-settings.reset',         [CompagnieSettingPolicy::class, 'reset']);
     }
 
     private function configureRateLimiting(): void

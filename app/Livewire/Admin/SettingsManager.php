@@ -2,91 +2,80 @@
 
 namespace App\Livewire\Admin;
 
-use App\Enums\CompagnieSettingKey;
 use App\Models\Compagnie\Compagnie;
-use App\Models\CompagnieSetting;
-use Livewire\Component;
+use App\Traits\ManagesCompagnieSettings;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
-use Livewire\WithPagination;
+use Livewire\Attributes\Url;
+use Livewire\Component;
 
+/**
+ * Paramétrage de n'importe quelle compagnie depuis le panel d'administration.
+ *
+ * Même formulaire que l'espace compagnie, augmenté d'un sélecteur de compagnie
+ * et du groupe « Avancé » réservé à la plateforme.
+ */
 #[Layout('layouts.admin-panel')]
 class SettingsManager extends Component
 {
-    use WithPagination;
+    use ManagesCompagnieSettings;
+
+    #[Url(as: 'compagnie', history: true)]
+    public ?int $selectedCompagnieId = null;
 
     public string $search = '';
-    public bool $showModal = false;
-    public ?int $editingId = null;
 
-    public ?int $compagnie_id = null;
-    public string $key = '';
-    public string $value = '';
-
-    public function updatingSearch(): void
+    public function mount(): void
     {
-        $this->resetPage();
+        Gate::authorize('compagnie-settings.viewAny');
+
+        $this->compagnieId = $this->selectedCompagnieId;
+
+        if ($this->compagnieId) {
+            $this->loadSettings();
+        }
     }
 
-    public function openCreate(): void
+    /** Change la compagnie configurée et recharge le formulaire. */
+    public function updatedSelectedCompagnieId(mixed $value): void
     {
-        $this->reset(['editingId', 'compagnie_id', 'key', 'value']);
-        $this->showModal = true;
+        $this->compagnieId = $value !== '' && $value !== null ? (int) $value : null;
+        $this->selectedCompagnieId = $this->compagnieId;
+        $this->resetErrorBag();
+        $this->loadSettings();
     }
 
-    public function openEdit(int $id): void
+    /** Rétablit l'intégralité des défauts pour la compagnie sélectionnée. */
+    public function resetAll(): void
     {
-        $setting = CompagnieSetting::findOrFail($id);
-        $this->editingId = $id;
-        $this->compagnie_id = $setting->compagnie_id;
-        $this->key = $setting->key;
-        $this->value = $setting->value;
-        $this->showModal = true;
-    }
+        $compagnie = $this->compagnie();
 
-    public function save(): void
-    {
-        $this->validate([
-            'compagnie_id' => 'required|exists:compagnies,id',
-            'key'          => 'required|string',
-            'value'        => 'required|string|max:500',
-        ]);
-
-        $data = [
-            'compagnie_id' => $this->compagnie_id,
-            'key'          => $this->key,
-            'value'        => $this->value,
-        ];
-
-        if ($this->editingId) {
-            CompagnieSetting::findOrFail($this->editingId)->update($data);
-            session()->flash('success', 'Paramètre mis à jour.');
-        } else {
-            CompagnieSetting::create($data);
-            session()->flash('success', 'Paramètre créé.');
+        if (! $compagnie) {
+            return;
         }
 
-        $this->showModal = false;
-        $this->reset(['editingId', 'compagnie_id', 'key', 'value']);
+        Gate::authorize('compagnie-settings.reset', $compagnie);
+
+        $this->settingService()->resetAll($compagnie);
+        $this->loadSettings();
+        $this->dispatch('toast', type: 'success', message: 'Paramétrage entièrement réinitialisé.');
     }
 
-    public function delete(int $id): void
+    public function render(): View
     {
-        CompagnieSetting::findOrFail($id)->delete();
-        session()->flash('success', 'Paramètre supprimé.');
-    }
+        $compagnies = Compagnie::query()
+            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
+                ->orWhere('sigle', 'like', "%{$this->search}%"))
+            ->orderBy('name')
+            ->get(['id', 'name', 'sigle']);
 
-    public function render()
-    {
-        $settings = CompagnieSetting::query()
-            ->with('compagnie')
-            ->when($this->search, fn($q) => $q->whereHas('compagnie', fn($c) => $c->where('name', 'like', "%{$this->search}%"))
-                ->orWhere('key', 'like', "%{$this->search}%"))
-            ->latest()
-            ->paginate(15);
-
-        $compagnies = Compagnie::orderBy('name')->get();
-        $keys = CompagnieSettingKey::cases();
-
-        return view('livewire.admin.settings-manager', compact('settings', 'compagnies', 'keys'));
+        return view('livewire.admin.settings-manager', [
+            'compagnies'        => $compagnies,
+            'compagnie'         => $this->compagnie(),
+            'catalogue'         => $this->catalogue(),
+            'readOnly'          => $this->isReadOnly(),
+            'canManageAdvanced' => $this->canManageAdvanced(),
+        ]);
     }
 }

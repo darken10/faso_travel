@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V2\PaymentController as PaymentControllerV2;
 use App\Http\Controllers\Api\V2\ConversationController as ConversationControllerV2;
 use App\Http\Controllers\Api\V2\RatingController as RatingControllerV2;
 use App\Http\Controllers\Api\V2\BugReportController as BugReportControllerV2;
+use App\Http\Controllers\Api\V2\CompagnieSettingController as CompagnieSettingControllerV2;
 
 // API V2
 Route::prefix('v2')->group(function () {
@@ -138,6 +139,22 @@ Route::prefix('v2')->group(function () {
     Route::post('/bug-reports', [BugReportControllerV2::class, 'store'])
         ->middleware('auth:sanctum')
         ->name('api.v2.bug-reports.store');
+
+    // ── Paramétrage compagnie V2 ──────────────────────────────────────────────
+    // Lecture publique : l'application voyageur adapte son parcours aux règles
+    // de la compagnie (paiement en ligne, sélection de siège, délais…).
+    Route::get('/companies/{compagnie}/settings', [CompagnieSettingControllerV2::class, 'publicSettings'])
+        ->name('api.v2.companies.settings');
+
+    // Lecture / écriture par un compte rattaché à une compagnie (application agent).
+    Route::prefix('/compagnie/settings')
+        ->middleware(['auth:sanctum', 'requires.compagnie'])
+        ->controller(CompagnieSettingControllerV2::class)
+        ->name('api.v2.compagnie.settings.')
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::put('/', 'update')->name('update');
+        });
 });
 
 

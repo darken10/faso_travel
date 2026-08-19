@@ -2,6 +2,8 @@
 
 namespace App\Models\Compagnie;
 
+use App\DTOs\Compagnie\CompagnieSettings;
+use App\Enums\CompagnieSettingKey;
 use App\Models\Rating;
 use App\Models\User;
 use App\Models\Statut;
@@ -9,6 +11,7 @@ use App\Models\Voyage\Classe;
 use App\Models\Voyage\Voyage;
 use App\Models\Compagnie\Gare;
 use App\Models\CompagnieSetting;
+use App\Services\Compagnie\CompagnieSettingService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -87,36 +90,60 @@ class Compagnie extends Model
         return $this->hasMany(Rating::class);
     }
 
-    public function settings(): Compagnie|Builder|HasMany
+    public function settings(): HasMany
     {
         return $this->hasMany(CompagnieSetting::class);
     }
 
-    /*public function getSetting(string $key, $default = null)
+    /**
+     * Paramètres résolus de la compagnie : valeurs propres complétées par les
+     * défauts du catalogue. Mis en cache par {@see CompagnieSettingService}.
+     */
+    public function parametres(): CompagnieSettings
     {
-        return optional($this->settings->firstWhere('key', $key))->value ?? $default;
-    }*/
-
-    public function getSetting(string $key, $default = null): mixed
-    {
-        $setting = $this->settings->firstWhere('key', $key);
-        return $setting ? $setting->getCastedValue() : $default;
+        return app(CompagnieSettingService::class)->bag($this);
     }
 
+    /**
+     * Valeur d'un paramètre.
+     *
+     * @param  CompagnieSettingKey|string  $key  Clé du catalogue.
+     */
+    public function getSetting(CompagnieSettingKey|string $key, mixed $default = null): mixed
+    {
+        return app(CompagnieSettingService::class)->get($this, $key, $default);
+    }
+
+    /** Écrit un paramètre après validation contre le catalogue. */
+    public function setSetting(CompagnieSettingKey $key, mixed $value, bool $allowAdminOnly = false): void
+    {
+        app(CompagnieSettingService::class)->set($this, $key, $value, $allowAdminOnly);
+    }
 
     public function getDevise(): string
     {
-        return $this->getSetting('devise', 'XOF');
+        return $this->parametres()->devise();
     }
 
     public function getDevisePosition(): string
     {
-        return $this->getSetting('devise_position', 'right');
+        return $this->parametres()->devisePosition();
     }
 
     public function getDevisePriceToUSD(): float
     {
-        return $this->getSetting("devise_price_to_usd", 650);
+        return $this->parametres()->float(CompagnieSettingKey::DEVISE_PRICE_TO_USD);
+    }
+
+    /** Formate un montant selon la devise et sa position configurées. */
+    public function formatMontant(int|float $montant): string
+    {
+        $parametres = $this->parametres();
+        $formate = number_format((float) $montant, 0, ',', ' ');
+
+        return $parametres->devisePosition() === 'left'
+            ? $parametres->devise().' '.$formate
+            : $formate.' '.$parametres->devise();
     }
 
 }
