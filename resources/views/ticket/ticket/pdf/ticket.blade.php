@@ -43,7 +43,7 @@
                         <img src="{{ $logo }}" alt="" style="width:26px; height:26px;">
                     </div>
                 @else
-                    <div style="width:30px; height:30px; border-radius:9px; background:#2563EB; text-align:center; padding-top:7px;">
+                    <div style="width:30px; height:30px; border-radius:9px; background:#2563EB; text-align:center; font-size:14px; line-height:30px;">
                         <span style="color:#FFFFFF; font-size:14px; font-weight:bold; line-height:1;">{{ mb_substr($company, 0, 1) }}</span>
                     </div>
                 @endif
@@ -55,7 +55,7 @@
             <td style="width:24%; text-align:right; vertical-align:middle;">
                 {{-- Chip discret plutôt qu'un aplat bleu : #17285D est le rendu opaque de
                      rgba(37,99,235,.18) sur le navy, DomPDF étant peu fiable en rgba. --}}
-                <div style="display:inline-block; background:#17285D; border:1px solid #3B82F6; border-radius:12px; padding:5px 13px;">
+                <div style="display:inline-block; background:#17285D; border:1px solid #3B82F6; border-radius:12px; padding:6px 13px; font-size:8.5px; line-height:1;">
                     <span style="color:#93C5FD; font-size:8.5px; font-weight:bold; letter-spacing:1.2px; text-transform:uppercase;">{{ $isRoundTrip ? 'Aller-retour' : 'Aller simple' }}</span>
                 </div>
             </td>
@@ -81,7 +81,7 @@
         <tr>
             <td style="height:190px; vertical-align:middle; padding:0 0 0 18px;">
 
-                <div style="display:inline-block; background:#EFF6FF; border-radius:11px; padding:5px 13px; margin-bottom:13px;">
+                <div style="display:inline-block; background:#EFF6FF; border-radius:11px; padding:6px 13px; margin-bottom:13px; font-size:8px; line-height:1;">
                     <span style="font-size:8px; font-weight:bold; color:#2563EB; text-transform:uppercase; letter-spacing:1px;">{{ $dateLabel }}</span>
                 </div>
 
@@ -139,8 +139,8 @@
                 </td>
                 <td width="11%" style="padding:11px 6px; vertical-align:middle; border-left:1px solid #E2E8F0; text-align:center;">
                     <div class="eyebrow">Siège</div>
-                    <div style="display:inline-block; background:#FFF7ED; border-radius:9px; padding:1px 11px; margin-top:3px;">
-                        <span style="font-size:18px; font-weight:bold; color:#F97316; line-height:1.35;">{{ $ticket->numero_chaise }}</span>
+                    <div style="display:inline-block; background:#FFF7ED; border-radius:9px; padding:5px 11px; margin-top:3px; font-size:18px; line-height:1;">
+                        <span style="font-size:18px; font-weight:bold; color:#F97316; line-height:1;">{{ $ticket->numero_chaise }}</span>
                     </div>
                 </td>
                 <td width="13%" style="padding:11px 9px; vertical-align:middle; border-left:1px solid #E2E8F0;">
@@ -209,8 +209,8 @@
         <tr>
             <td width="32%" style="vertical-align:top;">
                 <div class="eyebrow">Siège</div>
-                <div style="display:inline-block; background:#FFF7ED; border-radius:8px; padding:1px 9px; margin-top:2px;">
-                    <span style="font-size:13px; font-weight:bold; color:#F97316; line-height:1.4;">{{ $ticket->numero_chaise }}</span>
+                <div style="display:inline-block; background:#FFF7ED; border-radius:8px; padding:4px 9px; margin-top:2px; font-size:13px; line-height:1;">
+                    <span style="font-size:13px; font-weight:bold; color:#F97316; line-height:1;">{{ $ticket->numero_chaise }}</span>
                 </div>
             </td>
             <td width="34%" style="vertical-align:top;">
