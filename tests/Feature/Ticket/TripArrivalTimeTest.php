@@ -15,7 +15,7 @@ class TripArrivalTimeTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function instance(string $heure, string $temps, string $date = '+5 days'): VoyageInstance
+    protected function makeInstance(string $heure, string $temps, string $date = '+5 days'): VoyageInstance
     {
         $voyage = Voyage::factory()->create(['heure' => $heure, 'temps' => $temps]);
 
@@ -28,7 +28,7 @@ class TripArrivalTimeTest extends TestCase
 
     public function test_trip_arrival_is_departure_plus_duration(): void
     {
-        $instance = $this->instance('07:00:00', '04:00:00');
+        $instance = $this->makeInstance('07:00:00', '04:00:00');
 
         $response = $this->getJson("/api/v2/trips/{$instance->id}");
 
@@ -43,7 +43,7 @@ class TripArrivalTimeTest extends TestCase
 
     public function test_trip_arrival_handles_duration_with_minutes(): void
     {
-        $instance = $this->instance('08:45:00', '04:30:00');
+        $instance = $this->makeInstance('08:45:00', '04:30:00');
 
         $arrival = $this->getJson("/api/v2/trips/{$instance->id}")->json('arrival.time');
 
@@ -52,7 +52,7 @@ class TripArrivalTimeTest extends TestCase
 
     public function test_trip_arrival_rolls_over_to_next_day_for_night_trips(): void
     {
-        $instance = $this->instance('22:00:00', '06:00:00');
+        $instance = $this->makeInstance('22:00:00', '06:00:00');
 
         $arrival = $this->getJson("/api/v2/trips/{$instance->id}")->json('arrival.time');
 
@@ -61,7 +61,7 @@ class TripArrivalTimeTest extends TestCase
 
     public function test_trip_without_duration_falls_back_to_departure_time(): void
     {
-        $instance = $this->instance('09:00:00', '04:00:00');
+        $instance = $this->makeInstance('09:00:00', '04:00:00');
         $instance->voyage->update(['temps' => null]);
 
         $response = $this->getJson("/api/v2/trips/{$instance->id}");
@@ -75,7 +75,7 @@ class TripArrivalTimeTest extends TestCase
 
     public function test_model_arrival_helper_matches_departure_plus_duration(): void
     {
-        $instance = $this->instance('07:00:00', '04:00:00');
+        $instance = $this->makeInstance('07:00:00', '04:00:00');
 
         $this->assertSame('11:00', $instance->getHeureArrive()->format('H:i'));
         $this->assertSame('07:00', $instance->getHeureDepart()->format('H:i'));

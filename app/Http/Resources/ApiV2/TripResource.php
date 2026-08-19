@@ -46,17 +46,17 @@ class TripResource extends JsonResource
             'id' => $this->id,
             'departure' => [
                 'city'    => $depart->name,
-                'station' => $this->gareDepart()->name,
+                'station' => $this->gareDepart()?->name ?? '',
                 'time'    => $departureTime->format('Y-m-d H:i:s'),
-                'lat'     => (float) ($this->gareDepart()->lat ?? 0),
-                'lng'     => (float) ($this->gareDepart()->lng ?? 0),
+                'lat'     => (float) ($this->gareDepart()?->lat ?? 0),
+                'lng'     => (float) ($this->gareDepart()?->lng ?? 0),
             ],
             'arrival' => [
                 'city'    => $arriver->name,
-                'station' => $this->gareArrive()->name,
+                'station' => $this->gareArrive()?->name ?? '',
                 'time'    => $arrivalTime->format('Y-m-d H:i:s'),
-                'lat'     => (float) ($this->gareArrive()->lat ?? 0),
-                'lng'     => (float) ($this->gareArrive()->lng ?? 0),
+                'lat'     => (float) ($this->gareArrive()?->lat ?? 0),
+                'lng'     => (float) ($this->gareArrive()?->lng ?? 0),
             ],
             'company' => [
                 'id' => $compagnie->id,
