@@ -32,6 +32,7 @@ class Compagnie extends Model
         'description',
         'logo_uri',
         'user_id',
+        'statut_id',
     ];
 
     protected $with = [

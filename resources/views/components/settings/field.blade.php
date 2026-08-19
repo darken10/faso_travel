@@ -1,6 +1,7 @@
 @props([
     'definition',
     'model',
+    'value'    => null,
     'accent'   => 'blue',
     'disabled' => false,
 ])
@@ -9,11 +10,17 @@
     /** @var \App\DTOs\Compagnie\SettingDefinition $definition */
     $type = $definition->type;
 
-    $ring   = $accent === 'amber' ? 'focus:ring-amber-400' : 'focus:ring-blue-500';
-    $toggle = $accent === 'amber' ? 'peer-checked:bg-amber-500' : 'peer-checked:bg-blue-600';
-    $check  = $accent === 'amber' ? 'text-amber-500 focus:ring-amber-400' : 'text-blue-600 focus:ring-blue-500';
+    $ring  = $accent === 'amber' ? 'focus:ring-amber-400' : 'focus:ring-blue-500';
+    $check = $accent === 'amber' ? 'text-amber-500 focus:ring-amber-400' : 'text-blue-600 focus:ring-blue-500';
 
     $inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 {$ring} disabled:bg-gray-100 disabled:text-gray-400";
+
+    // Interrupteur : état rendu côté serveur avec des classes littérales, plutôt
+    // que des variantes peer-checked:after:* que le JIT Tailwind peut manquer.
+    $isOn      = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    $trackOn   = $accent === 'amber' ? 'bg-amber-500' : 'bg-blue-600';
+    $trackCls  = $isOn ? $trackOn : 'bg-gray-300';
+    $knobCls   = $isOn ? 'translate-x-[22px]' : 'translate-x-[2px]';
 @endphp
 
 <div class="py-4 {{ $type === \App\Enums\CompagnieSettingType::Boolean ? 'sm:flex sm:items-start sm:justify-between sm:gap-6' : '' }}">
@@ -33,10 +40,18 @@
         @switch($type)
 
             @case(\App\Enums\CompagnieSettingType::Boolean)
-                <label class="relative inline-flex items-center {{ $disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer' }}">
-                    <input type="checkbox" wire:model.live="{{ $model }}" @disabled($disabled) class="sr-only peer">
-                    <div class="w-11 h-6 bg-gray-300 rounded-full peer peer-focus:ring-2 peer-focus:ring-offset-1 peer-focus:ring-gray-300 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5 {{ $toggle }}"></div>
-                </label>
+                <div class="flex items-center gap-3">
+                    <button type="button" role="switch" aria-checked="{{ $isOn ? 'true' : 'false' }}"
+                            aria-label="{{ $definition->label }}"
+                            @if(! $disabled) wire:click="toggleSetting('{{ $definition->key->value }}')" @endif
+                            @disabled($disabled)
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 {{ $ring }} {{ $trackCls }} {{ $disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer' }}">
+                        <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow ring-1 ring-black/5 transition-transform duration-200 {{ $knobCls }}"></span>
+                    </button>
+                    <span class="text-sm {{ $isOn ? 'text-gray-700 font-medium' : 'text-gray-400' }}">
+                        {{ $isOn ? 'Activé' : 'Désactivé' }}
+                    </span>
+                </div>
                 @break
 
             @case(\App\Enums\CompagnieSettingType::Select)

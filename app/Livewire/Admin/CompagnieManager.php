@@ -15,6 +15,7 @@ class CompagnieManager extends Component
     use WithPagination, WithFileUploads;
 
     public string $search = '';
+    public ?int $statutFilter = null;
     public bool $showModal = false;
     public ?int $editingId = null;
 
@@ -95,16 +96,38 @@ class CompagnieManager extends Component
         session()->flash('success', 'Compagnie supprimée.');
     }
 
+    /** Change le statut d'une compagnie directement depuis sa carte. */
+    public function changeStatut(int $id, int $statutId): void
+    {
+        $statut = Statut::findOrFail($statutId);
+        $compagnie = Compagnie::findOrFail($id);
+
+        if ($compagnie->statut_id === $statut->id) {
+            return;
+        }
+
+        $compagnie->update(['statut_id' => $statut->id]);
+
+        session()->flash('success', "« {$compagnie->name} » est maintenant au statut « {$statut->name} ».");
+    }
+
+    public function updatingStatutFilter(): void
+    {
+        $this->resetPage();
+    }
+
     public function render()
     {
         $compagnies = Compagnie::query()
             ->with(['statut', 'user'])
-            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%")
-                ->orWhere('sigle', 'like', "%{$this->search}%"))
+            ->withCount(['voyages', 'gares', 'users'])
+            ->when($this->search, fn($q) => $q->where(fn($sub) => $sub->where('name', 'like', "%{$this->search}%")
+                ->orWhere('sigle', 'like', "%{$this->search}%")))
+            ->when($this->statutFilter, fn($q) => $q->where('statut_id', $this->statutFilter))
             ->latest()
-            ->paginate(15);
+            ->paginate(12);
 
-        $statuts = Statut::all();
+        $statuts = Statut::orderBy('id')->get();
 
         return view('livewire.admin.compagnie-manager', compact('compagnies', 'statuts'));
     }

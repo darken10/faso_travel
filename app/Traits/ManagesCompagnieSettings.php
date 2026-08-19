@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Enums\CompagnieSettingGroup;
 use App\Enums\CompagnieSettingKey;
+use App\Enums\CompagnieSettingType;
 use App\Models\Compagnie\Compagnie;
 use App\Services\Compagnie\CompagnieSettingService;
 use Illuminate\Support\Facades\Gate;
@@ -75,6 +76,22 @@ trait ManagesCompagnieSettings
             $this->activeGroup = $group;
             $this->resetErrorBag();
         }
+    }
+
+    /** Bascule un paramètre booléen depuis son interrupteur. */
+    public function toggleSetting(string $key): void
+    {
+        $settingKey = CompagnieSettingKey::tryFrom($key);
+
+        if (! $settingKey || $settingKey->type() !== CompagnieSettingType::Boolean) {
+            return;
+        }
+
+        if ($this->isReadOnly() || ($settingKey->definition()->isAdminOnly() && ! $this->canManageAdvanced())) {
+            return;
+        }
+
+        $this->values[$key] = ! filter_var($this->values[$key] ?? $settingKey->default(), FILTER_VALIDATE_BOOLEAN);
     }
 
     /** Enregistre l'ensemble des paramètres accessibles à l'utilisateur. */

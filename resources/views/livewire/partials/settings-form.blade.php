@@ -18,7 +18,7 @@
 <div class="flex flex-col lg:flex-row gap-6">
 
     {{-- Onglets des groupes --}}
-    <nav class="lg:w-64 flex-shrink-0 ">
+    <nav class="w-full lg:w-72 lg:flex-shrink-0">
         <div class="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
             @foreach ($catalogue as $slug => $entry)
                 @php $group = $entry['group']; @endphp
@@ -60,7 +60,9 @@
                                 <span class="absolute left-[-14px] top-6 w-1.5 h-1.5 rounded-full {{ $dotAccent }}"
                                     title="Valeur personnalisée pour cette compagnie"></span>
                             @endif
-                            <x-settings.field :definition="$definition" :model="'values.' . $definition->key->value" :accent="$accent" :disabled="$disabled" />
+                            <x-settings.field :definition="$definition" :model="'values.' . $definition->key->value"
+                                :value="$values[$definition->key->value] ?? $definition->default" :accent="$accent"
+                                :disabled="$disabled" />
                         </div>
                     @endforeach
                 </div>
