@@ -34,10 +34,13 @@ class TripResource extends JsonResource
         $heure = Carbon::parse($voyage->heure)->format('H:i:s');
 
         $departureTime = Carbon::parse("$date $heure");
-        $duration = $voyage->temps ?? ''; // Default 2 hours if not set
-        $arrivalTime = (clone $departureTime)->addMinutes(
-            \Carbon\Carbon::parse($duration)->diffInMinutes(\Carbon\Carbon::today())
-        );
+
+        // `temps` est une colonne TIME : on lit directement heures et minutes.
+        // diffInMinutes() est signé depuis Carbon 3 et renvoyait ici -240,
+        // ce qui retranchait la durée au lieu de l'ajouter.
+        $duration = $voyage->temps ? Carbon::parse($voyage->temps) : null;
+        $durationMinutes = $duration ? $duration->hour * 60 + $duration->minute : 0;
+        $arrivalTime = (clone $departureTime)->addMinutes($durationMinutes);
 
         return [
             'id' => $this->id,

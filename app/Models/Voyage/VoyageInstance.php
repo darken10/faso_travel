@@ -182,8 +182,13 @@ class VoyageInstance extends Model
     public function getHeureArrive()
     {
         $heureDepart = Carbon::parse($this->heure);
-        $temps = Carbon::parse($this->voyage->temps);
-        return Carbon::parse($this->date)->addMinutes($heureDepart->hour * 60 + $heureDepart->minute + $temps->hour * 60 + $temps->minute);
+        // Sans durée renseignée, Carbon::parse(null) vaut maintenant() et
+        // décalerait l'arrivée de l'heure courante.
+        $temps = $this->voyage->temps ? Carbon::parse($this->voyage->temps) : null;
+        $dureeMinutes = $temps ? $temps->hour * 60 + $temps->minute : 0;
+
+        return Carbon::parse($this->date)
+            ->addMinutes($heureDepart->hour * 60 + $heureDepart->minute + $dureeMinutes);
     }
 
 }
