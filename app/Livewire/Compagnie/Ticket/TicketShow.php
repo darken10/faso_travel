@@ -45,6 +45,9 @@ class TicketShow extends Component
             }
         }
 
+        // Pas de restriction par compagnie ici : le destinataire d'un transfert
+        // est un voyageur, pas un membre de la compagnie. L'identifiant provient
+        // du billet déjà vérifié ci-dessus, jamais d'une saisie utilisateur.
         $transferRecipient = $ticket->transferer_a_user_id
             ? User::find($ticket->transferer_a_user_id)
             : null;
