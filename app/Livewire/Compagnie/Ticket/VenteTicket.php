@@ -18,10 +18,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VenteTicket extends Component
 {
+    use ScopedToCompagnie;
+
     public int $step = 1;
 
     // Step 1
@@ -126,7 +129,7 @@ class VenteTicket extends Component
         if (!$this->voyage_instance_id) {
             return [];
         }
-        $instance = VoyageInstance::find($this->voyage_instance_id);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->find($this->voyage_instance_id);
         if (!$instance) {
             return [];
         }
@@ -157,7 +160,7 @@ class VenteTicket extends Component
             $this->prix = 0;
             return;
         }
-        $instance = VoyageInstance::find($this->voyage_instance_id);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->find($this->voyage_instance_id);
         if (!$instance) {
             $this->prix = 0;
             return;
@@ -231,7 +234,7 @@ class VenteTicket extends Component
                     : null,
             ]);
 
-            $voyageInstance = VoyageInstance::findOrFail($this->voyage_instance_id);
+            $voyageInstance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->voyage_instance_id);
 
             // Vérifie qu'une chaise est choisie et toujours libre.
             if (!$this->numero_chaise) {
@@ -342,11 +345,11 @@ class VenteTicket extends Component
             ->filter(fn ($i) => count($i->chaiseDispo()) > 0);
 
         $caisse = Caisse::sessionOuverte();
-        $ticketVendu = $this->ticketVenduId ? Ticket::find($this->ticketVenduId) : null;
+        $ticketVendu = $this->ticketVenduId ? Ticket::ofCompagnie($this->compagnieId())->find($this->ticketVenduId) : null;
         $typeTickets = TypeTicket::cases();
 
         // Plan des sièges du voyage sélectionné.
-        $selectedInstance = $this->voyage_instance_id ? VoyageInstance::find($this->voyage_instance_id) : null;
+        $selectedInstance = $this->voyage_instance_id ? VoyageInstance::ofCompagnie($this->compagnieId())->find($this->voyage_instance_id) : null;
         $totalSeats = $selectedInstance ? (int) $selectedInstance->nb_place : 0;
         $occupiedSeats = $this->occupiedSeats();
 

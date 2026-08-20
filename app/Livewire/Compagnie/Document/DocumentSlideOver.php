@@ -9,9 +9,12 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Traits\ScopedToCompagnie;
 
 class DocumentSlideOver extends Component
 {
+    use ScopedToCompagnie;
+
     use WithFileUploads;
 
     public bool    $open           = false;
@@ -57,7 +60,7 @@ class DocumentSlideOver extends Component
 
     public function openEditForm(int $id): void
     {
-        $doc = Document::with('rappels')->findOrFail($id);
+        $doc = Document::ofCompagnie($this->compagnieId())->with('rappels')->findOrFail($id);
         $this->editingDocId     = $id;
         $this->titre            = $doc->titre;
         $this->description      = $doc->description ?? '';
@@ -150,7 +153,7 @@ class DocumentSlideOver extends Component
         }
 
         if ($this->editingDocId) {
-            $doc = Document::findOrFail($this->editingDocId);
+            $doc = Document::ofCompagnie($this->compagnieId())->findOrFail($this->editingDocId);
             $doc->update($data);
             $doc->rappels()->delete();
         } else {
@@ -173,7 +176,7 @@ class DocumentSlideOver extends Component
 
     public function deleteDoc(int $id): void
     {
-        $doc = Document::findOrFail($id);
+        $doc = Document::ofCompagnie($this->compagnieId())->findOrFail($id);
         if ($doc->file_path) {
             Storage::disk('public')->delete($doc->file_path);
         }

@@ -15,10 +15,13 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class DocumentManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination, WithFileUploads;
 
     // ── Filtres liste ─────────────────────────────────────────────────────────
@@ -111,7 +114,7 @@ class DocumentManager extends Component
 
     public function openEdit(int $id): void
     {
-        $doc = Document::with('rappels')->findOrFail($id);
+        $doc = Document::ofCompagnie($this->compagnieId())->with('rappels')->findOrFail($id);
 
         $this->editingId          = $id;
         $this->titre              = $doc->titre;
@@ -172,7 +175,7 @@ class DocumentManager extends Component
         }
 
         if ($this->editingId) {
-            $doc = Document::findOrFail($this->editingId);
+            $doc = Document::ofCompagnie($this->compagnieId())->findOrFail($this->editingId);
             $doc->update($data);
             $doc->rappels()->delete();
         } else {
@@ -199,7 +202,7 @@ class DocumentManager extends Component
 
     public function delete(int $id): void
     {
-        $doc = Document::findOrFail($id);
+        $doc = Document::ofCompagnie($this->compagnieId())->findOrFail($id);
         Storage::disk('public')->delete($doc->file_path);
         $doc->delete();
         $this->dispatch('toast', type: 'success', message: 'Document supprimé.');

@@ -11,10 +11,13 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class ChauffeurManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination, WithFileUploads;
 
     public string  $search       = '';
@@ -38,7 +41,7 @@ class ChauffeurManager extends Component
 
     public function openDocPanel(string $id): void
     {
-        $c = Chauffer::findOrFail($id);
+        $c = Chauffer::ofCompagnie($this->compagnieId())->findOrFail($id);
         $this->dispatch('open-doc-panel',
             type:     Chauffer::class,
             id:       $id,
@@ -62,7 +65,7 @@ class ChauffeurManager extends Component
 
     public function openEdit(string $id): void
     {
-        $c = Chauffer::findOrFail($id);
+        $c = Chauffer::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         $this->editingId      = $id;
         $this->first_name     = $c->first_name;
@@ -112,7 +115,7 @@ class ChauffeurManager extends Component
         }
 
         if ($this->editingId) {
-            Chauffer::findOrFail($this->editingId)->update($data);
+            Chauffer::ofCompagnie($this->compagnieId())->findOrFail($this->editingId)->update($data);
             $this->dispatch('toast', type: 'success', message: 'Chauffeur mis à jour.');
         } else {
             Chauffer::create($data);
@@ -129,7 +132,7 @@ class ChauffeurManager extends Component
 
     public function delete(string $id): void
     {
-        $c = Chauffer::findOrFail($id);
+        $c = Chauffer::ofCompagnie($this->compagnieId())->findOrFail($id);
         if ($c->photo) {
             Storage::disk('public')->delete($c->photo);
         }

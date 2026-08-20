@@ -15,10 +15,13 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class UserManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination;
 
     public string $search = '';
@@ -61,7 +64,7 @@ class UserManager extends Component
 
     public function openEdit(int $id): void
     {
-        $user = User::findOrFail($id);
+        $user = User::ofCompagnie($this->compagnieId())->findOrFail($id);
         $this->editingId = $id;
         $this->first_name = $user->first_name;
         $this->last_name = $user->last_name;
@@ -80,7 +83,7 @@ class UserManager extends Component
         $compagnieId = Auth::user()->compagnie_id;
 
         if ($this->editingId) {
-            $user = User::findOrFail($this->editingId);
+            $user = User::ofCompagnie($this->compagnieId())->findOrFail($this->editingId);
             $user->update([
                 'first_name'         => $this->first_name,
                 'last_name'          => $this->last_name,
@@ -129,13 +132,13 @@ class UserManager extends Component
 
     public function bloquer(int $id): void
     {
-        User::findOrFail($id)->update(['statut' => StatutUser::Bloquer->value]);
+        User::ofCompagnie($this->compagnieId())->findOrFail($id)->update(['statut' => StatutUser::Bloquer->value]);
         $this->dispatch('toast', type: 'success', message: 'Utilisateur bloqué.');
     }
 
     public function debloquer(int $id): void
     {
-        User::findOrFail($id)->update(['statut' => StatutUser::Active->value]);
+        User::ofCompagnie($this->compagnieId())->findOrFail($id)->update(['statut' => StatutUser::Active->value]);
         $this->dispatch('toast', type: 'success', message: 'Utilisateur débloqué.');
     }
 

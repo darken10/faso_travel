@@ -6,10 +6,13 @@ use App\Models\Voyage\Voyage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VoyageManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination;
 
     public string $search = '';
@@ -21,7 +24,7 @@ class VoyageManager extends Component
 
     public function delete(int $id): void
     {
-        Voyage::findOrFail($id)->delete();
+        Voyage::ofCompagnie($this->compagnieId())->findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Voyage supprimé.');
     }
 

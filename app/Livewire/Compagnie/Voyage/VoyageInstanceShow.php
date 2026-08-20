@@ -11,10 +11,13 @@ use App\Notifications\Ticket\TicketNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VoyageInstanceShow extends Component
 {
+    use ScopedToCompagnie;
+
     public string $instanceId;
 
     // Affectation
@@ -81,7 +84,7 @@ class VoyageInstanceShow extends Component
             'assignChauffeurId' => 'nullable|exists:chauffers,id',
         ]);
 
-        $instance = VoyageInstance::findOrFail($this->instanceId);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->instanceId);
         $nbPlace  = $instance->nb_place;
         if ($this->assignCareId) {
             $care    = Care::find($this->assignCareId);
@@ -113,7 +116,7 @@ class VoyageInstanceShow extends Component
             'alertReason' => 'nullable|string|max:500',
         ]);
 
-        $instance = VoyageInstance::findOrFail($this->instanceId);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->instanceId);
         $isAnnule = $this->alertType === 'ANNULE';
 
         $instance->update(['statut' => $this->alertType]);

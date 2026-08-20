@@ -12,10 +12,13 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class TicketManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination;
 
     public string $search = '';
@@ -108,7 +111,7 @@ class TicketManager extends Component
 
     public function valider(int $id): void
     {
-        $ticket = Ticket::findOrFail($id);
+        $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         try {
             TicketValidation::valider($ticket);
@@ -120,7 +123,7 @@ class TicketManager extends Component
 
     public function bloquer(int $id): void
     {
-        $ticket = Ticket::findOrFail($id);
+        $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         try {
             TicketValidation::bloque($ticket);
@@ -132,7 +135,7 @@ class TicketManager extends Component
 
     public function activer(int $id): void
     {
-        $ticket = Ticket::findOrFail($id);
+        $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         try {
             TicketValidation::active($ticket);
@@ -144,7 +147,7 @@ class TicketManager extends Component
 
     public function rembourser(int $id): void
     {
-        $ticket = Ticket::with('user', 'payements')->findOrFail($id);
+        $ticket = Ticket::ofCompagnie($this->compagnieId())->with('user', 'payements')->findOrFail($id);
 
         // Remboursable uniquement si en pause (voyage annulé) ou déjà annulé non remboursé.
         if ($ticket->statut !== StatutTicket::Pause) {

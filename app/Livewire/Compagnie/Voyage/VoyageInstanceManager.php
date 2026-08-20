@@ -18,10 +18,13 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VoyageInstanceManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination;
 
     public string $search = '';
@@ -96,7 +99,7 @@ class VoyageInstanceManager extends Component
     public function updatedAssignCareId(): void
     {
         $care     = $this->assignCareId ? Care::find($this->assignCareId) : null;
-        $instance = VoyageInstance::find($this->assigningId);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->find($this->assigningId);
         $nb       = $care?->number_place ?: ($instance?->voyage?->nb_pace ?: 0);
         $this->assignPreviewNbPlace = $nb ? (string) $nb : '—';
     }
@@ -113,7 +116,7 @@ class VoyageInstanceManager extends Component
 
     private function refreshCreatePreview(): void
     {
-        $voyage = $this->voyage_id ? Voyage::find($this->voyage_id) : null;
+        $voyage = $this->voyage_id ? Voyage::ofCompagnie($this->compagnieId())->find($this->voyage_id) : null;
         $care   = $this->care_id   ? Care::find($this->care_id)     : null;
 
         $nb = $care?->number_place ?: ($voyage?->nb_pace ?: 0);
@@ -167,7 +170,7 @@ class VoyageInstanceManager extends Component
 
     public function openAssignModal(string $id): void
     {
-        $instance = VoyageInstance::with('voyage', 'care')->findOrFail($id);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->with('voyage', 'care')->findOrFail($id);
         $this->assigningId       = $id;
         $this->assignCareId      = $instance->care_id;
         $this->assignChauffeurId = $instance->chauffer_id;
@@ -189,7 +192,7 @@ class VoyageInstanceManager extends Component
             'assignChauffeurId' => 'nullable|exists:chauffers,id',
         ]);
 
-        $instance = VoyageInstance::findOrFail($this->assigningId);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->assigningId);
 
         $nbPlace = $instance->nb_place;
         if ($this->assignCareId) {
@@ -225,7 +228,7 @@ class VoyageInstanceManager extends Component
             'alertReason' => 'nullable|string|max:500',
         ]);
 
-        $instance = VoyageInstance::findOrFail($this->alertingId);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->alertingId);
         $isAnnule = $this->alertType === 'ANNULE';
 
         $instance->update(['statut' => $this->alertType]);
@@ -273,7 +276,7 @@ class VoyageInstanceManager extends Component
 
     public function openEdit(string $id): void
     {
-        $instance = VoyageInstance::with('voyage', 'care')->findOrFail($id);
+        $instance = VoyageInstance::ofCompagnie($this->compagnieId())->with('voyage', 'care')->findOrFail($id);
         $this->editingId   = $id;
         $this->voyage_id   = $instance->voyage_id;
         $this->date        = $instance->date ? $instance->date->format('Y-m-d') : '';
@@ -305,7 +308,7 @@ class VoyageInstanceManager extends Component
             'chauffer_id' => 'nullable|exists:chauffers,id',
         ]);
 
-        $voyage  = Voyage::find($this->voyage_id);
+        $voyage  = Voyage::ofCompagnie($this->compagnieId())->find($this->voyage_id);
         $care    = $this->care_id ? Care::find($this->care_id) : null;
         $nbPlace = $care?->number_place ?: ($voyage?->nb_pace ?: 0);
 
@@ -322,7 +325,7 @@ class VoyageInstanceManager extends Component
         ];
 
         if ($this->editingId) {
-            VoyageInstance::findOrFail($this->editingId)->update($data);
+            VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->editingId)->update($data);
             $this->dispatch('toast', type: 'success', message: 'Instance mise à jour.');
         } else {
             VoyageInstance::create($data);
@@ -335,7 +338,7 @@ class VoyageInstanceManager extends Component
 
     public function delete(string $id): void
     {
-        VoyageInstance::findOrFail($id)->delete();
+        VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Instance supprimée.');
     }
 

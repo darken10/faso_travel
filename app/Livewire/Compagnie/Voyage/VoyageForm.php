@@ -12,10 +12,13 @@ use App\Models\Voyage\Trajet;
 use App\Models\Voyage\Voyage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VoyageForm extends Component
 {
+    use ScopedToCompagnie;
+
     public ?int $editingId = null;
 
     public ?int   $trajet_id         = null;
@@ -47,7 +50,7 @@ class VoyageForm extends Component
             return;
         }
 
-        $voyage = Voyage::withoutGlobalScopes()->findOrFail($voyageId);
+        $voyage = Voyage::ofCompagnie($this->compagnieId())->findOrFail($voyageId);
 
         $this->editingId         = $voyage->id;
         $this->trajet_id         = $voyage->trajet_id;
@@ -142,7 +145,7 @@ class VoyageForm extends Component
         ];
 
         if ($this->editingId) {
-            Voyage::withoutGlobalScopes()->findOrFail($this->editingId)->update($data);
+            Voyage::ofCompagnie($this->compagnieId())->findOrFail($this->editingId)->update($data);
             session()->flash('success', 'Voyage mis à jour.');
         } else {
             Voyage::create($data);

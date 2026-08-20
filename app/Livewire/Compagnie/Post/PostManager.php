@@ -7,10 +7,13 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class PostManager extends Component
 {
+    use ScopedToCompagnie;
+
     use WithPagination;
 
     public string $search = '';
@@ -19,7 +22,7 @@ class PostManager extends Component
 
     public function delete(int $id): void
     {
-        Post::withoutGlobalScopes()->findOrFail($id)->delete();
+        Post::withoutGlobalScopes()->ofCompagnie($this->compagnieId())->findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Article supprimé.');
     }
 
