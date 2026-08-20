@@ -78,6 +78,44 @@ class CompagnieSettingPanelTest extends TestCase
         $this->assertArrayNotHasKey('avance', $component->viewData('catalogue'));
     }
 
+    public function test_linterrupteur_bascule_puis_persiste_le_parametre(): void
+    {
+        $compagnie = Compagnie::factory()->create();
+        $cle = CompagnieSettingKey::PIECE_IDENTITE_OBLIGATOIRE->value;
+
+        Livewire::actingAs($this->directeur($compagnie))
+            ->test(ParametreManager::class)
+            ->assertSet("values.{$cle}", false)
+            ->call('toggleSetting', $cle)
+            ->assertSet("values.{$cle}", true)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertTrue($this->service()->get($compagnie, CompagnieSettingKey::PIECE_IDENTITE_OBLIGATOIRE));
+    }
+
+    public function test_linterrupteur_reste_inerte_en_consultation_seule(): void
+    {
+        $compagnie = Compagnie::factory()->create();
+        $cle = CompagnieSettingKey::PIECE_IDENTITE_OBLIGATOIRE->value;
+
+        Livewire::actingAs($this->agent($compagnie))
+            ->test(ParametreManager::class)
+            ->call('toggleSetting', $cle)
+            ->assertSet("values.{$cle}", false);
+    }
+
+    public function test_linterrupteur_ignore_un_parametre_avance_pour_une_compagnie(): void
+    {
+        $compagnie = Compagnie::factory()->create();
+        $cle = CompagnieSettingKey::MODE_MAINTENANCE->value;
+
+        Livewire::actingAs($this->directeur($compagnie))
+            ->test(ParametreManager::class)
+            ->call('toggleSetting', $cle)
+            ->assertSet("values.{$cle}", false);
+    }
+
     public function test_un_agent_sans_droit_est_en_consultation_seule(): void
     {
         $compagnie = Compagnie::factory()->create();
