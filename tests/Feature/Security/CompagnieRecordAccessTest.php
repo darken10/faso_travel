@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\StatutTicket;
 use App\Enums\StatutUser;
 use App\Enums\UserRole;
 use App\Livewire\Compagnie\Compagnie\ChauffeurManager;
@@ -186,6 +187,62 @@ class CompagnieRecordAccessTest extends TestCase
         ]);
 
         $this->assertActionRefusee($this->agentDe($sienne), TicketManager::class, 'bloquer', $billet->id);
+    }
+
+    // ── API agent (application de contrôle) ─────────────────────────────────
+
+    public function test_lagent_ne_peut_pas_consulter_le_billet_dune_autre_compagnie(): void
+    {
+        $sienne = Compagnie::factory()->create();
+        $billet = $this->billetDe(Compagnie::factory()->create());
+
+        $this->actingAs($this->agentDe($sienne), 'sanctum')
+            ->getJson("/api/admin/tickets/{$billet->id}")
+            ->assertNotFound();
+    }
+
+    public function test_lagent_ne_peut_pas_valider_le_billet_dune_autre_compagnie(): void
+    {
+        $sienne = Compagnie::factory()->create();
+        $billet = $this->billetDe(Compagnie::factory()->create(), StatutTicket::Payer);
+
+        $this->actingAs($this->agentDe($sienne), 'sanctum')
+            ->postJson('/api/admin/tickets/validate', ['ticket_id' => $billet->id])
+            ->assertNotFound();
+
+        $this->assertSame(StatutTicket::Payer, $billet->fresh()->statut);
+    }
+
+    public function test_lagent_ne_peut_pas_lire_le_passager_dune_autre_compagnie(): void
+    {
+        $sienne = Compagnie::factory()->create();
+        $billet = $this->billetDe(Compagnie::factory()->create());
+
+        $this->actingAs($this->agentDe($sienne), 'sanctum')
+            ->getJson("/api/admin/passengers/{$billet->id}")
+            ->assertNotFound();
+    }
+
+    public function test_lagent_consulte_le_billet_de_sa_propre_compagnie(): void
+    {
+        $sienne = Compagnie::factory()->create();
+        $billet = $this->billetDe($sienne);
+
+        $this->actingAs($this->agentDe($sienne), 'sanctum')
+            ->getJson("/api/admin/tickets/{$billet->id}")
+            ->assertOk();
+    }
+
+    /** Crée un billet vendu sur un voyage opéré par la compagnie donnée. */
+    private function billetDe(Compagnie $compagnie, ?StatutTicket $statut = null): \App\Models\Ticket\Ticket
+    {
+        $instance = $this->instancePour($compagnie);
+
+        return \App\Models\Ticket\Ticket::factory()->create(array_filter([
+            'voyage_instance_id' => $instance->id,
+            'voyage_id'          => $instance->voyage_id,
+            'statut'             => $statut,
+        ]));
     }
 
     /** Crée une instance de voyage opérée par la compagnie donnée. */

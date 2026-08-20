@@ -47,12 +47,28 @@ class TicketController extends Controller
     /**
      * Get ticket by ID
      */
+    /**
+     * Résout un billet en garantissant qu'il porte sur un voyage opéré par la
+     * compagnie de l'agent connecté.
+     *
+     * Sans cette vérification, un agent pouvait consulter — et surtout valider
+     * ou changer le statut — d'un billet vendu par une compagnie concurrente.
+     */
+    private function findTicketOfCompagnie(string $ticketId): Ticket
+    {
+        $compagnieId = auth()->user()?->compagnie_id;
+
+        abort_if($compagnieId === null, 403, 'Compte non associé à une compagnie.');
+
+        return Ticket::ofCompagnie((int) $compagnieId)->findOrFail($ticketId);
+    }
+
     public function getTicketById(string $ticketId): JsonResponse
     {
         \Log::info("Fetching ticket by ID: {$ticketId}");
         
         try {
-            $ticket = Ticket::findOrFail($ticketId);
+            $ticket = $this->findTicketOfCompagnie($ticketId);
             \Log::info("Ticket found: {$ticket->numero_ticket}");
             
             $ticket->load(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe', 'autre_personne']);
@@ -125,7 +141,7 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $ticket = Ticket::findOrFail($request->input('ticket_id'));
+        $ticket = $this->findTicketOfCompagnie($request->input('ticket_id'));
 
         if (!in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Pause])) {
             return response()->json([
@@ -204,7 +220,7 @@ class TicketController extends Controller
 
         foreach ($request->input('actions') as $action) {
             try {
-                $ticket = Ticket::findOrFail($action['ticket_id']);
+                $ticket = $this->findTicketOfCompagnie($action['ticket_id']);
                 $success = false;
 
                 DB::beginTransaction();
@@ -290,7 +306,7 @@ class TicketController extends Controller
     public function getPassengerByTicket(string $ticketId): JsonResponse
     {
         try {
-            $ticket = Ticket::findOrFail($ticketId);
+            $ticket = $this->findTicketOfCompagnie($ticketId);
             $ticket->load(['user', 'autre_personne', 'voyageInstance.voyage.classe']);
 
             return response()->json([
