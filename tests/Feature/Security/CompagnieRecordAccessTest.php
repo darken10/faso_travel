@@ -47,6 +47,7 @@ class CompagnieRecordAccessTest extends TestCase
             $this->fail("L'action « {$action} » aurait dû refuser cet identifiant.");
         } catch (ModelNotFoundException) {
             // Comportement attendu : l'enregistrement est hors périmètre.
+            $this->addToAssertionCount(1);
         }
     }
 
@@ -124,7 +125,7 @@ class CompagnieRecordAccessTest extends TestCase
 
         $this->assertActionRefusee($this->agentDe($sienne), UserManager::class, 'bloquer', $collegueConcurrent->id);
 
-        $this->assertNotSame(StatutUser::Bloquer->value, $collegueConcurrent->fresh()->statut);
+        $this->assertNotSame(StatutUser::Bloquer, $collegueConcurrent->fresh()->statut);
     }
 
     public function test_bloquer_un_client_sans_compagnie_est_refuse(): void
@@ -152,7 +153,7 @@ class CompagnieRecordAccessTest extends TestCase
             ->test(UserManager::class)
             ->call('bloquer', $collegue->id);
 
-        $this->assertSame(StatutUser::Bloquer->value, $collegue->fresh()->statut);
+        $this->assertSame(StatutUser::Bloquer, $collegue->fresh()->statut);
     }
 
     // ── Chauffeurs ──────────────────────────────────────────────────────────
@@ -161,9 +162,12 @@ class CompagnieRecordAccessTest extends TestCase
     {
         $sienne = Compagnie::factory()->create();
         $chauffeurConcurrent = Chauffer::create([
-            'first_name'   => 'Ali',
-            'last_name'    => 'Traoré',
-            'compagnie_id' => Compagnie::factory()->create()->id,
+            'first_name'      => 'Ali',
+            'last_name'       => 'Traoré',
+            'date_naissance'  => '1985-04-12',
+            'genre'           => 'Homme',
+            'statut'          => 'Disponible',
+            'compagnie_id'    => Compagnie::factory()->create()->id,
         ]);
 
         $this->assertActionRefusee($this->agentDe($sienne), ChauffeurManager::class, 'openEdit', $chauffeurConcurrent->id);

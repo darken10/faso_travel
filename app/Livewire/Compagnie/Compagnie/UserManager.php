@@ -132,14 +132,28 @@ class UserManager extends Component
 
     public function bloquer(int $id): void
     {
-        User::ofCompagnie($this->compagnieId())->findOrFail($id)->update(['statut' => StatutUser::Bloquer->value]);
+        $this->changerStatut($id, StatutUser::Bloquer);
         $this->dispatch('toast', type: 'success', message: 'Utilisateur bloqué.');
     }
 
     public function debloquer(int $id): void
     {
-        User::ofCompagnie($this->compagnieId())->findOrFail($id)->update(['statut' => StatutUser::Active->value]);
+        $this->changerStatut($id, StatutUser::Active);
         $this->dispatch('toast', type: 'success', message: 'Utilisateur débloqué.');
+    }
+
+    /**
+     * Change le statut d'un membre de l'équipe.
+     *
+     * `statut` est volontairement absent du `$fillable` de User — l'ajouter
+     * l'exposerait à l'affectation de masse des formulaires d'inscription. On
+     * assigne donc l'attribut directement ; un `update()` était ici sans effet.
+     */
+    private function changerStatut(int $id, StatutUser $statut): void
+    {
+        $user = User::ofCompagnie($this->compagnieId())->findOrFail($id);
+        $user->statut = $statut->value;
+        $user->save();
     }
 
     public function render()
