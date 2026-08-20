@@ -3,6 +3,8 @@
 namespace App\Services\V2;
 
 use Carbon\Carbon;
+use App\Enums\StatutTicket;
+use App\Http\Resources\ApiV2\TravelHistoryResource;
 use App\Models\User;
 use App\Models\Ticket\Ticket;
 use App\Models\Voyage\Trajet;
@@ -70,22 +72,61 @@ class UserService
     }
 
     /**
-     * Get user travel history
+     * Historique de voyages du client, mis en forme pour l'application mobile.
      *
-     * @return array
+     * @return array{trips: array<int, mixed>, count: int, stats: array<string, mixed>}
      */
     public function getTravelHistory(): array
     {
-        $user = Auth::user();
-        
-        $tickets = Ticket::with(['voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver'])
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
+        $tickets = Ticket::query()
+            ->with([
+                'voyageInstance.voyage.trajet.depart',
+                'voyageInstance.voyage.trajet.arriver',
+                'voyageInstance.voyage.compagnie',
+                'voyageInstance.voyage.gareDepart',
+                'voyageInstance.voyage.gareArriver',
+            ])
+            ->where('user_id', Auth::id())
+            ->orderByDesc('created_at')
             ->get();
-        
+
+        $trips = TravelHistoryResource::collection($tickets)->resolve();
+
         return [
-            'count' => $tickets->count(),
-            'tickets' => $tickets
+            'trips' => $trips,
+            'count' => count($trips),
+            'stats' => $this->buildTravelStats($trips),
+        ];
+    }
+
+    /**
+     * Quelques repères affichés en tête de l'historique.
+     *
+     * @param  array<int, array<string, mixed>>  $trips
+     * @return array<string, mixed>
+     */
+    private function buildTravelStats(array $trips): array
+    {
+        $realises = array_filter(
+            $trips,
+            fn (array $trip) => ($trip['is_past'] ?? false)
+                && in_array($trip['status'] ?? null, [StatutTicket::Valider->value, StatutTicket::Payer->value], true),
+        );
+
+        $villes = [];
+        foreach ($realises as $trip) {
+            foreach ([$trip['departure']['city'] ?? null, $trip['arrival']['city'] ?? null] as $ville) {
+                if ($ville) {
+                    $villes[$ville] = true;
+                }
+            }
+        }
+
+        return [
+            'total_trips'     => count($trips),
+            'completed_trips' => count($realises),
+            'cities_visited'  => count($villes),
+            'total_spent'     => (float) array_sum(array_column($realises, 'price')),
         ];
     }
 
