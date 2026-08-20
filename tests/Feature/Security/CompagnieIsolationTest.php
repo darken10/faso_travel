@@ -156,17 +156,23 @@ class CompagnieIsolationTest extends TestCase
 
     // ── Articles ────────────────────────────────────────────────────────────
 
+    /**
+     * Post assigne son auteur depuis l'utilisateur connecté (`creating`),
+     * pas depuis les attributs : l'article doit donc être créé en session.
+     */
+    private function articleRedigePar(User $redacteur, string $titre): Post
+    {
+        return $this->actingAs($redacteur)->app->call(
+            fn () => Post::create(['title' => $titre, 'content' => 'Contenu.'])
+        );
+    }
+
     public function test_un_agent_ne_peut_pas_ouvrir_larticle_dune_autre_compagnie(): void
     {
         $sienne = Compagnie::factory()->create();
         $autre  = Compagnie::factory()->create();
 
-        $redacteurConcurrent = $this->agentDe($autre);
-        $article = Post::create([
-            'title'   => 'Article confidentiel Saramaya',
-            'content' => 'Contenu réservé.',
-            'user_id' => $redacteurConcurrent->id,
-        ]);
+        $article = $this->articleRedigePar($this->agentDe($autre), 'Article confidentiel Saramaya');
 
         $this->expectException(ModelNotFoundException::class);
 
@@ -176,17 +182,23 @@ class CompagnieIsolationTest extends TestCase
 
     public function test_un_agent_ouvre_larticle_de_sa_propre_compagnie(): void
     {
-        $sienne = Compagnie::factory()->create();
-        $redacteur = $this->agentDe($sienne);
+        $redacteur = $this->agentDe(Compagnie::factory()->create());
+        $article = $this->articleRedigePar($redacteur, 'Nouvelle desserte Elitis');
 
-        $article = Post::create([
-            'title'   => 'Nouvelle desserte Elitis',
-            'content' => 'Ouverture de la ligne.',
-            'user_id' => $redacteur->id,
-        ]);
+        $this->assertSame($redacteur->id, $article->user_id);
 
         Livewire::actingAs($redacteur)
             ->test(PostForm::class, ['postId' => $article->id])
             ->assertSet('title', 'Nouvelle desserte Elitis');
+    }
+
+    public function test_un_collegue_de_la_meme_compagnie_peut_editer_larticle(): void
+    {
+        $compagnie = Compagnie::factory()->create();
+        $article = $this->articleRedigePar($this->agentDe($compagnie), 'Promotion de saison');
+
+        Livewire::actingAs($this->agentDe($compagnie))
+            ->test(PostForm::class, ['postId' => $article->id])
+            ->assertSet('title', 'Promotion de saison');
     }
 }
