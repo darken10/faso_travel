@@ -168,58 +168,139 @@
         </div>
     @endif
 
-    {{-- Modal --}}
+
+    {{-- Modale de création / édition --}}
     @if($showModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" x-data x-on:keydown.escape.window="$wire.set('showModal', false)">
-            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" wire:click="$set('showModal', false)"></div>
-            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg" x-trap.noscroll="true">
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h3 class="text-base font-semibold text-gray-800">{{ $editingId ? 'Modifier la compagnie' : 'Nouvelle compagnie' }}</h3>
-                    <button wire:click="$set('showModal', false)" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             x-data x-on:keydown.escape.window="$wire.closeModal()">
+
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                 wire:click="closeModal"></div>
+
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh]"
+                 x-trap.noscroll="true"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-3 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100">
+
+                {{-- En-tête --}}
+                <div class="flex items-start gap-3 px-6 py-4 border-b border-gray-100">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="text-base font-semibold text-gray-800">
+                            {{ $editingId ? 'Modifier la compagnie' : 'Nouvelle compagnie' }}
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            {{ $editingId ? 'Mettez à jour l\'identité et le statut de la compagnie.' : 'Renseignez l\'identité de la compagnie à référencer.' }}
+                        </p>
+                    </div>
+                    <button type="button" wire:click="closeModal"
+                            class="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 flex-shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
-                <form wire:submit="save" class="px-6 py-5 space-y-4" enctype="multipart/form-data">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                            <input wire:model="name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ex: STAF">
-                            @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Sigle *</label>
-                            <input wire:model="sigle" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Ex: STAF">
-                            @error('sigle') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Slogan</label>
-                        <textarea wire:model="slogant" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Votre slogan..."></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea wire:model="description" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Description de la compagnie..."></textarea>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Statut *</label>
-                            <select wire:model="statut_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+
+                <form wire:submit="save" class="flex flex-col min-h-0 flex-1">
+
+                    <div class="px-6 py-5 space-y-6 overflow-y-auto">
+
+                        {{-- Identité visuelle --}}
+                        <section class="space-y-4">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Identité</p>
+
+                            <x-form.image-upload
+                                model="logo"
+                                :file="$logo"
+                                :existing="$existingLogo"
+                                :fallback="strtoupper(substr($name ?: '?', 0, 2))"
+                                label="Logo de la compagnie"
+                                hint="Carré de préférence · PNG, JPG, WEBP ou SVG · 2 Mo maximum"
+                                accent="amber"
+                                remove-action="removeLogo"/>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="sm:col-span-2">
+                                    <label for="cm-name" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Nom <span class="text-red-500">*</span>
+                                    </label>
+                                    <input id="cm-name" wire:model="name" type="text" placeholder="Ex. Société de Transport Africain"
+                                           class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 @error('name') border-red-300 @else border-gray-300 @enderror">
+                                    @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                                </div>
+                                <div>
+                                    <label for="cm-sigle" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Sigle <span class="text-red-500">*</span>
+                                    </label>
+                                    <input id="cm-sigle" wire:model="sigle" type="text" placeholder="Ex. STAF"
+                                           class="w-full px-3 py-2 border rounded-lg text-sm uppercase font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 @error('sigle') border-red-300 @else border-gray-300 @enderror">
+                                    @error('sigle') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+                        </section>
+
+                        {{-- Présentation --}}
+                        <section class="space-y-4">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Présentation</p>
+
+                            <div>
+                                <label for="cm-slogant" class="block text-sm font-medium text-gray-700 mb-1">Slogan</label>
+                                <input id="cm-slogant" wire:model="slogant" type="text" placeholder="Voyagez en toute sérénité"
+                                       class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 @error('slogant') border-red-300 @else border-gray-300 @enderror">
+                                @error('slogant') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div x-data="{ len: ($wire.description || '').length }">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label for="cm-description" class="block text-sm font-medium text-gray-700">Description</label>
+                                    <span class="text-xs text-gray-400"><span x-text="len"></span>/2000</span>
+                                </div>
+                                <textarea id="cm-description" wire:model="description" rows="4"
+                                          x-on:input="len = $event.target.value.length"
+                                          placeholder="Activités, zones desservies, spécificités de la compagnie…"
+                                          class="w-full px-3 py-2 border rounded-lg text-sm resize-y focus:outline-none focus:ring-2 focus:ring-amber-400 @error('description') border-red-300 @else border-gray-300 @enderror"></textarea>
+                                @error('description') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            </div>
+                        </section>
+
+                        {{-- Statut --}}
+                        <section class="space-y-3">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Statut</p>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 @foreach($statuts as $s)
-                                    <option value="{{ $s->id }}">{{ $s->name }}</option>
+                                    @php $dot = ($statutColors[$s->name] ?? ['dot' => 'bg-gray-400'])['dot']; @endphp
+                                    <label class="flex items-center gap-2 px-3 py-2.5 border rounded-lg cursor-pointer text-sm transition-colors
+                                                  {{ (int) $statut_id === $s->id ? 'border-amber-400 bg-amber-50 text-gray-900 font-medium' : 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+                                        <input type="radio" wire:model.live="statut_id" value="{{ $s->id }}" class="sr-only">
+                                        <span class="w-2 h-2 rounded-full flex-shrink-0 {{ $dot }}"></span>
+                                        <span class="truncate">{{ $s->name }}</span>
+                                    </label>
                                 @endforeach
-                            </select>
-                            @error('statut_id') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Logo</label>
-                            <input wire:model="logo" type="file" accept="image/*" class="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-                            @error('logo') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                            <div wire:loading wire:target="logo" class="text-xs text-gray-400 mt-1">Chargement...</div>
-                        </div>
+                            </div>
+                            @error('statut_id') <p class="text-red-500 text-xs">{{ $message }}</p> @enderror
+                        </section>
                     </div>
-                    <div class="flex gap-3 pt-2">
-                        <button type="button" wire:click="$set('showModal', false)" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Annuler</button>
-                        <button type="submit" class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors">{{ $editingId ? 'Enregistrer' : 'Créer' }}</button>
+
+                    {{-- Pied --}}
+                    <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/70 rounded-b-2xl flex items-center justify-end gap-3">
+                        <button type="button" wire:click="closeModal"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 rounded-lg transition-colors">
+                            Annuler
+                        </button>
+                        <button type="submit" wire:loading.attr="disabled" wire:target="save,logo"
+                                class="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                            <svg wire:loading wire:target="save" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                            </svg>
+                            {{ $editingId ? 'Enregistrer' : 'Créer la compagnie' }}
+                        </button>
                     </div>
                 </form>
             </div>

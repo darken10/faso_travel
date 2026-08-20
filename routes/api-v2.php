@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V2\ConversationController as ConversationController
 use App\Http\Controllers\Api\V2\RatingController as RatingControllerV2;
 use App\Http\Controllers\Api\V2\BugReportController as BugReportControllerV2;
 use App\Http\Controllers\Api\V2\CompagnieSettingController as CompagnieSettingControllerV2;
+use App\Http\Controllers\Api\V2\StationController as StationControllerV2;
 
 // API V2
 Route::prefix('v2')->group(function () {
@@ -139,6 +140,13 @@ Route::prefix('v2')->group(function () {
     Route::post('/bug-reports', [BugReportControllerV2::class, 'store'])
         ->middleware('auth:sanctum')
         ->name('api.v2.bug-reports.store');
+
+    // ── Gares V2 ──────────────────────────────────────────────────────────────
+    // Annuaire consommé par l'écran « Gares & itinéraire » de l'application.
+    Route::prefix('/stations')->controller(StationControllerV2::class)->name('api.v2.stations.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{station}', 'show')->name('show');
+    });
 
     // ── Paramétrage compagnie V2 ──────────────────────────────────────────────
     // Lecture publique : l'application voyageur adapte son parcours aux règles
