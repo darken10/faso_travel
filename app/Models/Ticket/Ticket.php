@@ -59,22 +59,16 @@ class Ticket extends Model
         'voyageInstance',
     ];
 
-    protected static function booted(): void
-    {
-        static::addGlobalScope('userCompany', function (Builder $builder) {
-            if (Auth::check() && request()->is('compagnie/ticket*')) {
-                if (Auth::user()->compagnie_id) {
-                    $companyId = Auth::user()->compagnie_id;
-                    $builder->whereHas('voyageInstance', function ($query) use ($companyId) {
-                        $query->whereHas('voyage', function ($subQuery) use ($companyId) {
-                            $subQuery->where('compagnie_id', $companyId);
-                        });
-                    });
-                }
-            }
-
-        });
-    }
+    /*
+     * Pas de global scope de cloisonnement ici : un agent de compagnie doit
+     * continuer à voir ses propres billets achetés chez un concurrent. Le
+     * cloisonnement du guichet est appliqué explicitement côté panel
+     * (TicketManager, TicketShow, VenteTicket) sur la compagnie du voyage.
+     *
+     * Un scope conditionné à `request()->is('compagnie/ticket*')` existait ici ;
+     * ce chemin n'existe plus depuis le passage aux sous-domaines, le scope ne
+     * s'exécutait donc jamais et laissait croire à tort à un cloisonnement.
+     */
 
     public function canValider(): bool
     {

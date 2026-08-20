@@ -20,6 +20,23 @@ class VoyageTicketController extends Controller
     }
 
     /**
+     * Résout une instance de voyage en garantissant qu'elle est bien opérée par
+     * la compagnie de l'agent connecté.
+     *
+     * Sans cette vérification, un identifiant deviné suffisait à consulter le
+     * voyage et la liste des passagers d'une compagnie concurrente.
+     */
+    private function findInstanceOfCompagnie(string $voyageInstanceId): VoyageInstance
+    {
+        $compagnieId = auth()->user()?->compagnie_id;
+
+        abort_if($compagnieId === null, 403, 'Compte non associé à une compagnie.');
+
+        return VoyageInstance::whereHas('voyage', fn ($q) => $q->where('compagnie_id', $compagnieId))
+            ->findOrFail($voyageInstanceId);
+    }
+
+    /**
      * Récupère les instances de voyage par date pour la compagnie de l'utilisateur connecté
      *
      * @param Request $request
@@ -65,7 +82,7 @@ class VoyageTicketController extends Controller
     public function getVoyageInstanceDetail(string $voyageInstance): JsonResponse
     {
         try {
-            $instance = VoyageInstance::findOrFail($voyageInstance);
+            $instance = $this->findInstanceOfCompagnie($voyageInstance);
             $instance->load(['voyage.trajet.depart', 'voyage.trajet.arriver', 'voyage.compagnie', 'care', 'chauffer', 'tickets']);
 
             return response()->json([
@@ -83,7 +100,7 @@ class VoyageTicketController extends Controller
     public function getVoyageStats(string $voyageInstance): JsonResponse
     {
         try {
-            $instance = VoyageInstance::findOrFail($voyageInstance);
+            $instance = $this->findInstanceOfCompagnie($voyageInstance);
             $tickets  = $instance->tickets()
                 ->whereIn('statut', [
                     StatutTicket::Payer,

@@ -38,17 +38,20 @@ class Classe extends Model
 
     protected static function booted(): void
     {
+        // Une compagnie ne voit que ses classes et les classes communes. Les
+        // comptes clients ne sont pas filtrés : la consultation d'un voyage
+        // doit afficher la classe de la compagnie qui l'opère.
+        //
+        // Le filtre porte sur l'utilisateur, jamais sur l'URL : la version
+        // précédente testait `request()->is('compagnie*')`, un chemin qui
+        // n'existe plus depuis le passage aux sous-domaines.
         static::addGlobalScope('classeCompany', function (Builder $builder) {
-            if (Auth::check() && request()->is('compagnie*')) {
-                if (Auth::user()->compagnie_id) {
-                    $companyId = Auth::user()->compagnie_id;
-                    $builder->where(function (Builder $q) use ($companyId) {
-                        $q->where('compagnie_id', $companyId)
-                          ->orWhere('is_default', true);
-                    });
-                } else {
-                    $builder->where('is_default', true);
-                }
+            if (Auth::check() && Auth::user()->compagnie_id) {
+                $companyId = Auth::user()->compagnie_id;
+                $builder->where(function (Builder $q) use ($companyId) {
+                    $q->where('compagnie_id', $companyId)
+                      ->orWhere('is_default', true);
+                });
             }
         });
     }

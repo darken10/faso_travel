@@ -48,12 +48,16 @@ class Care extends Model
 
     protected static function booted(): void
     {
+        // Un véhicule appartient toujours à une seule compagnie : un compte
+        // rattaché à une compagnie ne voit jamais la flotte d'une autre.
+        //
+        // Le filtre porte sur l'utilisateur, jamais sur l'URL : la version
+        // précédente testait `request()->is('compagnie/compagnie/cares*')`,
+        // un chemin qui n'existe plus depuis le passage aux sous-domaines —
+        // le scope ne s'appliquait donc jamais et exposait toute la flotte.
         static::addGlobalScope('careCompany', function (Builder $builder) {
-            if (Auth::check() && request()->is('compagnie/compagnie/cares*')) {
-                if (Auth::user()->compagnie_id) {
-                    $companyId = Auth::user()->compagnie_id;
-                    $builder->where('compagnie_id', $companyId);
-                }
+            if (Auth::check() && Auth::user()->compagnie_id) {
+                $builder->where('compagnie_id', Auth::user()->compagnie_id);
             }
         });
     }

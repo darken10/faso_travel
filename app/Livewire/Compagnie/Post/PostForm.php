@@ -5,6 +5,8 @@ namespace App\Livewire\Compagnie\Post;
 use App\Models\Post\Category;
 use App\Models\Post\Post;
 use App\Models\Post\Tag;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -34,13 +36,27 @@ class PostForm extends Component
         $this->postId = $postId;
 
         if ($postId) {
-            $post = Post::withoutGlobalScopes()->findOrFail($postId);
+            $post = $this->findPostOfCompagnie($postId);
             $this->title          = $post->title;
             $this->content        = $post->content ?? '';
             $this->category_id    = $post->category_id;
             $this->selectedTags   = $post->tags()->pluck('tags.id')->toArray();
             $this->existingImages = $post->images_uri ?? [];
         }
+    }
+
+    /**
+     * Résout un article en garantissant qu'il appartient bien à la compagnie
+     * de l'utilisateur : sans cette vérification, un identifiant deviné dans
+     * l'URL suffisait à ouvrir — et modifier — l'article d'une autre compagnie.
+     */
+    private function findPostOfCompagnie(int $postId): Post
+    {
+        $userIds = User::where('compagnie_id', Auth::user()->compagnie_id)->pluck('id');
+
+        return Post::withoutGlobalScopes()
+            ->whereIn('user_id', $userIds)
+            ->findOrFail($postId);
     }
 
     protected function rules(): array
@@ -90,7 +106,7 @@ class PostForm extends Component
         $allImages = array_merge($this->existingImages, $newUris);
 
         if ($this->postId) {
-            $post = Post::withoutGlobalScopes()->findOrFail($this->postId);
+            $post = $this->findPostOfCompagnie($this->postId);
             $post->update([
                 'title'       => $this->title,
                 'content'     => $this->content,

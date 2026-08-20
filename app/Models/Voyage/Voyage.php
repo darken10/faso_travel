@@ -70,17 +70,16 @@ class Voyage extends Model
     ];
 
 
-    protected static function booted(): void
-    {
-        static::addGlobalScope('voyageCompany', function (Builder $builder) {
-            if (Auth::check() && request()->is('compagnie/voyage*')) {
-                if (Auth::user()->compagnie_id) {
-                    $companyId = Auth::user()->compagnie_id;
-                    $builder->where('compagnie_id', $companyId);
-                }
-            }
-        });
-    }
+    /*
+     * Pas de global scope de cloisonnement ici : la recherche de voyages doit
+     * couvrir toutes les compagnies, y compris pour un compte rattaché à l'une
+     * d'elles qui voyagerait comme client. L'isolation est appliquée
+     * explicitement côté panel (VoyageManager, VoyageForm, VoyageInstance*).
+     *
+     * Un scope conditionné à `request()->is('compagnie/voyage*')` existait ici ;
+     * ce chemin n'existe plus depuis le passage aux sous-domaines, le scope ne
+     * s'exécutait donc jamais et laissait croire à tort à un cloisonnement.
+     */
 
 
     public function getDays(): \Illuminate\Support\Collection

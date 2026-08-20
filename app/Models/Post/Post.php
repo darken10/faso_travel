@@ -38,19 +38,16 @@ class Post extends Model
         });
     }
 
-    protected static function booted(): void
-    {
-        static::addGlobalScope('postCompany', function (Builder $builder) {
-            if (Auth::check() && request()->is('compagnie/post*')) {
-                if (Auth::user()->compagnie_id) {
-                    $companyId = Auth::user()->compagnie_id;
-                    $users = User::where('compagnie_id', $companyId)->get()->pluck('id')->toArray();
-
-                    $builder->whereIn('user_id', $users);
-                }
-            }
-        });
-    }
+    /*
+     * Pas de global scope de cloisonnement ici : un article est visible par
+     * tous les voyageurs dans le fil d'actualité. L'isolation par compagnie
+     * est appliquée explicitement côté panel (PostManager, PostForm), qui
+     * restreint aux articles rédigés par les membres de la compagnie.
+     *
+     * Un scope conditionné à `request()->is('compagnie/post*')` existait ici ;
+     * ce chemin n'existe plus depuis le passage aux sous-domaines, le scope ne
+     * s'exécutait donc jamais et laissait croire à tort à un cloisonnement.
+     */
 
     protected function casts(): array
     {
