@@ -23,6 +23,7 @@ class StationResource extends JsonResource
             'id'          => $this->id,
             'name'        => $this->name,
             'city'        => $this->ville?->name,
+            'city_id'     => $this->ville_id,
             'region'      => $this->ville?->region?->name,
             'lat'         => $lat,
             'lng'         => $lng,
