@@ -15,6 +15,7 @@ use App\Models\Post\Post;
 use App\Models\Post\Comment;
 use App\Models\Ticket\Ticket;
 use App\Models\Role;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
@@ -157,6 +158,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
     function tickets():HasMany{
         return $this->hasMany(Ticket::class);
+    }
+
+    /** Restreint aux comptes rattachés à une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->where('compagnie_id', $compagnieId);
     }
 
     function compagnie(): BelongsTo

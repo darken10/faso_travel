@@ -152,6 +152,12 @@ class VoyageInstance extends Model
 
 
 
+    /** Restreint aux instances dont le voyage est opéré par une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->whereHas('voyage', fn (Builder $q) => $q->where('compagnie_id', $compagnieId));
+    }
+
     public function scopeDisponibles(Builder $query): Builder
     {
         return $query->whereHas('voyage', function ($q) {

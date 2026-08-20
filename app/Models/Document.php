@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Compagnie\Compagnie;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -49,6 +50,12 @@ class Document extends Model
     public function rappels(): HasMany
     {
         return $this->hasMany(DocumentRappel::class);
+    }
+
+    /** Restreint aux documents rattachés à une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->where('compagnie_id', $compagnieId);
     }
 
     public function compagnie(): BelongsTo

@@ -82,6 +82,12 @@ class Voyage extends Model
      */
 
 
+    /** Restreint aux voyages opérés par une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->where('compagnie_id', $compagnieId);
+    }
+
     public function getDays(): \Illuminate\Support\Collection
     {
         return collect(json_decode($this->days))->map(fn ($jour)=>JoursSemain::from($jour));

@@ -65,6 +65,12 @@ class Post extends Model
         return $this->belongsTo(Category::class);
     }
 
+    /** Restreint aux articles rédigés par un membre d'une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->whereHas('user', fn (Builder $q) => $q->where('compagnie_id', $compagnieId));
+    }
+
     function user():BelongsTo{
         return $this->belongsTo(User::class);
     }

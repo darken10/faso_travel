@@ -4,6 +4,7 @@ namespace App\Models\Compagnie;
 
 use App\Models\Document;
 use App\Models\Voyage\VoyageInstance;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -32,6 +33,12 @@ class Chauffer extends Model
         'compagnie_id',
         'statut',
     ];
+
+    /** Restreint aux chauffeurs employés par une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->where('compagnie_id', $compagnieId);
+    }
 
     public function compagnie(): BelongsTo
     {

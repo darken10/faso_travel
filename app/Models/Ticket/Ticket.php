@@ -70,6 +70,15 @@ class Ticket extends Model
      * s'exécutait donc jamais et laissait croire à tort à un cloisonnement.
      */
 
+    /** Restreint aux billets vendus sur un voyage d'une compagnie donnée. */
+    public function scopeOfCompagnie(Builder $query, int $compagnieId): Builder
+    {
+        return $query->whereHas(
+            'voyageInstance.voyage',
+            fn (Builder $q) => $q->where('compagnie_id', $compagnieId),
+        );
+    }
+
     public function canValider(): bool
     {
         return $this->statut === StatutTicket::Payer;
