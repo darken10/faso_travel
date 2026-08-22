@@ -47,6 +47,8 @@ class Ticket extends Model
         "voyage_instance_id",
         "caisse_id",
         "rembourse_at",
+        "paused_at",
+        "paused_auto",
         "rembourse_par_id",
         "rembourse_montant",
         "promo_code_id",
@@ -94,6 +96,8 @@ class Ticket extends Model
             'bagages'      => 'array',
             'statut'       => StatutTicket::class,
             'rembourse_at' => 'datetime',
+            'paused_at'    => 'datetime',
+            'paused_auto'  => 'boolean',
         ];
     }
 
