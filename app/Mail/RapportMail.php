@@ -18,6 +18,7 @@ class RapportMail extends Mailable
         public array $data,
         public string $periodLabel,
         public string $pdf,
+        public string $fileName = 'rapport.pdf',
     ) {}
 
     public function envelope(): Envelope
@@ -35,7 +36,7 @@ class RapportMail extends Mailable
     public function attachments(): array
     {
         return [
-            Attachment::fromData(fn () => $this->pdf, 'rapport.pdf')->withMime('application/pdf'),
+            Attachment::fromData(fn () => $this->pdf, $this->fileName)->withMime('application/pdf'),
         ];
     }
 }

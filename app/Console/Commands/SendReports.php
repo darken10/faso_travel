@@ -22,7 +22,7 @@ class SendReports extends Command
     public function handle(ReportService $reports): int
     {
         $period = $this->argument('period');
-        [$start, $end, $label] = $this->resolvePeriod($period);
+        [$start, $end, $label, $slug] = $this->resolvePeriod($period);
 
         $this->info("Envoi des rapports {$period} ({$start->format('d/m/Y')} → {$end->format('d/m/Y')})…");
 
@@ -45,9 +45,18 @@ class SendReports extends Command
 
             try {
                 $data = $reports->data($compagnie->id, $start, $end);
-                $pdf  = Pdf::loadView('exports.rapport', ['data' => $data, 'compagnie' => $compagnie])->output();
 
-                Mail::to($recipients)->send(new RapportMail($compagnie, $data, $label, $pdf));
+                $pdf = Pdf::loadView('exports.rapport', [
+                    'data'        => $data,
+                    'compagnie'   => $compagnie,
+                    'logo'        => $reports->logoDataUri($compagnie),
+                    'periodLabel' => $slug,
+                ])->output();
+
+                // rapport-<type>-<date>.pdf, la date étant la fin de la période couverte.
+                $fileName = sprintf('rapport-%s-%s.pdf', $slug, $end->format('Y-m-d'));
+
+                Mail::to($recipients)->send(new RapportMail($compagnie, $data, $label, $pdf, $fileName));
                 $sent++;
             } catch (\Throwable $e) {
                 Log::error("[reports:send] Compagnie {$compagnie->id} : " . $e->getMessage());
@@ -59,7 +68,7 @@ class SendReports extends Command
         return self::SUCCESS;
     }
 
-    /** @return array{0: Carbon, 1: Carbon, 2: string} */
+    /** @return array{0: Carbon, 1: Carbon, 2: string, 3: string} */
     private function resolvePeriod(string $period): array
     {
         $now = now();
@@ -69,21 +78,25 @@ class SendReports extends Command
                 $now->copy()->subYear()->startOfYear(),
                 $now->copy()->subYear()->endOfYear(),
                 'Annuel — ' . $now->copy()->subYear()->format('Y'),
+                'annuel',
             ],
             'monthly' => [
                 $now->copy()->subMonthNoOverflow()->startOfMonth(),
                 $now->copy()->subMonthNoOverflow()->endOfMonth(),
                 'Mensuel — ' . $now->copy()->subMonthNoOverflow()->translatedFormat('F Y'),
+                'mensuel',
             ],
             'weekly' => [
                 $now->copy()->subWeek()->startOfWeek(),
                 $now->copy()->subWeek()->endOfWeek(),
                 'Hebdomadaire — semaine du ' . $now->copy()->subWeek()->startOfWeek()->format('d/m/Y'),
+                'hebdomadaire',
             ],
             default => [
                 $now->copy()->startOfDay(),
                 $now->copy()->endOfDay(),
                 'Journalier — ' . $now->format('d/m/Y'),
+                'journalier',
             ],
         };
     }

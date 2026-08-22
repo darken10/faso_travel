@@ -14,6 +14,8 @@ use App\Services\Ticket\TicketCommandService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -199,6 +201,92 @@ class RapportActiviteTest extends TestCase
         $mail = new RapportMail($this->compagnie, $this->rapportDuJour(), 'Journalier — test', 'pdf');
 
         $this->assertNotEmpty($mail->render());
+    }
+
+    // ── Poids et présentation du document ───────────────────────────────────
+
+    public function test_le_pdf_reste_leger(): void
+    {
+        $pdf = Pdf::loadView('exports.rapport', [
+            'data'      => $this->rapportDuJour(),
+            'compagnie' => $this->compagnie,
+        ])->output();
+
+        // Sans police embarquée, un rapport sans logo tient largement sous 60 Ko.
+        // Un dépassement signale le retour d'une police non « core PDF ».
+        $this->assertLessThan(
+            60 * 1024,
+            strlen($pdf),
+            'Le PDF a dépassé 60 Ko : une police est probablement embarquée.',
+        );
+    }
+
+    public function test_le_document_nembarque_aucune_police(): void
+    {
+        $pdf = Pdf::loadView('exports.rapport', [
+            'data'      => $this->rapportDuJour(),
+            'compagnie' => $this->compagnie,
+        ])->output();
+
+        $this->assertStringNotContainsString('FontFile', $pdf, 'Aucune police ne doit être embarquée.');
+    }
+
+    public function test_le_logo_est_reduit_avant_dentrer_dans_le_pdf(): void
+    {
+        Storage::fake('public');
+        $original = UploadedFile::fake()->image('logo.jpg', 1200, 1200)->store('compagnies', 'public');
+        $this->compagnie->update(['logo_uri' => $original]);
+
+        $logo = app(ReportService::class)->logoDataUri($this->compagnie->fresh());
+
+        $this->assertNotNull($logo);
+        $this->assertStringStartsWith('data:image/', $logo);
+        $this->assertLessThan(
+            Storage::disk('public')->size($original),
+            strlen(base64_decode(explode(',', $logo)[1])),
+            'Le logo doit être plus léger que le fichier source.',
+        );
+    }
+
+    public function test_un_logo_absent_ninterrompt_pas_le_rapport(): void
+    {
+        $this->compagnie->update(['logo_uri' => 'compagnies/inexistant.jpg']);
+
+        $this->assertNull(app(ReportService::class)->logoDataUri($this->compagnie->fresh()));
+    }
+
+    public function test_le_fichier_joint_est_nomme_par_type_et_date(): void
+    {
+        $mail = new RapportMail(
+            $this->compagnie,
+            $this->rapportDuJour(),
+            'Journalier — test',
+            'pdf',
+            'rapport-journalier-2026-08-22.pdf',
+        );
+
+        $this->assertSame('rapport-journalier-2026-08-22.pdf', $mail->attachments()[0]->as);
+    }
+
+    public function test_les_libelles_tiennent_dans_le_jeu_de_caracteres_du_pdf(): void
+    {
+        $billet = $this->billet(StatutTicket::Valider);
+        $billet->update(['valider_at' => now()]);
+
+        $data = $this->rapportDuJour();
+        $textes = array_merge(
+            array_column($data['embarques'], 'trajet'),
+            array_column($data['topTrajets'], 'trajet'),
+        );
+
+        foreach ($textes as $texte) {
+            // Helvetica ne rend que Windows-1252 : un caractère hors jeu
+            // apparaîtrait comme un carré vide dans le document.
+            $this->assertNotFalse(
+                @iconv('UTF-8', 'Windows-1252', (string) $texte),
+                "Caractère non rendu par la police du PDF : {$texte}",
+            );
+        }
     }
 
     public function test_le_rapport_annuel_couvre_lannee_ecoulee(): void

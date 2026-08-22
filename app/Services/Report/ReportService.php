@@ -9,6 +9,8 @@ use App\Models\Finance\Recette;
 use App\Models\Ticket\Payement;
 use App\Models\Ticket\Ticket;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class ReportService
 {
@@ -48,7 +50,7 @@ class ReportService
         // ── Top trajets (nb tickets + recette + remplissage) ───────────────────
         $topTrajets = $tickets
             ->groupBy(fn ($t) => ($t->voyageInstance?->voyage?->trajet?->depart?->name ?? '—')
-                . ' → ' . ($t->voyageInstance?->voyage?->trajet?->arriver?->name ?? '—'))
+                . ' – ' . ($t->voyageInstance?->voyage?->trajet?->arriver?->name ?? '—'))
             ->map(fn ($grp, $label) => [
                 'trajet'  => $label,
                 'tickets' => $grp->count(),
@@ -125,6 +127,75 @@ class ReportService
     }
 
     /**
+     * Logo de la compagnie réduit et encodé en data URI, prêt à être posé dans
+     * le PDF.
+     *
+     * Le fichier d'origine est une photo pleine résolution : l'insérer tel quel
+     * alourdirait chaque rapport de plusieurs dizaines de kilo-octets pour une
+     * vignette de deux centimètres. On le redimensionne donc à la taille
+     * réellement affichée, et le résultat est mémorisé — un même logo sert à
+     * tous les rapports d'une campagne d'envoi.
+     */
+    public function logoDataUri(mixed $compagnie, int $largeurMax = 160): ?string
+    {
+        $chemin = $compagnie?->logo_uri;
+
+        if (! $chemin || ! Storage::disk('public')->exists($chemin)) {
+            return null;
+        }
+
+        return Cache::remember(
+            'report_logo:'.md5($chemin.'|'.$largeurMax),
+            now()->addDay(),
+            function () use ($chemin, $largeurMax) {
+                try {
+                    $binaire = Storage::disk('public')->get($chemin);
+
+                    if (! function_exists('imagecreatefromstring')) {
+                        return $this->dataUri($binaire, Storage::disk('public')->mimeType($chemin));
+                    }
+
+                    $source = @imagecreatefromstring($binaire);
+
+                    if ($source === false) {
+                        return null;
+                    }
+
+                    $reduit = imagescale($source, min($largeurMax, imagesx($source)));
+                    imagedestroy($source);
+
+                    if ($reduit === false) {
+                        return $this->dataUri($binaire, 'image/png');
+                    }
+
+                    // Un logo photographique se compresse bien mieux en JPEG ;
+                    // le PNG n'est conservé que pour les logos à fond transparent.
+                    $estPhoto = in_array(
+                        strtolower(pathinfo($chemin, PATHINFO_EXTENSION)),
+                        ['jpg', 'jpeg'],
+                        true,
+                    );
+
+                    ob_start();
+                    $estPhoto ? imagejpeg($reduit, null, 82) : imagepng($reduit, null, 9);
+                    $optimise = (string) ob_get_clean();
+                    imagedestroy($reduit);
+
+                    return $this->dataUri($optimise, $estPhoto ? 'image/jpeg' : 'image/png');
+                } catch (\Throwable) {
+                    // Un logo illisible ne doit jamais empêcher l'envoi du rapport.
+                    return null;
+                }
+            },
+        );
+    }
+
+    private function dataUri(string $binaire, string $mime): string
+    {
+        return 'data:'.$mime.';base64,'.base64_encode($binaire);
+    }
+
+    /**
      * Billets effectivement embarqués sur la période, d'après la date de
      * validation par l'agent.
      *
@@ -193,7 +264,7 @@ class ReportService
         return [
             'numero'    => $ticket->numero_ticket,
             'passager'  => $this->nomUtilisateur($ticket->user),
-            'trajet'    => ($trajet?->depart?->name ?? '—').' → '.($trajet?->arriver?->name ?? '—'),
+            'trajet'    => ($trajet?->depart?->name ?? '—').' – '.($trajet?->arriver?->name ?? '—'),
             'depart_le' => $ticket->voyageInstance?->date
                 ? Carbon::parse($ticket->voyageInstance->date)->format('d/m/Y')
                 : null,
