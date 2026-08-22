@@ -64,7 +64,13 @@ enum CompagnieSettingKey: string
     case NOTIF_EMAIL_ACTIVE        = 'notif_email_active';
     case NOTIF_PUSH_ACTIVE         = 'notif_push_active';
     case NOTIF_WHATSAPP_ACTIVE     = 'notif_whatsapp_active';
-    case RAPPEL_DEPART_HEURES      = 'rappel_depart_heures';
+    case RAPPEL_VEILLE_ACTIF          = 'rappel_veille_actif';
+    case RAPPEL_VEILLE_HEURES         = 'rappel_veille_heures';
+    case RAPPEL_AVANT_DEPART_ACTIF    = 'rappel_avant_depart_actif';
+    case RAPPEL_AVANT_DEPART_MINUTES  = 'rappel_avant_depart_minutes';
+    case RAPPEL_EMBARQUEMENT_ACTIF    = 'rappel_embarquement_actif';
+    case BON_VOYAGE_ACTIF             = 'bon_voyage_actif';
+    case BON_VOYAGE_DELAI_MINUTES     = 'bon_voyage_delai_minutes';
     case SIGNATURE_SMS             = 'signature_sms';
 
     // ── Fidélité & promotions ───────────────────────────────────────────────
@@ -332,11 +338,42 @@ enum CompagnieSettingKey: string
                 CompagnieSettingType::Boolean, CompagnieSettingGroup::Notification,
                 'Notifications WhatsApp', false,
             ),
-            self::RAPPEL_DEPART_HEURES => $this->make(
+            self::RAPPEL_VEILLE_ACTIF => $this->make(
+                CompagnieSettingType::Boolean, CompagnieSettingGroup::Notification,
+                'Rappel la veille du départ', true,
+                help: 'Ignoré lorsque le billet est acheté le jour même du voyage.',
+            ),
+            self::RAPPEL_VEILLE_HEURES => $this->make(
                 CompagnieSettingType::Integer, CompagnieSettingGroup::Notification,
-                'Rappel avant le départ', 2,
-                help: 'Envoi du rappel ce nombre d\'heures avant l\'heure de départ.',
-                rules: ['min:0', 'max:72'], suffix: 'heures',
+                'Avance du rappel de la veille', 24,
+                help: 'Nombre d\'heures avant le départ auquel part ce premier rappel.',
+                rules: ['min:2', 'max:168'], suffix: 'heures',
+            ),
+            self::RAPPEL_AVANT_DEPART_ACTIF => $this->make(
+                CompagnieSettingType::Boolean, CompagnieSettingGroup::Notification,
+                'Rappel juste avant le départ', true,
+            ),
+            self::RAPPEL_AVANT_DEPART_MINUTES => $this->make(
+                CompagnieSettingType::Integer, CompagnieSettingGroup::Notification,
+                'Avance du rappel de départ', 60,
+                help: 'Laissez au voyageur le temps de rejoindre la gare.',
+                rules: ['min:5', 'max:720'], suffix: 'minutes',
+            ),
+            self::RAPPEL_EMBARQUEMENT_ACTIF => $this->make(
+                CompagnieSettingType::Boolean, CompagnieSettingGroup::Notification,
+                'Message à l\'heure de l\'embarquement', true,
+                help: 'Prévient le voyageur que l\'embarquement commence.',
+            ),
+            self::BON_VOYAGE_ACTIF => $this->make(
+                CompagnieSettingType::Boolean, CompagnieSettingGroup::Notification,
+                'Message « bon voyage »', true,
+                help: 'Envoyé aux seuls passagers effectivement embarqués, une fois le trajet entamé.',
+            ),
+            self::BON_VOYAGE_DELAI_MINUTES => $this->make(
+                CompagnieSettingType::Integer, CompagnieSettingGroup::Notification,
+                'Envoi du message « bon voyage »', 60,
+                help: 'Minutes après l\'embarquement du passager.',
+                rules: ['min:1', 'max:1440'], suffix: 'minutes après embarquement',
             ),
             self::SIGNATURE_SMS => $this->make(
                 CompagnieSettingType::String, CompagnieSettingGroup::Notification,

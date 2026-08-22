@@ -37,7 +37,14 @@ Schedule::command('reports:send monthly')->monthlyOn(1, '07:00')->withoutOverlap
 // Annuel : le 1er janvier à 8h (année écoulée)
 Schedule::command('reports:send yearly')->yearlyOn(1, 1, '08:00')->withoutOverlapping();
 
-// Rappels de départ (push/email) : ~2h avant le départ, vérifié toutes les 15 min
-Schedule::command('notifications:departure-reminders --hours=2')
-    ->everyFifteenMinutes()
+// Rappels de départ (push/email/in-app), tous paliers confondus.
+// Les paliers actifs et leur avance de tir sont réglés par chaque compagnie
+// depuis le panel ; la commande se contente de vérifier ce qui est dû.
+Schedule::command('notifications:departure-reminders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Message « bon voyage » aux passagers scannés à l'embarquement.
+Schedule::command('notifications:bon-voyage')
+    ->everyFiveMinutes()
     ->withoutOverlapping();
