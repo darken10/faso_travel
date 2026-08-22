@@ -19,6 +19,13 @@ Schedule::command('tickets:clean-expired --hours=24')
     ->hourly()
     ->withoutOverlapping();
 
+// Met en pause les tickets payés jamais scannés, 3h après le départ (chaque heure).
+// Le battement laisse à l'agent le temps de valider les embarquements tardifs ;
+// le statut « Pause » permet ensuite au voyageur de reporter son trajet.
+Schedule::command('tickets:pause-non-consommes --hours=3')
+    ->hourly()
+    ->withoutOverlapping();
+
 // ── Rapports automatiques par email aux gérants ──────────────────────────────
 // Journalier : chaque soir à 20h (activité du jour)
 Schedule::command('reports:send daily')->dailyAt('20:00')->withoutOverlapping();
