@@ -82,6 +82,7 @@ enum CompagnieSettingKey: string
     case PLAFOND_VENTE_JOURNALIER  = 'plafond_vente_journalier';
     case MODE_MAINTENANCE          = 'mode_maintenance';
     case API_AGENT_ACTIVE          = 'api_agent_active';
+    case DELAI_PAUSE_NON_CONSOMME  = 'delai_pause_non_consomme';
 
     public function definition(): SettingDefinition
     {
@@ -399,6 +400,14 @@ enum CompagnieSettingKey: string
                 CompagnieSettingType::Boolean, CompagnieSettingGroup::Avance,
                 'Application agent activée', true,
                 help: 'Autorise la connexion des agents depuis l\'application de contrôle.',
+            ),
+            self::DELAI_PAUSE_NON_CONSOMME => $this->make(
+                CompagnieSettingType::Integer, CompagnieSettingGroup::Avance,
+                'Mise en pause des billets non scannés', 3,
+                help: 'Heures après le départ au bout desquelles un billet payé mais jamais '
+                    .'scanné bascule en « Pause », d\'où il peut être reporté. Le battement '
+                    .'laisse à l\'agent le temps de valider les embarquements tardifs.',
+                rules: ['min:0', 'max:720'], suffix: 'heures',
             ),
         };
     }

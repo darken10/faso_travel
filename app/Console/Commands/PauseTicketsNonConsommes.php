@@ -8,32 +8,39 @@ use Illuminate\Console\Command;
 /**
  * Bascule en « Pause » les billets payés qui n'ont jamais été scannés et dont
  * le voyage est parti. Planifiée dans `routes/console.php`.
+ *
+ * Le battement appliqué est celui réglé par l'administrateur pour chaque
+ * compagnie ; `--hours` ne sert qu'à forcer une valeur commune le temps d'un
+ * rattrapage manuel.
  */
 class PauseTicketsNonConsommes extends Command
 {
     protected $signature = 'tickets:pause-non-consommes
-                            {--hours= : Heures de battement après le départ avant mise en pause}
+                            {--hours= : Force un battement commun, en heures (par défaut : réglage de chaque compagnie)}
                             {--dry-run : Simuler sans modifier la base}';
 
     protected $description = 'Met en pause les tickets payés dont le voyage est passé sans avoir été validés';
 
     public function handle(TicketExpirationService $service): int
     {
-        $hours = (int) ($this->option('hours') ?: TicketExpirationService::DELAI_GRACE_HEURES);
+        $override = $this->option('hours');
+        $override = $override === null || $override === '' ? null : (int) $override;
 
-        if ($hours < 0) {
+        if ($override !== null && $override < 0) {
             $this->error('Le délai de battement ne peut pas être négatif.');
 
             return self::FAILURE;
         }
 
-        $this->info("Recherche des tickets payés dont le départ remonte à plus de {$hours}h...");
+        $this->info($override === null
+            ? 'Recherche des tickets non consommés, selon le battement réglé par compagnie...'
+            : "Recherche des tickets non consommés, battement forcé à {$override}h...");
 
         if ($this->option('dry-run')) {
-            return $this->simuler($service, $hours);
+            return $this->simuler($service, $override);
         }
 
-        $bilan = $service->pauseNonConsommes($hours);
+        $bilan = $service->pauseNonConsommes($override);
 
         if ($bilan['total'] === 0) {
             $this->info('Aucun ticket non consommé à mettre en pause.');
@@ -51,9 +58,9 @@ class PauseTicketsNonConsommes extends Command
     }
 
     /** Affiche ce qui serait modifié, sans rien écrire. */
-    private function simuler(TicketExpirationService $service, int $hours): int
+    private function simuler(TicketExpirationService $service, ?int $override): int
     {
-        $tickets = $service->ticketsNonConsommes($hours);
+        $tickets = $service->ticketsNonConsommes($override);
 
         if ($tickets->isEmpty()) {
             $this->info('Aucun ticket non consommé à mettre en pause.');
@@ -64,18 +71,13 @@ class PauseTicketsNonConsommes extends Command
         $this->warn("{$tickets->count()} ticket(s) seraient mis en pause.");
 
         $this->table(
-            ['ID', 'Numéro', 'Compagnie', 'Départ prévu'],
+            ['ID', 'Numéro', 'Compagnie', 'Départ prévu', 'Battement'],
             $tickets->map(fn ($ticket) => [
                 $ticket->id,
                 $ticket->numero_ticket,
                 $ticket->voyageInstance?->voyage?->compagnie?->name ?? '—',
-                // `date` et `heure` sont tous deux castés en datetime : on ne
-                // garde de chacun que la partie utile, sinon la cellule affiche
-                // deux horodatages complets accolés.
-                $ticket->voyageInstance
-                    ? $ticket->voyageInstance->date?->format('d/m/Y')
-                        .' à '.($ticket->voyageInstance->heure?->format('H:i') ?? '--:--')
-                    : '—',
+                $service->departAt($ticket)?->format('d/m/Y à H:i') ?? '—',
+                ($override ?? $service->battementPour($ticket)).'h',
             ]),
         );
 

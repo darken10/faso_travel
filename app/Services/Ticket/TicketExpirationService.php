@@ -2,9 +2,12 @@
 
 namespace App\Services\Ticket;
 
+use App\Enums\CompagnieSettingKey;
 use App\Enums\StatutTicket;
 use App\Enums\StatutVoyageInstance;
 use App\Models\Ticket\Ticket;
+use App\Services\Compagnie\CompagnieSettingService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
@@ -17,25 +20,34 @@ use Illuminate\Support\Facades\Log;
  * empêche le voyageur de reporter son trajet : on le bascule en « Pause », état
  * depuis lequel {@see TicketCommandService::activate()} permet de le réaffecter
  * à un autre départ.
+ *
+ * Le délai de battement est propre à chaque compagnie et se règle depuis le
+ * panel d'administration (groupe « Avancé »), une compagnie de courtes liaisons
+ * urbaines n'ayant pas les mêmes marges qu'une compagnie longue distance.
  */
 class TicketExpirationService
 {
-    /** Heures de battement laissées à l'agent pour scanner après le départ. */
-    public const DELAI_GRACE_HEURES = 3;
-
-    public function __construct(private readonly TicketCommandService $commandService) {}
+    public function __construct(
+        private readonly TicketCommandService $commandService,
+        private readonly CompagnieSettingService $settings,
+    ) {}
 
     /**
-     * Billets payés dont le départ est passé depuis plus de `$graceHours`.
+     * Billets payés dont le départ est passé depuis plus longtemps que le
+     * battement accordé à leur compagnie.
      *
-     * Les voyages annulés sont écartés : ils relèvent du remboursement, pas de
-     * la mise en pause.
+     * @param  int|null  $graceHoursOverride  Force un battement identique pour
+     *                                        toutes les compagnies (rattrapage
+     *                                        ponctuel en ligne de commande).
+     * @return Collection<int, Ticket>
      */
-    public function ticketsNonConsommes(int $graceHours = self::DELAI_GRACE_HEURES): Collection
+    public function ticketsNonConsommes(?int $graceHoursOverride = null): Collection
     {
-        return $this->queryNonConsommes($graceHours)
+        return $this->queryDepartPasse()
             ->with(['voyageInstance.voyage.compagnie', 'user'])
-            ->get();
+            ->get()
+            ->filter(fn (Ticket $ticket) => $this->battementEcoule($ticket, $graceHoursOverride))
+            ->values();
     }
 
     /**
@@ -46,9 +58,9 @@ class TicketExpirationService
      *
      * @return array{paused: int, failed: int, total: int}
      */
-    public function pauseNonConsommes(int $graceHours = self::DELAI_GRACE_HEURES): array
+    public function pauseNonConsommes(?int $graceHoursOverride = null): array
     {
-        $tickets = $this->ticketsNonConsommes($graceHours);
+        $tickets = $this->ticketsNonConsommes($graceHoursOverride);
         $paused = 0;
         $failed = 0;
 
@@ -65,8 +77,55 @@ class TicketExpirationService
         return ['paused' => $paused, 'failed' => $failed, 'total' => $tickets->count()];
     }
 
-    /** @return Builder<Ticket> */
-    private function queryNonConsommes(int $graceHours): Builder
+    /** Battement accordé à la compagnie qui opère le voyage du billet. */
+    public function battementPour(Ticket $ticket): int
+    {
+        $compagnieId = $ticket->voyageInstance?->voyage?->compagnie_id;
+
+        if (! $compagnieId) {
+            return (int) CompagnieSettingKey::DELAI_PAUSE_NON_CONSOMME->default();
+        }
+
+        return (int) $this->settings->get($compagnieId, CompagnieSettingKey::DELAI_PAUSE_NON_CONSOMME);
+    }
+
+    /** Date et heure de départ effectives du billet. */
+    public function departAt(Ticket $ticket): ?Carbon
+    {
+        $instance = $ticket->voyageInstance;
+
+        if (! $instance?->date) {
+            return null;
+        }
+
+        $heure = $instance->heure ? Carbon::parse($instance->heure)->format('H:i:s') : '00:00:00';
+
+        return Carbon::parse(Carbon::parse($instance->date)->toDateString().' '.$heure);
+    }
+
+    /** Le battement accordé est-il écoulé pour ce billet ? */
+    private function battementEcoule(Ticket $ticket, ?int $graceHoursOverride): bool
+    {
+        $depart = $this->departAt($ticket);
+
+        if (! $depart) {
+            return false;
+        }
+
+        $battement = $graceHoursOverride ?? $this->battementPour($ticket);
+
+        return $depart->copy()->addHours($battement)->isPast();
+    }
+
+    /**
+     * Billets payés dont le départ est déjà passé, tous battements confondus.
+     *
+     * Le filtrage fin se fait ensuite en PHP, le battement dépendant de la
+     * compagnie : une seule requête suffit, au lieu d'une par compagnie.
+     *
+     * @return Builder<Ticket>
+     */
+    private function queryDepartPasse(): Builder
     {
         // `tickets` porte aussi une colonne `date` : les colonnes de l'instance
         // doivent être préfixées, sinon MySQL lève une ambiguïté.
@@ -77,6 +136,6 @@ class TicketExpirationService
             ->where('statut', StatutTicket::Payer)
             ->whereHas('voyageInstance', fn (Builder $q) => $q
                 ->where('statut', '!=', StatutVoyageInstance::ANNULE)
-                ->whereRaw("{$departAt} < DATE_SUB(NOW(), INTERVAL ? HOUR)", [$graceHours]));
+                ->whereRaw("{$departAt} < NOW()"));
     }
 }
