@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Mail;
 
 class SendReports extends Command
 {
-    protected $signature = 'reports:send {period=daily : daily|weekly|monthly}';
+    protected $signature = 'reports:send {period=daily : daily|weekly|monthly|yearly}';
 
     protected $description = 'Envoie les rapports d\'activité par email aux gérants des compagnies';
 
@@ -65,6 +65,11 @@ class SendReports extends Command
         $now = now();
 
         return match ($period) {
+            'yearly' => [
+                $now->copy()->subYear()->startOfYear(),
+                $now->copy()->subYear()->endOfYear(),
+                'Annuel — ' . $now->copy()->subYear()->format('Y'),
+            ],
             'monthly' => [
                 $now->copy()->subMonthNoOverflow()->startOfMonth(),
                 $now->copy()->subMonthNoOverflow()->endOfMonth(),

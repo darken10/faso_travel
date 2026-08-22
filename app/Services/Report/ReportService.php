@@ -94,6 +94,9 @@ class ReportService
         $totalRecettes = (int) $revenueBilletterie + $recettesManuelles;
         $benefice      = $totalRecettes - $totalDepenses;
 
+        $embarques  = $this->ticketsEmbarques($compagnieId, $start, $end);
+        $pausesAuto = $this->ticketsEnPauseAutomatique($compagnieId, $start, $end);
+
         return [
             'start'                => $start,
             'end'                  => $end,
@@ -109,7 +112,104 @@ class ReportService
             'topTrajets'           => $topTrajets,
             'parAgent'             => $parAgent,
             'depensesParCategorie' => $depensesParCategorie,
+
+            // Embarquements et absences : comptés sur la date de l'événement, et
+            // non sur la date de vente — un billet vendu lundi peut n'embarquer
+            // que jeudi. Ces sections ne recoupent donc pas `ticketsCount`.
+            'embarques'            => $embarques,
+            'embarquesCount'       => count($embarques),
+            'pausesAuto'           => $pausesAuto,
+            'pausesAutoCount'      => count($pausesAuto),
+            'pausesAutoMontant'    => (int) array_sum(array_column($pausesAuto, 'montant')),
         ];
+    }
+
+    /**
+     * Billets effectivement embarqués sur la période, d'après la date de
+     * validation par l'agent.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function ticketsEmbarques(int $compagnieId, Carbon $start, Carbon $end): array
+    {
+        return $this->ticketsQuery($compagnieId)
+            ->where('statut', StatutTicket::Valider)
+            ->whereBetween('valider_at', [$start, $end])
+            ->with(['validePar:id,first_name,last_name,name'])
+            ->orderBy('valider_at')
+            ->get()
+            ->map(fn (Ticket $ticket) => $this->ligneTicket($ticket) + [
+                // `valider_at` n'est pas casté sur le modèle : plusieurs ressources API
+                // exposent la valeur brute et un cast global changerait leur format.
+                'embarque_le' => $ticket->valider_at ? Carbon::parse($ticket->valider_at)->format('d/m/Y H:i') : null,
+                'valide_par'  => $this->nomUtilisateur($ticket->validePar),
+            ])
+            ->all();
+    }
+
+    /**
+     * Billets payés basculés en pause par la tâche planifiée, faute d'avoir été
+     * scannés — autrement dit les voyageurs absents au départ.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function ticketsEnPauseAutomatique(int $compagnieId, Carbon $start, Carbon $end): array
+    {
+        return $this->ticketsQuery($compagnieId)
+            ->where('statut', StatutTicket::Pause)
+            ->where('paused_auto', true)
+            ->whereBetween('paused_at', [$start, $end])
+            ->orderBy('paused_at')
+            ->get()
+            ->map(fn (Ticket $ticket) => $this->ligneTicket($ticket) + [
+                'pause_le' => $ticket->paused_at?->format('d/m/Y H:i'),
+            ])
+            ->all();
+    }
+
+    /** Requête de base des billets d'une compagnie, relations d'affichage incluses. */
+    private function ticketsQuery(int $compagnieId): \Illuminate\Database\Eloquent\Builder
+    {
+        return Ticket::withoutGlobalScopes()
+            ->whereHas('voyageInstance.voyage', fn ($q) => $q->where('compagnie_id', $compagnieId))
+            ->with([
+                'user:id,first_name,last_name,name',
+                'payements:id,ticket_id,montant',
+                'voyageInstance:id,voyage_id,date,heure',
+                'voyageInstance.voyage.trajet.depart:id,name',
+                'voyageInstance.voyage.trajet.arriver:id,name',
+            ]);
+    }
+
+    /**
+     * Colonnes communes aux listes de billets des rapports.
+     *
+     * @return array<string, mixed>
+     */
+    private function ligneTicket(Ticket $ticket): array
+    {
+        $trajet = $ticket->voyageInstance?->voyage?->trajet;
+
+        return [
+            'numero'    => $ticket->numero_ticket,
+            'passager'  => $this->nomUtilisateur($ticket->user),
+            'trajet'    => ($trajet?->depart?->name ?? '—').' → '.($trajet?->arriver?->name ?? '—'),
+            'depart_le' => $ticket->voyageInstance?->date
+                ? Carbon::parse($ticket->voyageInstance->date)->format('d/m/Y')
+                : null,
+            'siege'     => $ticket->numero_chaise,
+            'montant'   => (int) $ticket->payements->sum('montant'),
+        ];
+    }
+
+    private function nomUtilisateur(mixed $user): string
+    {
+        if (! $user) {
+            return '—';
+        }
+
+        return $user->name
+            ?: (trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: '—');
     }
 
     /**

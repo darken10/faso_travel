@@ -101,6 +101,68 @@
         </tbody>
     </table>
 
+    {{-- Embarquements : billets scannés par un agent sur la période --}}
+    <h2>Tickets embarqués ({{ $data['embarquesCount'] }})</h2>
+    <table class="list">
+        <thead>
+            <tr>
+                <th>N° ticket</th><th>Passager</th><th>Trajet</th>
+                <th>Embarqué le</th><th>Validé par</th><th class="right">Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($data['embarques'] as $r)
+                <tr>
+                    <td>{{ $r['numero'] }}</td>
+                    <td>{{ $r['passager'] }}</td>
+                    <td>{{ $r['trajet'] }}</td>
+                    <td>{{ $r['embarque_le'] }}</td>
+                    <td>{{ $r['valide_par'] }}</td>
+                    <td class="right">{{ number_format($r['montant'], 0, ',', ' ') }} F</td>
+                </tr>
+            @empty
+                <tr><td colspan="6" style="text-align:center; color:#9ca3af; padding:10px;">Aucun embarquement sur la période.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    {{-- Absents au départ : billets payés jamais scannés, mis en pause par le système --}}
+    <h2>Tickets mis en pause automatiquement ({{ $data['pausesAutoCount'] }})</h2>
+    <p style="font-size:10px; color:#6b7280; margin:0 0 6px;">
+        Billets payés dont le voyage est parti sans qu'ils soient scannés. Ils restent
+        utilisables : le voyageur peut les reporter sur un autre départ.
+    </p>
+    <table class="list">
+        <thead>
+            <tr>
+                <th>N° ticket</th><th>Passager</th><th>Trajet</th>
+                <th>Départ prévu</th><th>Mis en pause le</th><th class="right">Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($data['pausesAuto'] as $r)
+                <tr>
+                    <td>{{ $r['numero'] }}</td>
+                    <td>{{ $r['passager'] }}</td>
+                    <td>{{ $r['trajet'] }}</td>
+                    <td>{{ $r['depart_le'] }}</td>
+                    <td>{{ $r['pause_le'] }}</td>
+                    <td class="right">{{ number_format($r['montant'], 0, ',', ' ') }} F</td>
+                </tr>
+            @empty
+                <tr><td colspan="6" style="text-align:center; color:#9ca3af; padding:10px;">Aucun ticket en attente de report.</td></tr>
+            @endforelse
+        </tbody>
+        @if($data['pausesAutoCount'] > 0)
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="right"><strong>Montant immobilisé</strong></td>
+                    <td class="right"><strong>{{ number_format($data['pausesAutoMontant'], 0, ',', ' ') }} F</strong></td>
+                </tr>
+            </tfoot>
+        @endif
+    </table>
+
     <div class="footer">Édité le {{ now()->format('d/m/Y à H:i') }} — LIPTRA</div>
 </body>
 </html>

@@ -61,13 +61,20 @@ class TicketCommandService
         $ticket->save();
     }
 
-    public function pause(Ticket $ticket): void
+    /**
+     * @param  bool  $automatique  Vrai lorsque la pause vient de la tâche planifiée
+     *                             (billet jamais scanné), faux pour un geste d'agent.
+     *                             Les rapports d'activité distinguent les deux.
+     */
+    public function pause(Ticket $ticket, bool $automatique = false): void
     {
         if ($ticket->statut !== StatutTicket::Payer) {
             throw new \DomainException('Seul un ticket payé peut être mis en pause.');
         }
 
-        $ticket->statut = StatutTicket::Pause;
+        $ticket->statut      = StatutTicket::Pause;
+        $ticket->paused_at   = now();
+        $ticket->paused_auto = $automatique;
         $ticket->save();
     }
 

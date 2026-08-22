@@ -66,7 +66,7 @@ class TicketExpirationService
 
         foreach ($tickets as $ticket) {
             try {
-                $this->commandService->pause($ticket);
+                $this->commandService->pause($ticket, automatique: true);
                 $paused++;
             } catch (\Throwable $e) {
                 $failed++;

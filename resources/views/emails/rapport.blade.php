@@ -32,9 +32,22 @@
                         <div style="font-size:16px; font-weight:bold; color:#111827;">{{ number_format($data['ticketsCount'], 0, ',', ' ') }}</div>
                     </td>
                 </tr>
+                <tr>
+                    <td style="padding:10px; border:1px solid #e5e7eb;">
+                        <div style="font-size:10px; color:#6b7280; text-transform:uppercase;">Tickets embarqués</div>
+                        <div style="font-size:16px; font-weight:bold; color:#111827;">{{ number_format($data['embarquesCount'], 0, ',', ' ') }}</div>
+                    </td>
+                    <td style="padding:10px; border:1px solid #e5e7eb;">
+                        <div style="font-size:10px; color:#6b7280; text-transform:uppercase;">Absents au départ</div>
+                        <div style="font-size:16px; font-weight:bold; color:{{ $data['pausesAutoCount'] > 0 ? '#d97706' : '#111827' }};">{{ number_format($data['pausesAutoCount'], 0, ',', ' ') }}</div>
+                        @if($data['pausesAutoCount'] > 0)
+                            <div style="font-size:10px; color:#6b7280;">{{ number_format($data['pausesAutoMontant'], 0, ',', ' ') }} F immobilisés</div>
+                        @endif
+                    </td>
+                </tr>
             </table>
 
-            <p style="font-size:12px; color:#9ca3af;">LIPTRA — rapport généré automatiquement.</p>
+            <p style="font-size:12px; color:#9ca3af;">LIPTRA — rapport généré automatiquement. Le détail des embarquements et des billets à reporter figure dans le PDF joint.</p>
         </div>
     </div>
 </body>

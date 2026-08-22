@@ -110,6 +110,12 @@ class Ticket extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** Agent ayant scanné le billet à l'embarquement. */
+    public function validePar(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'valider_by_id');
+    }
+
 
 
     #----------------------------------------------------------------
