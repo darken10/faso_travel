@@ -8,6 +8,7 @@ use App\Models\Compagnie\Compagnie;
 use App\Models\Messages\Conversation;
 use App\Models\Messages\Message;
 use App\Models\User;
+use App\Notifications\Channels\ExpoChannel;
 use App\Notifications\NouveauMessageNotification;
 use App\Services\Messages\CompagnieMessagerieService;
 use App\Services\V2\ConversationService;
@@ -306,6 +307,89 @@ class MessagerieTest extends TestCase
             ->call('select', $conversation->id)
             ->assertDontSeeHtml('<script>alert("x")</script>')
             ->assertSee('&lt;script&gt;', false);
+    }
+
+    // ── E-mail au client ───────────────────────────────────────────────────
+
+    private function clientAvec(array $attributs): Conversation
+    {
+        return $this->conversation(['client_id' => User::factory()->create($attributs)->id]);
+    }
+
+    public function test_la_reponse_est_aussi_envoyee_par_email_au_client(): void
+    {
+        Event::fake([MessageSent::class]);
+        Notification::fake();
+
+        $conversation = $this->clientAvec(['email' => 'client@example.test', 'email_verified_at' => now()]);
+
+        $this->panneau()->call('select', $conversation->id)->set('reponse', 'Votre bus part à 8 h.')->call('send');
+
+        Notification::assertSentTo($conversation->client, NouveauMessageNotification::class,
+            fn ($n, $canaux) => in_array('mail', $canaux, true) && in_array(ExpoChannel::class, $canaux, true));
+    }
+
+    public function test_un_compte_sans_email_recoit_seulement_le_push(): void
+    {
+        Event::fake([MessageSent::class]);
+        Notification::fake();
+
+        // Compte créé avec le téléphone seul : email NULL (colonne rendue facultative).
+        $conversation = $this->clientAvec(['email' => null, 'numero' => 70000001]);
+
+        $this->panneau()->call('select', $conversation->id)->set('reponse', 'Bonjour')->call('send')->assertHasNoErrors();
+
+        Notification::assertSentTo($conversation->client, NouveauMessageNotification::class,
+            fn ($n, $canaux) => $canaux === [ExpoChannel::class]);
+        $this->assertSame(1, Message::where('message', 'Bonjour')->count(), 'la réponse est enregistrée malgré l\'absence d\'adresse');
+    }
+
+    public function test_une_adresse_non_verifiee_ne_recoit_pas_de_mail(): void
+    {
+        // Une faute de frappe à l'inscription enverrait le message d'une compagnie à un inconnu.
+        $client = User::factory()->create(['email' => 'faute@example.test', 'email_verified_at' => null]);
+        $message = Message::factory()->create();
+
+        $this->assertSame(
+            [ExpoChannel::class],
+            (new NouveauMessageNotification($message, 'Compagnie'))->via($client),
+        );
+    }
+
+    public function test_le_contenu_du_mail_nomme_la_compagnie_et_reprend_le_message(): void
+    {
+        $client = User::factory()->create(['first_name' => 'Aminata', 'last_name' => 'Traoré']);
+        $message = Message::factory()->create(['message' => "Bonjour,\nle départ est à 8 h."]);
+
+        $mail = (new NouveauMessageNotification($message, 'TSR Transport'))->toMail($client);
+        $html = (string) $mail->render();
+
+        $this->assertStringContainsString('TSR Transport', $mail->subject);
+        $this->assertStringContainsString('AMINATA Traoré', $html);
+        $this->assertStringContainsString('le départ est à 8 h.', $html);
+        $this->assertStringContainsString('<br', $html, 'les retours à la ligne sont conservés');
+    }
+
+    public function test_le_texte_ecrit_par_la_compagnie_est_echappe_dans_le_mail(): void
+    {
+        $client = User::factory()->create();
+        $message = Message::factory()->create(['message' => '<script>alert(1)</script> <a href="http://pirate.test">cliquez</a>']);
+
+        $html = (string) (new NouveauMessageNotification($message, 'Compagnie'))->toMail($client)->render();
+
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+        $this->assertStringNotContainsString('<a href="http://pirate.test">', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+    }
+
+    public function test_un_nom_de_compagnie_piege_est_echappe_dans_le_mail(): void
+    {
+        $client = User::factory()->create();
+        $message = Message::factory()->create();
+
+        $html = (string) (new NouveauMessageNotification($message, '<img src=x onerror=alert(1)>'))->toMail($client)->render();
+
+        $this->assertStringNotContainsString('<img src=x', $html);
     }
 
     // ── Robustesse : la réponse n'est jamais perdue ────────────────────────
