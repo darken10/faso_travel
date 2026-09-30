@@ -204,6 +204,7 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/vente-ticket',       \App\Livewire\Compagnie\Ticket\VenteTicket::class)->name('vente-ticket');
     Route::get('/tickets',            \App\Livewire\Compagnie\Ticket\TicketManager::class)->name('tickets');
     Route::get('/conflits',           \App\Livewire\Compagnie\Ticket\ConflitManager::class)->name('conflits');
+    Route::get('/messages',           \App\Livewire\Compagnie\Message\Messagerie::class)->name('messages');
     Route::get('/tickets/{ticketId}/print', function (int $ticketId) {
         $ticket = \App\Models\Ticket\Ticket::withoutGlobalScopes()
             ->whereHas('voyageInstance.voyage', fn ($q) => $q->where('compagnie_id', auth()->user()->compagnie_id))
