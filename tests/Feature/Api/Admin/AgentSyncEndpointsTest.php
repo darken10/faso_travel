@@ -256,6 +256,38 @@ class AgentSyncEndpointsTest extends TestCase
         $response->assertOk()->assertJsonPath('success', true);
     }
 
+    public function test_le_qr_dune_autre_compagnie_nest_pas_lisible(): void
+    {
+        // Le QR porte le secret du billet et le telephone du passager : sans
+        // cloisonnement, tout agent authentifie pouvait lire ceux d'un concurrent.
+        $this->ticketOfCompagnie(Compagnie::factory()->create(), ['code_qr' => 'QR-CONCURRENT']);
+
+        Sanctum::actingAs($this->agent);
+
+        $this->getJson('/api/admin/tickets/verify/QR-CONCURRENT')->assertNotFound();
+    }
+
+    public function test_les_passagers_dune_autre_compagnie_ne_sont_pas_listables(): void
+    {
+        $ticketTiers = $this->ticketOfCompagnie(Compagnie::factory()->create());
+
+        Sanctum::actingAs($this->agent);
+
+        $this->getJson("/api/admin/voyages/{$ticketTiers->voyage_instance_id}/passengers")
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_les_tickets_dune_autre_compagnie_ne_sont_pas_listables(): void
+    {
+        $ticketTiers = $this->ticketOfCompagnie(Compagnie::factory()->create());
+
+        Sanctum::actingAs($this->agent);
+
+        $this->getJson("/api/admin/voyages/{$ticketTiers->voyage_instance_id}/tickets")
+            ->assertNotFound();
+    }
+
     public function test_un_ticket_est_verifiable_par_son_code_qr(): void
     {
         $ticket = $this->ticketOfAgentCompagnie(['code_qr' => 'QR-TEST-AGENT-001']);

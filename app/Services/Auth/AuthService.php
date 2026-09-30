@@ -22,7 +22,7 @@ use App\Exceptions\AuthenticationException;
 use App\Mail\Auth\OtpMail;
 use App\Enums\OtpChannelType;
 use App\Services\Otp\OtpService;
-use Laravel\Sanctum\PersonalAccessToken;
+use App\Models\Auth\PersonalAccessToken;
 use Twilio\Rest\Client as TwilioClient;
 
 class AuthService

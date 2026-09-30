@@ -31,7 +31,14 @@ class TicketController extends Controller
      */
     public function verifyByQrCode(string $ticketCode): JsonResponse
     {
-        $ticket = Ticket::where('code_qr', $ticketCode)
+        $compagnieId = auth()->user()?->compagnie_id;
+        abort_if($compagnieId === null, 403, 'Compte non associé à une compagnie.');
+
+        // Cloisonnement : sans ce scope, n'importe quel agent authentifié pouvait
+        // lire le billet d'une compagnie concurrente, code_qr et telephone du
+        // passager compris, en devinant ou en scannant simplement son QR.
+        $ticket = Ticket::ofCompagnie((int) $compagnieId)
+            ->where('code_qr', $ticketCode)
             ->with(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe', 'autre_personne'])
             ->first();
 
@@ -289,7 +296,14 @@ class TicketController extends Controller
      */
     public function getPassengers(string $voyageInstance): JsonResponse
     {
-        $tickets = Ticket::where('voyage_instance_id', $voyageInstance)
+        $compagnieId = auth()->user()?->compagnie_id;
+        abort_if($compagnieId === null, 403, 'Compte non associé à une compagnie.');
+
+        // Cloisonnement : l'identifiant d'instance est un uuid, mais rien
+        // n'empechait un agent d'en presenter un appartenant a une autre
+        // compagnie et d'obtenir la liste de ses passagers avec leurs code_qr.
+        $tickets = Ticket::ofCompagnie((int) $compagnieId)
+            ->where('voyage_instance_id', $voyageInstance)
             ->whereIn('statut', [
                 StatutTicket::Payer,
                 StatutTicket::Valider,

@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use App\Features\Payement\PaymentGatewayFactory;
+use App\Models\Auth\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,6 +31,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         JsonResource::withoutWrapping();
+
+        // Voir le modele : garantit une echeance par defaut maintenant que le
+        // plafond global de config('sanctum.expiration') est desactive.
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
         $this->registerPolicies();
         $this->registerGates();
