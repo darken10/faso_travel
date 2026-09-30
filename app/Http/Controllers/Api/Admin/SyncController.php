@@ -78,7 +78,11 @@ class SyncController extends Controller
             // Conservé pour compatibilité : null tant qu'il reste des pages.
             'last_sync_at' => $hasMore ? null : $syncedAt->toISOString(),
             'data' => [
-                'voyages' => $this->pullVoyages((int) $compagnieId, $from, $to, $since),
+                // Les voyages ne se paginent pas : ne les renvoyer qu'à la première
+                // page évite de les retransmettre à chaque page de tickets.
+                'voyages' => $cursor === null
+                    ? $this->pullVoyages((int) $compagnieId, $from, $to, $since)
+                    : [],
                 'tickets' => $tickets,
                 'deleted' => [
                     // Les tickets sont supprimés en dur : aucune trace ne subsiste
@@ -166,9 +170,16 @@ class SyncController extends Controller
      */
     private function deletedVoyages(int $compagnieId, ?Carbon $since): array
     {
+        // Un instantané complet ne contient que des voyages vivants : lister tous
+        // ceux jamais supprimés serait sans borne et n'apprendrait rien au client,
+        // qui ne les a de toute façon jamais reçus.
+        if ($since === null) {
+            return [];
+        }
+
         return VoyageInstance::onlyTrashed()
             ->whereHas('voyage', fn (Builder $q) => $q->where('compagnie_id', $compagnieId))
-            ->when($since, fn (Builder $q) => $q->where('deleted_at', '>=', $since))
+            ->where('deleted_at', '>=', $since)
             ->pluck('id')
             ->all();
     }

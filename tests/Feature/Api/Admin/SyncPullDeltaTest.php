@@ -238,6 +238,28 @@ class SyncPullDeltaTest extends TestCase
         $this->assertNotSame($instance->id, $numero);
     }
 
+    public function test_les_voyages_ne_sont_renvoyes_quune_fois_sur_une_pagination(): void
+    {
+        $instance = $this->voyageInstance();
+        $this->ticket($instance);
+        $this->ticket($instance);
+        $this->ticket($instance);
+
+        $premiere = $this->pull(['limit' => 2])->assertOk();
+        $this->assertCount(1, $premiere->json('data.voyages'));
+
+        $suivante = $this->pull(['limit' => 2, 'cursor' => $premiere->json('cursor.next')])->assertOk();
+        $this->assertCount(0, $suivante->json('data.voyages'));
+        $this->assertCount(1, $suivante->json('data.tickets'));
+    }
+
+    public function test_un_instantane_ne_liste_pas_de_voyages_supprimes(): void
+    {
+        $this->voyageInstance()->delete();
+
+        $this->pull()->assertOk()->assertJsonCount(0, 'data.deleted.voyages');
+    }
+
     public function test_un_curseur_illisible_est_ignore_sans_erreur(): void
     {
         $this->ticket($this->voyageInstance());
