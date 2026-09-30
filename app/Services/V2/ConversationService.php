@@ -8,6 +8,7 @@ use App\Models\Messages\Message;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ConversationService
 {
@@ -87,11 +88,13 @@ class ConversationService
             'message'   => $text,
         ]);
 
-        // Mise à jour des métadonnées de la conversation
-        $conversation->update([
-            'last_message_at'     => now(),
-            'last_message'        => mb_substr($text, 0, 100),
-            'unread_count_agent'  => $conversation->unread_count_agent + 1,
+        // Mise à jour des métadonnées de la conversation. L'incrément est fait par la
+        // base : lire la valeur puis la réécrire perdait un message quand deux
+        // arrivaient en même temps (client sur deux appareils, double envoi).
+        Conversation::whereKey($conversation->id)->update([
+            'last_message_at'    => now(),
+            'last_message'       => mb_substr($text, 0, 100),
+            'unread_count_agent' => DB::raw('unread_count_agent + 1'),
         ]);
 
         $message->load('sender:id,name,first_name,last_name,profile_photo_path');
