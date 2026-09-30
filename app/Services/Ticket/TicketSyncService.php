@@ -80,14 +80,40 @@ class TicketSyncService
 
         return match ($type) {
             SyncActionType::ValidateTicket => $this->applyValidate($action, $agent, $ticket),
-            SyncActionType::PauseTicket    => $this->applyTransition($action, $agent, $ticket,
+            SyncActionType::PauseTicket    => $this->applyGuarded($action, $agent, $ticket,
+                [StatutTicket::Payer],
                 fn () => $this->validationService->pause($ticket)),
-            SyncActionType::BlockTicket    => $this->applyTransition($action, $agent, $ticket,
+            SyncActionType::BlockTicket    => $this->applyGuarded($action, $agent, $ticket,
+                [StatutTicket::Payer, StatutTicket::Pause],
                 fn () => $this->validationService->block($ticket)),
             // Constat de non-présentation : aucune transition de statut n'existe
             // pour l'instant côté ticket, l'opération n'est donc que journalisée.
             SyncActionType::MarkAbsent     => $this->journal($action, $agent, $ticket, SyncResult::Applied),
         };
+    }
+
+    /**
+     * Pause et blocage ne s'appliquent qu'à un ticket encore en circulation.
+     *
+     * L'opération a été décidée hors ligne, sur un état parfois ancien de plusieurs
+     * jours. Sans ce garde, un « bloquer » rejoué tardivement écrasait un ticket
+     * entre-temps embarqué ou annulé ailleurs, et effaçait cet état.
+     *
+     * @param  list<StatutTicket>  $allowedFrom
+     * @param  callable():bool  $transition
+     */
+    private function applyGuarded(
+        array $action,
+        User $agent,
+        Ticket $ticket,
+        array $allowedFrom,
+        callable $transition,
+    ): TicketValidation {
+        if (! in_array($ticket->statut, $allowedFrom, true)) {
+            return $this->journal($action, $agent, $ticket, SyncResult::Rejected, SyncErrorCode::InvalidStatus);
+        }
+
+        return $this->applyTransition($action, $agent, $ticket, $transition);
     }
 
     private function applyValidate(array $action, User $agent, Ticket $ticket): TicketValidation

@@ -255,6 +255,60 @@ class BatchSyncIdempotencyTest extends TestCase
         $this->assertSame('op-aveugle', TicketValidation::unverified()->sole()->operation_id);
     }
 
+    // ── Pause et blocage ───────────────────────────────────────────────────
+
+    public function test_un_ticket_paye_peut_etre_bloque_et_mis_en_pause(): void
+    {
+        $aBloquer = $this->ticket();
+        $aPauser  = $this->ticket();
+        Sanctum::actingAs($this->agent);
+
+        $this->push($aBloquer, 'op-bloque', ['type' => 'BLOCK_TICKET'])
+            ->assertJsonPath('data.results.0.status', SyncResult::Applied->value);
+        $this->push($aPauser, 'op-pause', ['type' => 'PAUSE_TICKET'])
+            ->assertJsonPath('data.results.0.status', SyncResult::Applied->value);
+
+        $this->assertSame(StatutTicket::Bloquer, $aBloquer->fresh()->statut);
+        $this->assertSame(StatutTicket::Pause, $aPauser->fresh()->statut);
+    }
+
+    public function test_un_blocage_tardif_nefface_pas_un_ticket_deja_embarque(): void
+    {
+        // L'agent a décidé de bloquer hors ligne ; entre-temps un autre agent a
+        // embarqué ce passager. Le blocage ne doit pas écraser cet embarquement.
+        $ticket = $this->ticket(['statut' => StatutTicket::Valider]);
+        Sanctum::actingAs($this->agent);
+
+        $this->push($ticket, 'op-tardif', ['type' => 'BLOCK_TICKET'])
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', SyncResult::Rejected->value)
+            ->assertJsonPath('data.results.0.error_code', SyncErrorCode::InvalidStatus->value);
+
+        $this->assertSame(StatutTicket::Valider, $ticket->fresh()->statut);
+    }
+
+    public function test_une_pause_nest_pas_appliquee_a_un_ticket_annule(): void
+    {
+        $ticket = $this->ticket(['statut' => StatutTicket::Annuler]);
+        Sanctum::actingAs($this->agent);
+
+        $this->push($ticket, 'op-pause-annule', ['type' => 'PAUSE_TICKET'])
+            ->assertJsonPath('data.results.0.status', SyncResult::Rejected->value);
+
+        $this->assertSame(StatutTicket::Annuler, $ticket->fresh()->statut);
+    }
+
+    public function test_le_blocage_rejoue_reste_idempotent(): void
+    {
+        $ticket = $this->ticket();
+        Sanctum::actingAs($this->agent);
+
+        $this->push($ticket, 'op-bloque-2', ['type' => 'BLOCK_TICKET'])->assertOk();
+        // Le ticket est désormais Bloquer : sans la clé d'idempotence, ce rejeu serait refusé.
+        $this->push($ticket, 'op-bloque-2', ['type' => 'BLOCK_TICKET'])
+            ->assertJsonPath('data.results.0.status', SyncResult::AlreadyApplied->value);
+    }
+
     // ── Ticket absent du cache du téléphone ────────────────────────────────
 
     public function test_un_ticket_confirme_a_laveugle_est_resolu_par_son_qr(): void
