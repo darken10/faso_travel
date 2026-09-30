@@ -23,9 +23,16 @@ class SyncController extends Controller
         $since       = $request->query('since');
         $compagnieId = Auth::user()->compagnie_id;
 
-        $sinceDate = $since
-            ? \Carbon\Carbon::parse($since)
-            : now()->subDay();
+        try {
+            $sinceDate = $since
+                ? \Carbon\Carbon::parse($since)
+                : now()->subDay();
+        } catch (\Throwable) {
+            return response()->json([
+                'success' => false,
+                'message' => "Le paramètre 'since' n'est pas une date valide.",
+            ], 422);
+        }
 
         // Voyages modifiés
         $voyages = VoyageInstance::whereHas('voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
@@ -38,7 +45,10 @@ class SyncController extends Controller
         $validations = Ticket::whereHas('voyageInstance.voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
             ->where('updated_at', '>=', $sinceDate)
             ->whereIn('statut', [StatutTicket::Valider, StatutTicket::Pause, StatutTicket::Bloquer])
-            ->with(['user', 'voyageInstance', 'autrePersonne'])
+            // Aucune relation n'est lue par le mapper ci-dessous. L'ancien
+            // ->with([...]) chargeait 'autrePersonne', qui n'existe pas : la
+            // relation du modèle s'appelle autre_personne(). Eloquent levait
+            // donc RelationNotFoundException dès qu'un ticket correspondait.
             ->get()
             ->map(fn($ticket) => [
                 'ticket_id'    => $ticket->id,
