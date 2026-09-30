@@ -225,7 +225,10 @@ class TicketController extends Controller
             'actions.*.type'                 => ['required', 'string', Rule::in(SyncActionType::values())],
             // Pas de règle exists : un ticket introuvable doit être journalisé
             // comme refus auditable, pas rejeter le lot entier en 422.
-            'actions.*.ticket_id'            => 'required|integer|min:1',
+            // L'identifiant ou le QR suffit : un ticket absent du cache du
+            // téléphone n'a pas d'identifiant connu, seulement le code scanné.
+            'actions.*.ticket_id'            => 'required_without:actions.*.qr_code|nullable|integer|min:1',
+            'actions.*.qr_code'              => 'required_without:actions.*.ticket_id|nullable|string|max:128',
             'actions.*.voyage_instance_id'   => 'nullable|uuid',
             'actions.*.device_id'            => 'nullable|string|max:100',
             'actions.*.method'               => 'nullable|string|in:qr,sms',
@@ -259,7 +262,7 @@ class TicketController extends Controller
 
                 return [
                     'id'         => $action['id'],
-                    'ticket_id'  => $action['ticket_id'],
+                    'ticket_id'  => $action['ticket_id'] ?? null,
                     'status'     => SyncResult::Rejected->value,
                     'success'    => false,
                     'error_code' => SyncErrorCode::ServerError->value,
@@ -268,7 +271,7 @@ class TicketController extends Controller
 
             return [
                 'id'         => $action['id'],
-                'ticket_id'  => $action['ticket_id'],
+                'ticket_id'  => $outcome->journal->ticket_id ?? $action['ticket_id'] ?? null,
                 'status'     => $outcome->status()->value,
                 // Conservé pour les versions de l'app antérieures au champ status.
                 'success'    => $outcome->isSuccess(),

@@ -214,6 +214,30 @@ class SyncPullDeltaTest extends TestCase
             ->assertJsonPath('last_sync_at', fn ($v) => is_string($v) && $v !== '');
     }
 
+    public function test_chaque_page_expose_un_repere_de_reprise(): void
+    {
+        $instance = $this->voyageInstance();
+        $this->ticket($instance);
+        $this->ticket($instance);
+
+        // synced_at est capturé avant la lecture. Calculé après, un ticket modifié
+        // pendant la requête serait antérieur au repère et ne serait jamais reçu.
+        $page = $this->pull(['limit' => 1])->assertOk();
+
+        $this->assertNotEmpty($page->json('synced_at'));
+        $this->assertTrue($page->json('cursor.has_more'));
+        $this->assertNull($page->json('last_sync_at'));
+    }
+
+    public function test_le_numero_de_voyage_nest_jamais_un_uuid(): void
+    {
+        $instance = $this->voyageInstance();
+
+        $numero = $this->pull()->assertOk()->json('data.voyages.0.numero_voyage');
+
+        $this->assertNotSame($instance->id, $numero);
+    }
+
     public function test_un_curseur_illisible_est_ignore_sans_erreur(): void
     {
         $this->ticket($this->voyageInstance());

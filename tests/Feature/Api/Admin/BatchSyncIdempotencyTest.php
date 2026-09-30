@@ -11,6 +11,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketValidation;
 use App\Models\User;
 use App\Models\Voyage\Voyage;
+use App\Services\Ticket\TicketValidationService;
 use App\Models\Voyage\VoyageInstance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -251,6 +252,101 @@ class BatchSyncIdempotencyTest extends TestCase
 
         $this->assertSame(1, TicketValidation::unverified()->count());
         $this->assertSame('op-aveugle', TicketValidation::unverified()->sole()->operation_id);
+    }
+
+    // ── Ticket absent du cache du téléphone ────────────────────────────────
+
+    public function test_un_ticket_confirme_a_laveugle_est_resolu_par_son_qr(): void
+    {
+        $ticket = $this->ticket(['code_qr' => 'QR-INCONNU-DU-CACHE']);
+        Sanctum::actingAs($this->agent);
+
+        // Le téléphone n'a que le code scanné : pas d'identifiant de ticket.
+        $this->postJson('/api/admin/tickets/batch-sync', [
+            'actions' => [[
+                'id'               => 'op-aveugle',
+                'type'             => 'VALIDATE_TICKET',
+                'qr_code'          => 'QR-INCONNU-DU-CACHE',
+                'verified_offline' => false,
+            ]],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', SyncResult::Applied->value)
+            ->assertJsonPath('data.results.0.ticket_id', $ticket->id);
+
+        $this->assertSame(StatutTicket::Valider, $ticket->fresh()->statut);
+    }
+
+    public function test_un_qr_dune_autre_compagnie_nest_pas_resolu(): void
+    {
+        $this->ticketOfCompagnie(Compagnie::factory()->create(), ['code_qr' => 'QR-CONCURRENT']);
+        Sanctum::actingAs($this->agent);
+
+        $this->postJson('/api/admin/tickets/batch-sync', [
+            'actions' => [['id' => 'op-x', 'type' => 'VALIDATE_TICKET', 'qr_code' => 'QR-CONCURRENT']],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.results.0.error_code', SyncErrorCode::NotFound->value);
+    }
+
+    public function test_le_refus_dun_qr_inconnu_ne_conserve_que_son_empreinte(): void
+    {
+        Sanctum::actingAs($this->agent);
+
+        $this->postJson('/api/admin/tickets/batch-sync', [
+            'actions' => [['id' => 'op-faux', 'type' => 'VALIDATE_TICKET', 'qr_code' => 'QR-FABRIQUE']],
+        ])->assertOk();
+
+        $journal = TicketValidation::where('operation_id', 'op-faux')->sole();
+
+        // Le journal est lisible par l'administration : jamais le secret en clair.
+        $this->assertSame(hash('sha256', 'QR-FABRIQUE'), $journal->requested_qr_hash);
+        $this->assertNull($journal->ticket_id);
+        $this->assertNull($journal->requested_ticket_id);
+    }
+
+    public function test_une_action_sans_ticket_ni_qr_est_refusee(): void
+    {
+        Sanctum::actingAs($this->agent);
+
+        $this->postJson('/api/admin/tickets/batch-sync', [
+            'actions' => [['id' => 'op-vide', 'type' => 'VALIDATE_TICKET']],
+        ])->assertStatus(422);
+    }
+
+    // ── Pannes transitoires ────────────────────────────────────────────────
+
+    public function test_une_panne_serveur_nest_pas_figee_en_refus_definitif(): void
+    {
+        $ticket = $this->ticket();
+        Sanctum::actingAs($this->agent);
+
+        // 1er envoi : la validation échoue (base indisponible, deadlock...).
+        $this->instance(TicketValidationService::class, new class extends TicketValidationService {
+            public function validate(\App\Models\Ticket\Ticket $ticket): bool
+            {
+                throw new \RuntimeException('deadlock simulé');
+            }
+        });
+
+        $this->push($ticket, 'op-panne')
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', SyncResult::Rejected->value)
+            ->assertJsonPath('data.results.0.error_code', SyncErrorCode::ServerError->value);
+
+        // Rien n'est journalisé : le journal sert de clé d'idempotence, y écrire
+        // une panne la rejouerait à l'identique pour toujours.
+        $this->assertSame(0, TicketValidation::where('operation_id', 'op-panne')->count());
+        $this->assertSame(StatutTicket::Payer, $ticket->fresh()->statut);
+
+        // 2e envoi, la panne est passée : l'opération doit aboutir.
+        $this->app->forgetInstance(TicketValidationService::class);
+
+        $this->push($ticket, 'op-panne')
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', SyncResult::Applied->value);
+
+        $this->assertSame(StatutTicket::Valider, $ticket->fresh()->statut);
     }
 
     // ── Garde-fous du contrat ──────────────────────────────────────────────

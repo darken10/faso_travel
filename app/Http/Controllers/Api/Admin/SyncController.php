@@ -46,6 +46,11 @@ class SyncController extends Controller
             'limit'  => 'nullable|integer|min:1|max:' . self::MAX_LIMIT,
         ]);
 
+        // Capturé AVANT toute lecture. Calculé après, un ticket modifié pendant la
+        // requête porterait un updated_at antérieur à ce repère et ne serait
+        // jamais reçu : le client repartirait de plus tard que sa modification.
+        $syncedAt = now();
+
         $compagnieId = $request->user()->compagnie_id;
 
         if ($compagnieId === null) {
@@ -67,9 +72,11 @@ class SyncController extends Controller
 
         return response()->json([
             'success' => true,
-            // Null tant que la pagination n'est pas épuisée : le client ne doit
-            // avancer son point de reprise qu'une fois tout reçu.
-            'last_sync_at' => $hasMore ? null : now()->toISOString(),
+            // Repère de reprise de CET appel. Sur une pagination, le client retient
+            // celui de la première page : c'est le plus ancien, donc le plus sûr.
+            'synced_at'    => $syncedAt->toISOString(),
+            // Conservé pour compatibilité : null tant qu'il reste des pages.
+            'last_sync_at' => $hasMore ? null : $syncedAt->toISOString(),
             'data' => [
                 'voyages' => $this->pullVoyages((int) $compagnieId, $from, $to, $since),
                 'tickets' => $tickets,
@@ -232,7 +239,9 @@ class SyncController extends Controller
 
         return [
             'id'             => $instance->id,
-            'numero_voyage'  => $voyage?->reference ?? $instance->id,
+            // Le voyage n'a pas de colonne reference : l'ancien repli sur l'uuid de
+            // l'instance affichait un identifiant illisible dans l'application.
+            'numero_voyage'  => $voyage?->reference ?? '',
             'departure_time' => $instance->date->format('Y-m-d') . 'T' . ($instance->heure ? $instance->heure->format('H:i:s') : '00:00:00'),
             'status'         => $this->mapStatut($instance->statut),
             'total_seats'    => $instance->nb_place,

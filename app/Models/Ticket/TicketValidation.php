@@ -28,6 +28,7 @@ class TicketValidation extends Model
         'operation_id',
         'ticket_id',
         'requested_ticket_id',
+        'requested_qr_hash',
         'voyage_instance_id',
         'agent_id',
         'device_id',

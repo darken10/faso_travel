@@ -12,7 +12,6 @@ use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Rejeu idempotent des opérations réalisées hors connexion par l'application agent.
@@ -66,7 +65,7 @@ class TicketSyncService
     private function execute(array $action, User $agent): TicketValidation
     {
         $type   = SyncActionType::from($action['type']);
-        $ticket = $this->findTicket((int) $action['ticket_id'], $agent);
+        $ticket = $this->findTicket($action, $agent);
 
         if (! $ticket) {
             return $this->journal($action, $agent, null, SyncResult::Rejected, SyncErrorCode::NotFound);
@@ -107,35 +106,48 @@ class TicketSyncService
             fn () => $this->validationService->validate($ticket));
     }
 
-    /** @param  callable():bool  $transition */
+    /**
+     * @param  callable():bool  $transition
+     *
+     * Une exception n'est volontairement PAS journalisée. Le journal sert de clé
+     * d'idempotence : y inscrire une panne transitoire (base indisponible,
+     * deadlock) la figerait en refus définitif, rejoué à l'identique à chaque
+     * retry. On laisse l'exception annuler la transaction — effet métier compris —
+     * et remonter : le client recevra SERVER_ERROR et réessaiera.
+     */
     private function applyTransition(array $action, User $agent, Ticket $ticket, callable $transition): TicketValidation
     {
-        try {
-            $ok = $transition();
-        } catch (\Throwable $e) {
-            Log::error('Opération de synchronisation en échec', [
-                'operation_id' => $action['operation_id'],
-                'ticket_id'    => $ticket->id,
-                'type'         => $action['type'],
-                'exception'    => $e->getMessage(),
-            ]);
-
-            return $this->journal($action, $agent, $ticket, SyncResult::Rejected, SyncErrorCode::ServerError);
-        }
+        $ok = $transition();
 
         return $ok
             ? $this->journal($action, $agent, $ticket, SyncResult::Applied)
             : $this->journal($action, $agent, $ticket, SyncResult::Rejected, SyncErrorCode::InvalidStatus);
     }
 
-    /** Ticket appartenant à un voyage de la compagnie de l'agent, ou null. */
-    private function findTicket(int $ticketId, User $agent): ?Ticket
+    /**
+     * Ticket appartenant à un voyage de la compagnie de l'agent, ou null.
+     *
+     * L'identifiant prime. Le QR sert quand le téléphone n'avait pas le ticket
+     * dans son cache et a dû être confirmé à l'aveugle : il n'a alors que le code
+     * scanné. Dans les deux cas la recherche reste bornée à la compagnie.
+     */
+    private function findTicket(array $action, User $agent): ?Ticket
     {
         if ($agent->compagnie_id === null) {
             return null;
         }
 
-        return Ticket::ofCompagnie((int) $agent->compagnie_id)->find($ticketId);
+        $query = Ticket::ofCompagnie((int) $agent->compagnie_id);
+
+        if (! empty($action['ticket_id'])) {
+            return $query->find((int) $action['ticket_id']);
+        }
+
+        if (! empty($action['qr_code'])) {
+            return $query->where('code_qr', $action['qr_code'])->first();
+        }
+
+        return null;
     }
 
     private function journal(
@@ -148,7 +160,9 @@ class TicketSyncService
         return TicketValidation::create([
             'operation_id'       => $action['operation_id'],
             'ticket_id'           => $ticket?->id,
-            'requested_ticket_id' => (int) $action['ticket_id'],
+            'requested_ticket_id' => ! empty($action['ticket_id']) ? (int) $action['ticket_id'] : null,
+            // Jamais le QR en clair : c'est le secret du billet.
+            'requested_qr_hash'   => ! empty($action['qr_code']) ? hash('sha256', $action['qr_code']) : null,
             'voyage_instance_id' => $ticket?->voyage_instance_id ?? ($action['voyage_instance_id'] ?? null),
             'agent_id'           => $agent->id,
             'device_id'          => $action['device_id'] ?? null,
