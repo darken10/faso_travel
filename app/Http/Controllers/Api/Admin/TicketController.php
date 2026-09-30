@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Enums\StatutTicket;
+use App\Enums\SyncActionType;
+use App\Enums\SyncErrorCode;
+use App\Enums\SyncResult;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket\Ticket;
 use App\Services\Ticket\TicketCommandService;
 use App\Services\Ticket\TicketQueryService;
+use App\Services\Ticket\TicketSyncService;
 use App\Services\Ticket\TicketValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
 {
@@ -196,84 +200,86 @@ class TicketController extends Controller
     }
 
     /**
-     * Batch sync — traite un tableau d'actions offline
+     * Batch sync — rejoue les opérations réalisées hors connexion.
+     *
+     * Le traitement est idempotent : chaque action porte un identifiant généré par
+     * le téléphone (`id`), et une action déjà reçue renvoie son verdict d'origine
+     * sans être réexécutée. Un réessai après timeout est donc sans danger.
+     *
+     * Chaque résultat porte un `status` — applied, already_applied ou rejected —
+     * que le client doit lire à la place de l'ancien booléen : « déjà validé » et
+     * « échec réel » y étaient indiscernables.
      */
-    public function batchSync(Request $request): JsonResponse
+    public function batchSync(Request $request, TicketSyncService $syncService): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'actions' => 'required|array|min:1',
-            'actions.*.id' => 'required|string',
-            'actions.*.type' => 'required|string|in:VALIDATE_TICKET,PAUSE_TICKET,BLOCK_TICKET',
-            'actions.*.ticket_id' => 'required|integer|exists:tickets,id',
-            'actions.*.payload' => 'nullable|array',
+            'actions'                        => 'required|array|min:1|max:200',
+            'actions.*.id'                   => 'required|string|max:64',
+            'actions.*.type'                 => ['required', 'string', Rule::in(SyncActionType::values())],
+            // Pas de règle exists : un ticket introuvable doit être journalisé
+            // comme refus auditable, pas rejeter le lot entier en 422.
+            'actions.*.ticket_id'            => 'required|integer|min:1',
+            'actions.*.voyage_instance_id'   => 'nullable|uuid',
+            'actions.*.device_id'            => 'nullable|string|max:100',
+            'actions.*.method'               => 'nullable|string|in:qr,sms',
+            'actions.*.verified_offline'     => 'nullable|boolean',
+            'actions.*.client_created_at'    => 'nullable|date',
+            'actions.*.payload'              => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Données invalides',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
-        $results = [];
+        $agent = $request->user();
 
-        foreach ($request->input('actions') as $action) {
+        $results = collect($validator->validated()['actions'])->map(function (array $action) use ($syncService, $agent) {
+            // L'identifiant client circule sous le nom `id` dans le contrat HTTP
+            // et `operation_id` côté journal.
+            $action['operation_id'] = $action['id'];
+
             try {
-                $ticket = $this->findTicketOfCompagnie($action['ticket_id']);
-                $success = false;
-
-                DB::beginTransaction();
-
-                switch ($action['type']) {
-                    case 'VALIDATE_TICKET':
-                        if (in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Pause])) {
-                            $success = $this->validationService->validate($ticket);
-                        }
-                        break;
-
-                    case 'PAUSE_TICKET':
-                        $success = $this->validationService->pause($ticket);
-                        break;
-
-                    case 'BLOCK_TICKET':
-                        $success = $this->validationService->block($ticket);
-                        break;
-                }
-
-                DB::commit();
-
-                $results[] = [
-                    'id' => $action['id'],
-                    'success' => $success,
-                    'ticket_id' => $action['ticket_id'],
-                ];
-            } catch (\Exception $e) {
-                DB::rollBack();
-                Log::error("Batch sync action failed", [
-                    'action_id' => $action['id'],
-                    'error' => $e->getMessage(),
+                $outcome = $syncService->apply($action, $agent);
+            } catch (\Throwable $e) {
+                Log::error('Batch sync : opération non traitée', [
+                    'operation_id' => $action['id'],
+                    'error'        => $e->getMessage(),
                 ]);
 
-                $results[] = [
-                    'id' => $action['id'],
-                    'success' => false,
-                    'ticket_id' => $action['ticket_id'],
-                    'error' => $e->getMessage(),
+                return [
+                    'id'         => $action['id'],
+                    'ticket_id'  => $action['ticket_id'],
+                    'status'     => SyncResult::Rejected->value,
+                    'success'    => false,
+                    'error_code' => SyncErrorCode::ServerError->value,
                 ];
             }
-        }
 
-        $successCount = collect($results)->where('success', true)->count();
-        $failedCount = collect($results)->where('success', false)->count();
+            return [
+                'id'         => $action['id'],
+                'ticket_id'  => $action['ticket_id'],
+                'status'     => $outcome->status()->value,
+                // Conservé pour les versions de l'app antérieures au champ status.
+                'success'    => $outcome->isSuccess(),
+                'error_code' => $outcome->errorCode()?->value,
+            ];
+        })->all();
+
+        $syncedCount   = collect($results)->where('success', true)->count();
+        $rejectedCount = count($results) - $syncedCount;
 
         return response()->json([
             'success' => true,
-            'message' => "$successCount action(s) synchronisée(s), $failedCount échec(s)",
-            'data' => [
-                'results' => $results,
-                'synced' => $successCount,
-                'failed' => $failedCount,
+            'message' => "$syncedCount opération(s) synchronisée(s), $rejectedCount refusée(s)",
+            'data'    => [
+                'results'  => $results,
+                'synced'   => $syncedCount,
+                'failed'   => $rejectedCount,
+                'rejected' => $rejectedCount,
             ],
         ]);
     }
