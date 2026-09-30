@@ -44,9 +44,18 @@ return [
     | considered expired. This will override any values set in the token's
     | "expires_at" attribute, but first-party sessions are not affected.
     |
+    | Ce plafond s'ajoute au expires_at de chaque token : Sanctum exige les deux
+    | (Guard::isValidAccessToken). Fixe a 24h, il invalidait donc silencieusement
+    | tous les tokens emis avec une echeance plus lointaine — notamment les
+    | refresh tokens de 30 jours, qui mouraient en realite au bout d'un jour.
+    |
+    | Il est desactive : la duree de vie est portee par chaque token. Un token
+    | cree sans echeance explicite n'est pas eternel pour autant, le modele
+    | App\Models\Auth\PersonalAccessToken lui en applique une par defaut.
+    |
     */
 
-    'expiration' => 60 * 24, // 24 heures
+    'expiration' => null,
 
     /*
     |--------------------------------------------------------------------------

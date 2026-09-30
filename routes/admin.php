@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Admin\AgentAuthController;
 // ─── Agent login (pas de sanctum) ─────────────────────────────────────────────
 Route::prefix('/admin/auth')->name('admin.auth.')->middleware('throttle:10,1')->group(function () {
     Route::post('/login', [AgentAuthController::class, 'login'])->name('login');
+    Route::post('/refresh', [AgentAuthController::class, 'refresh'])->name('refresh');
 });
 
 Route::prefix('/admin')->name('admin.')->middleware('auth:sanctum')->group(function () {
@@ -26,7 +27,12 @@ Route::prefix('/admin')->name('admin.')->middleware('auth:sanctum')->group(funct
     // ─── Tickets ──────────────────────────────────────────────────────────────
     Route::prefix('/tickets')->name('tickets.')->group(function () {
         Route::get('/verify/{ticketCode}', [TicketController::class, 'verifyByQrCode'])->name('verify-qr');
-        Route::post('/verify-phone', [TicketController::class, 'verifyByPhoneAndCode'])->name('verify-phone');
+        // Le code SMS ne fait que 6 chiffres : sans limite de debit, il est
+        // devinable par force brute. Aucun throttle global ne s'applique a
+        // /api/* (throttleApi() n'est pas appele dans bootstrap/app.php).
+        Route::post('/verify-phone', [TicketController::class, 'verifyByPhoneAndCode'])
+            ->middleware('throttle:20,1')
+            ->name('verify-phone');
         Route::post('/validate', [TicketController::class, 'validate'])->name('validate');
         Route::post('/batch-sync', [TicketController::class, 'batchSync'])->name('batch-sync');
         Route::get('/{ticketId}', [TicketController::class, 'getTicketById'])->name('get-by-id');

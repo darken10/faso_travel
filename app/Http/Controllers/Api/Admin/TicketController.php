@@ -3,16 +3,20 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Enums\StatutTicket;
+use App\Enums\SyncActionType;
+use App\Enums\SyncErrorCode;
+use App\Enums\SyncResult;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket\Ticket;
 use App\Services\Ticket\TicketCommandService;
 use App\Services\Ticket\TicketQueryService;
+use App\Services\Ticket\TicketSyncService;
 use App\Services\Ticket\TicketValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class TicketController extends Controller
 {
@@ -27,7 +31,14 @@ class TicketController extends Controller
      */
     public function verifyByQrCode(string $ticketCode): JsonResponse
     {
-        $ticket = Ticket::where('code_qr', $ticketCode)
+        $compagnieId = auth()->user()?->compagnie_id;
+        abort_if($compagnieId === null, 403, 'Compte non associé à une compagnie.');
+
+        // Cloisonnement : sans ce scope, n'importe quel agent authentifié pouvait
+        // lire le billet d'une compagnie concurrente, code_qr et telephone du
+        // passager compris, en devinant ou en scannant simplement son QR.
+        $ticket = Ticket::ofCompagnie((int) $compagnieId)
+            ->where('code_qr', $ticketCode)
             ->with(['user', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'voyageInstance.voyage.classe', 'autre_personne'])
             ->first();
 
@@ -196,84 +207,89 @@ class TicketController extends Controller
     }
 
     /**
-     * Batch sync — traite un tableau d'actions offline
+     * Batch sync — rejoue les opérations réalisées hors connexion.
+     *
+     * Le traitement est idempotent : chaque action porte un identifiant généré par
+     * le téléphone (`id`), et une action déjà reçue renvoie son verdict d'origine
+     * sans être réexécutée. Un réessai après timeout est donc sans danger.
+     *
+     * Chaque résultat porte un `status` — applied, already_applied ou rejected —
+     * que le client doit lire à la place de l'ancien booléen : « déjà validé » et
+     * « échec réel » y étaient indiscernables.
      */
-    public function batchSync(Request $request): JsonResponse
+    public function batchSync(Request $request, TicketSyncService $syncService): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'actions' => 'required|array|min:1',
-            'actions.*.id' => 'required|string',
-            'actions.*.type' => 'required|string|in:VALIDATE_TICKET,PAUSE_TICKET,BLOCK_TICKET',
-            'actions.*.ticket_id' => 'required|integer|exists:tickets,id',
-            'actions.*.payload' => 'nullable|array',
+            'actions'                        => 'required|array|min:1|max:200',
+            'actions.*.id'                   => 'required|string|max:64',
+            'actions.*.type'                 => ['required', 'string', Rule::in(SyncActionType::values())],
+            // Pas de règle exists : un ticket introuvable doit être journalisé
+            // comme refus auditable, pas rejeter le lot entier en 422.
+            // L'identifiant ou le QR suffit : un ticket absent du cache du
+            // téléphone n'a pas d'identifiant connu, seulement le code scanné.
+            'actions.*.ticket_id'            => 'required_without:actions.*.qr_code|nullable|integer|min:1',
+            'actions.*.qr_code'              => 'required_without:actions.*.ticket_id|nullable|string|max:128',
+            'actions.*.voyage_instance_id'   => 'nullable|uuid',
+            'actions.*.device_id'            => 'nullable|string|max:100',
+            'actions.*.method'               => 'nullable|string|in:qr,sms',
+            'actions.*.verified_offline'     => 'nullable|boolean',
+            'actions.*.client_created_at'    => 'nullable|date',
+            'actions.*.payload'              => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Données invalides',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422);
         }
 
-        $results = [];
+        $agent = $request->user();
 
-        foreach ($request->input('actions') as $action) {
+        $results = collect($validator->validated()['actions'])->map(function (array $action) use ($syncService, $agent) {
+            // L'identifiant client circule sous le nom `id` dans le contrat HTTP
+            // et `operation_id` côté journal.
+            $action['operation_id'] = $action['id'];
+
             try {
-                $ticket = $this->findTicketOfCompagnie($action['ticket_id']);
-                $success = false;
-
-                DB::beginTransaction();
-
-                switch ($action['type']) {
-                    case 'VALIDATE_TICKET':
-                        if (in_array($ticket->statut, [StatutTicket::Payer, StatutTicket::Pause])) {
-                            $success = $this->validationService->validate($ticket);
-                        }
-                        break;
-
-                    case 'PAUSE_TICKET':
-                        $success = $this->validationService->pause($ticket);
-                        break;
-
-                    case 'BLOCK_TICKET':
-                        $success = $this->validationService->block($ticket);
-                        break;
-                }
-
-                DB::commit();
-
-                $results[] = [
-                    'id' => $action['id'],
-                    'success' => $success,
-                    'ticket_id' => $action['ticket_id'],
-                ];
-            } catch (\Exception $e) {
-                DB::rollBack();
-                Log::error("Batch sync action failed", [
-                    'action_id' => $action['id'],
-                    'error' => $e->getMessage(),
+                $outcome = $syncService->apply($action, $agent);
+            } catch (\Throwable $e) {
+                Log::error('Batch sync : opération non traitée', [
+                    'operation_id' => $action['id'],
+                    'error'        => $e->getMessage(),
                 ]);
 
-                $results[] = [
-                    'id' => $action['id'],
-                    'success' => false,
-                    'ticket_id' => $action['ticket_id'],
-                    'error' => $e->getMessage(),
+                return [
+                    'id'         => $action['id'],
+                    'ticket_id'  => $action['ticket_id'] ?? null,
+                    'status'     => SyncResult::Rejected->value,
+                    'success'    => false,
+                    'error_code' => SyncErrorCode::ServerError->value,
                 ];
             }
-        }
 
-        $successCount = collect($results)->where('success', true)->count();
-        $failedCount = collect($results)->where('success', false)->count();
+            return [
+                'id'         => $action['id'],
+                'ticket_id'  => $outcome->journal->ticket_id ?? $action['ticket_id'] ?? null,
+                'status'     => $outcome->status()->value,
+                // Conservé pour les versions de l'app antérieures au champ status.
+                'success'    => $outcome->isSuccess(),
+                'error_code' => $outcome->errorCode()?->value,
+            ];
+        })->all();
+
+        $syncedCount   = collect($results)->where('success', true)->count();
+        $rejectedCount = count($results) - $syncedCount;
 
         return response()->json([
             'success' => true,
-            'message' => "$successCount action(s) synchronisée(s), $failedCount échec(s)",
-            'data' => [
-                'results' => $results,
-                'synced' => $successCount,
-                'failed' => $failedCount,
+            'message' => "$syncedCount opération(s) synchronisée(s), $rejectedCount refusée(s)",
+            'data'    => [
+                'results'  => $results,
+                'synced'   => $syncedCount,
+                'failed'   => $rejectedCount,
+                'rejected' => $rejectedCount,
             ],
         ]);
     }
@@ -283,7 +299,14 @@ class TicketController extends Controller
      */
     public function getPassengers(string $voyageInstance): JsonResponse
     {
-        $tickets = Ticket::where('voyage_instance_id', $voyageInstance)
+        $compagnieId = auth()->user()?->compagnie_id;
+        abort_if($compagnieId === null, 403, 'Compte non associé à une compagnie.');
+
+        // Cloisonnement : l'identifiant d'instance est un uuid, mais rien
+        // n'empechait un agent d'en presenter un appartenant a une autre
+        // compagnie et d'obtenir la liste de ses passagers avec leurs code_qr.
+        $tickets = Ticket::ofCompagnie((int) $compagnieId)
+            ->where('voyage_instance_id', $voyageInstance)
             ->whereIn('statut', [
                 StatutTicket::Payer,
                 StatutTicket::Valider,
@@ -369,8 +392,11 @@ class TicketController extends Controller
             'code_qr' => $ticket->code_qr,
             'valider_at' => $ticket->valider_at,
             'classe' => $voyage?->classe?->name,
+            // La colonne d'autre_personnes est `name`, pas `nom` : l'ancien
+            // accès renvoyait toujours null, donc 'N/A' pour tout billet acheté
+            // au nom d'un tiers.
             'passenger_name' => $isAutre
-                ? ($ticket->autre_personne?->nom ?? 'N/A')
+                ? ($ticket->autre_personne?->name ?? 'N/A')
                 : ($ticket->user?->name ?? 'N/A'),
             'passenger_phone' => $isAutre
                 ? ($ticket->autre_personne?->numero ?? '')
@@ -382,8 +408,9 @@ class TicketController extends Controller
                 'nb_place' => $instance->nb_place,
                 'voyage' => $voyage ? [
                     'trajet' => [
-                        'depart' => ['name' => $trajet?->depart?->nom],
-                        'arriver' => ['name' => $trajet?->arriver?->nom],
+                        // Idem : villes.name, et non villes.nom.
+                        'depart' => ['name' => $trajet?->depart?->name],
+                        'arriver' => ['name' => $trajet?->arriver?->name],
                     ],
                 ] : null,
             ] : null,

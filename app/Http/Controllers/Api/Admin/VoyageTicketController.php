@@ -196,8 +196,14 @@ class VoyageTicketController extends Controller
      */
     public function getTicketsByVoyageInstance($voyageInstance)
     {
+        // Le garde existait deja dans ce controleur mais n'etait pas appele ici :
+        // un uuid d'instance suffisait a lister les tickets d'une autre
+        // compagnie. Il reste hors du try, sinon le 404 qu'il leve serait
+        // recuperé plus bas et transforme en 500.
+        $instance = $this->findInstanceOfCompagnie($voyageInstance);
+
         try {
-            $tickets = $this->voyageTicketService->getTicketsByVoyageInstance($voyageInstance);
+            $tickets = $this->voyageTicketService->getTicketsByVoyageInstance($instance->id);
 
             return response()->json($tickets);
         } catch (\Exception $e) {

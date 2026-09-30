@@ -42,14 +42,17 @@ class VoyageTicketService
                     'statut' => $ticket->statut,
                     'type' => $ticket->type,
                     'created_at' => $ticket->created_at->format('Y-m-d H:i:s'),
+                    // Acces prudents : un ticket marque is_my_ticket dont le
+                    // user_id est nul (ou l'inverse) produisait une 500 sur
+                    // "Attempt to read property on null".
                     'passager' => $ticket->is_my_ticket ? [
-                        'id' => $ticket->user->id,
-                        'name' => $ticket->user->name,
-                        'email' => $ticket->user->email
+                        'id'    => $ticket->user?->id,
+                        'name'  => $ticket->user?->name ?? 'N/A',
+                        'email' => $ticket->user?->email,
                     ] : [
-                        'id' => $ticket->autre_personne->id,
-                        'name' => $ticket->autre_personne->name,
-                        'numero' => $ticket->autre_personne->numero
+                        'id'     => $ticket->autre_personne?->id,
+                        'name'   => $ticket->autre_personne?->name ?? 'N/A',
+                        'numero' => $ticket->autre_personne?->numero,
                     ]
                 ];
             });
