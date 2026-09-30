@@ -62,7 +62,12 @@ class AgentSyncEndpointsTest extends TestCase
     private function ticketOfCompagnie(Compagnie $compagnie, array $attributes = []): Ticket
     {
         $voyage = Voyage::factory()->create(['compagnie_id' => $compagnie->id]);
-        $instance = VoyageInstance::factory()->create(['voyage_id' => $voyage->id]);
+        // La fenêtre de pull couvre J+0 et J+1 : la factory daterait sinon le
+        // voyage jusqu'à 30 jours plus tard, hors périmètre.
+        $instance = VoyageInstance::factory()->create([
+            'voyage_id' => $voyage->id,
+            'date'      => now()->toDateString(),
+        ]);
 
         return Ticket::factory()->create($attributes + [
             'voyage_instance_id' => $instance->id,
@@ -113,8 +118,8 @@ class AgentSyncEndpointsTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.validations.0.ticket_id', $ticket->id)
-            ->assertJsonPath('data.validations.0.statut', StatutTicket::Valider->value);
+            ->assertJsonPath('data.tickets.0.id', $ticket->id)
+            ->assertJsonPath('data.tickets.0.statut', StatutTicket::Valider->value);
     }
 
     public function test_sync_pull_accepte_le_format_iso_envoye_par_lapp_mobile(): void
@@ -126,7 +131,7 @@ class AgentSyncEndpointsTest extends TestCase
 
         $this->getJson('/api/admin/sync/pull?since=' . now()->subHour()->utc()->format('Y-m-d\\TH:i:s\\Z'))
             ->assertOk()
-            ->assertJsonCount(1, 'data.validations');
+            ->assertJsonCount(1, 'data.tickets');
     }
 
     public function test_sync_pull_rejette_une_date_since_invalide(): void
@@ -150,7 +155,7 @@ class AgentSyncEndpointsTest extends TestCase
 
         $this->getJson('/api/admin/sync/pull?since=' . urlencode(now()->subHour()->toIso8601String()))
             ->assertOk()
-            ->assertJsonCount(0, 'data.validations');
+            ->assertJsonCount(0, 'data.tickets');
     }
 
     public function test_sync_pull_exige_une_authentification(): void

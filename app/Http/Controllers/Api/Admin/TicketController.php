@@ -375,8 +375,11 @@ class TicketController extends Controller
             'code_qr' => $ticket->code_qr,
             'valider_at' => $ticket->valider_at,
             'classe' => $voyage?->classe?->name,
+            // La colonne d'autre_personnes est `name`, pas `nom` : l'ancien
+            // accès renvoyait toujours null, donc 'N/A' pour tout billet acheté
+            // au nom d'un tiers.
             'passenger_name' => $isAutre
-                ? ($ticket->autre_personne?->nom ?? 'N/A')
+                ? ($ticket->autre_personne?->name ?? 'N/A')
                 : ($ticket->user?->name ?? 'N/A'),
             'passenger_phone' => $isAutre
                 ? ($ticket->autre_personne?->numero ?? '')
@@ -388,8 +391,9 @@ class TicketController extends Controller
                 'nb_place' => $instance->nb_place,
                 'voyage' => $voyage ? [
                     'trajet' => [
-                        'depart' => ['name' => $trajet?->depart?->nom],
-                        'arriver' => ['name' => $trajet?->arriver?->nom],
+                        // Idem : villes.name, et non villes.nom.
+                        'depart' => ['name' => $trajet?->depart?->name],
+                        'arriver' => ['name' => $trajet?->arriver?->name],
                     ],
                 ] : null,
             ] : null,
