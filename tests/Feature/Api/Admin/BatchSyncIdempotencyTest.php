@@ -145,10 +145,11 @@ class BatchSyncIdempotencyTest extends TestCase
             ->assertJsonPath('data.results.0.error_code', SyncErrorCode::AlreadyValidated->value);
 
         $journal = TicketValidation::where('operation_id', 'op-conflit')->sole();
-        $this->assertTrue($journal->error_code->isConflict());
+        $this->assertSame(1, TicketValidation::openConflicts()->count());
+        $this->assertSame($journal->id, TicketValidation::openConflicts()->sole()->id);
     }
 
-    public function test_un_statut_incompatible_nest_pas_un_conflit(): void
+    public function test_un_ticket_annule_entre_temps_est_aussi_remonte_a_ladministration(): void
     {
         $ticket = $this->ticket(['statut' => StatutTicket::Annuler]);
         Sanctum::actingAs($this->agent);
@@ -157,9 +158,9 @@ class BatchSyncIdempotencyTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.results.0.error_code', SyncErrorCode::InvalidStatus->value);
 
-        $this->assertFalse(
-            TicketValidation::where('operation_id', 'op-annule')->sole()->error_code->isConflict(),
-        );
+        // Le passager est déjà monté dans le bus : un ticket annulé entre-temps doit
+        // être instruit par l'administration et la finance, comme un doublon.
+        $this->assertSame(1, TicketValidation::openConflicts()->count());
     }
 
     public function test_un_ticket_dune_autre_compagnie_est_refuse_et_journalise(): void

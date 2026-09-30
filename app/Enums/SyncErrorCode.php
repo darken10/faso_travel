@@ -26,12 +26,16 @@ enum SyncErrorCode: string
     /** Échec inattendu côté serveur — l'opération peut être réessayée. */
     case ServerError = 'SERVER_ERROR';
 
-    /**
-     * Un conflit demande un arbitrage humain : l'agent en est notifié et
-     * l'incident est remonté à l'administration et à la finance.
-     */
-    public function isConflict(): bool
+    /** Libellé affiché à l'administration et à la finance. */
+    public function label(): string
     {
-        return $this === self::AlreadyValidated || $this === self::WrongVoyage;
+        return match ($this) {
+            self::AlreadyValidated => 'Déjà validé par un autre agent',
+            self::InvalidStatus    => 'Ticket annulé ou non valide au moment de la synchronisation',
+            self::NotFound         => 'Ticket introuvable (QR non reconnu)',
+            self::WrongVoyage      => 'Ticket d\'un autre voyage',
+            self::ServerError      => 'Erreur serveur',
+        };
     }
+
 }

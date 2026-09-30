@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Enums\CompanyRole;
+use App\Enums\UserRole;
 use App\Models\Compagnie\Compagnie;
+use App\Models\User;
 use App\Models\Ticket\Ticket;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
@@ -60,6 +63,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('compagnie-settings.update',        [CompagnieSettingPolicy::class, 'update']);
         Gate::define('compagnie-settings.updateAdvanced', [CompagnieSettingPolicy::class, 'updateAdvanced']);
         Gate::define('compagnie-settings.reset',         [CompagnieSettingPolicy::class, 'reset']);
+
+        // Instruction des validations refusées : réservée à la direction, à
+        // l'administration et à la comptabilité. Un agent terrain ou un guichetier
+        // ne doit pas pouvoir classer sans suite le refus qui le concerne.
+        Gate::define('manage-boarding-conflicts', function (User $user): bool {
+            return $user->compagnie_id !== null
+                && (
+                    $user->role === UserRole::CompagnieBosse
+                    || $user->hasAnyRole([CompanyRole::Admin->value, CompanyRole::Comptabilite->value])
+                );
+        });
     }
 
     private function configureRateLimiting(): void

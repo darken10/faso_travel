@@ -67,6 +67,10 @@
         <nav class="flex-1 overflow-y-auto py-4 space-y-0.5 px-2">
 
             @php
+            // Compteur des conflits à traiter, affiché seulement à ceux qui peuvent les instruire.
+            $conflitsOuverts = auth()->user()->can('manage-boarding-conflicts')
+                ? \App\Models\Ticket\TicketValidation::openConflicts()->ofAgentsOfCompagnie((int) auth()->user()->compagnie_id)->count()
+                : 0;
             $compagnieNav = [
                 ['route' => 'panel.compagnie.dashboard', 'label' => 'Tableau de bord', 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
                 ['section' => 'Voyage'],
@@ -77,6 +81,7 @@
                 ['section' => 'Guichet'],
                 ['route' => 'panel.compagnie.vente-ticket', 'label' => 'Vente de ticket', 'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'],
                 ['route' => 'panel.compagnie.tickets', 'label' => 'Tickets', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+                ['route' => 'panel.compagnie.conflits', 'label' => 'Conflits', 'can' => 'manage-boarding-conflicts', 'badge' => $conflitsOuverts, 'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
                 ['route' => 'panel.compagnie.caisse', 'label' => 'Ma Caisse', 'icon' => 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
                 ['route' => 'panel.compagnie.caisses-historique', 'label' => 'Historique caisses', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
                 ['section' => 'Ressources'],
@@ -100,6 +105,9 @@
             @endphp
 
             @foreach($compagnieNav as $item)
+                @if(isset($item['can']) && ! auth()->user()->can($item['can']))
+                    @continue
+                @endif
                 @if(isset($item['section']))
                     <div x-show="sidebarOpen || mobileSidebarOpen" x-cloak class="pt-4 pb-1 px-2">
                         <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">{{ $item['section'] }}</p>
@@ -113,6 +121,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $item['icon'] }}"/>
                         </svg>
                         <span x-show="sidebarOpen || mobileSidebarOpen" x-cloak class="whitespace-nowrap overflow-hidden">{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-xs font-bold">{{ $item['badge'] }}</span>
+                        @endif
                         <span x-show="!sidebarOpen && !mobileSidebarOpen"
                               class="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 hidden lg:block">
                             {{ $item['label'] }}
