@@ -2,13 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\Rbac\ControleAcces;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Contrôle une permission, en bloquant ou en observant selon `rbac.enforce`.
+ * Contrôle une permission sur une route, en bloquant ou en observant selon
+ * `rbac.enforce`.
  *
  * Aucune des routes du panneau n'était filtrée jusqu'ici : l'usage réel de chaque écran
  * par chaque métier est donc inconnu. Fermer les accès sans l'avoir mesuré arrêterait des
@@ -17,42 +18,25 @@ use Symfony\Component\HttpFoundation\Response;
  * peut basculer.
  *
  * Ce middleware vient toujours après une garde d'authentification : un visiteur anonyme
- * est redirigé vers la connexion bien avant d'arriver ici.
+ * est redirigé vers la connexion bien avant d'arriver ici. Il échoue malgré tout fermé,
+ * pour qu'une route mal configurée ne devienne pas une porte ouverte.
+ *
+ * Déclaré persistant auprès de Livewire : une mise à jour de composant ne repasse pas par
+ * la route d'origine, et sans cela seul le premier chargement serait contrôlé.
  */
 class AuthorizeOrObserve
 {
-    /** Repère de ligne, pour que `rbac:refusals` retrouve ses entrées. */
-    public const MARQUEUR = 'rbac.refus';
+    /** @deprecated Utiliser ControleAcces::MARQUEUR. */
+    public const MARQUEUR = ControleAcces::MARQUEUR;
+
+    public function __construct(private readonly ControleAcces $controle) {}
 
     public function handle(Request $request, Closure $next, string $permission): Response
     {
-        $user = $request->user();
+        $autorise = $this->controle->autorise($request->user(), $permission);
 
-        if ($user?->hasPermission($permission)) {
-            return $next($request);
-        }
-
-        if ((bool) config('rbac.enforce') === true) {
-            abort(403, 'Vous n\'avez pas l\'autorisation « '.$permission.' ».');
-        }
-
-        $this->observer($request, $permission);
+        abort_unless($autorise, 403, 'Vous n\'avez pas l\'autorisation « '.$permission.' ».');
 
         return $next($request);
-    }
-
-    private function observer(Request $request, string $permission): void
-    {
-        $user = $request->user();
-
-        Log::channel(config('rbac.log_channel'))->info(self::MARQUEUR, [
-            'permission' => $permission,
-            'user_id' => $user?->getKey(),
-            'compagnie_id' => $user?->compagnie_id,
-            'roles' => $user?->roles->pluck('name')->sort()->values()->all() ?? [],
-            'route' => $request->route()?->getName() ?? $request->path(),
-            'method' => $request->method(),
-            'at' => now()->toIso8601String(),
-        ]);
     }
 }

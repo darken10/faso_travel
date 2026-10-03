@@ -3,6 +3,7 @@
 namespace App\Livewire\Compagnie\Finance;
 
 use App\Models\Finance\CategorieDepense;
+use App\Traits\AutoriseLesActions;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -11,24 +12,31 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class CategorieManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public string $nom = '';
+
     public string $description = '';
 
     protected function rules(): array
     {
         return [
-            'nom'         => 'required|string|max:255',
+            'nom' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
         ];
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public function openCreate(): void
     {
@@ -47,19 +55,20 @@ class CategorieManager extends Component
 
     public function save(): void
     {
+        $this->autoriser('finance.categorie.manage');
         $this->validate();
         $compagnieId = Auth::user()->compagnie_id;
 
         if ($this->editingId) {
             CategorieDepense::findOrFail($this->editingId)->update([
-                'nom'         => $this->nom,
+                'nom' => $this->nom,
                 'description' => $this->description ?: null,
             ]);
         } else {
             CategorieDepense::create([
                 'compagnie_id' => $compagnieId,
-                'nom'          => $this->nom,
-                'description'  => $this->description ?: null,
+                'nom' => $this->nom,
+                'description' => $this->description ?: null,
             ]);
         }
 
@@ -70,9 +79,11 @@ class CategorieManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('finance.categorie.manage');
         $cat = CategorieDepense::findOrFail($id);
         if ($cat->depenses()->count() > 0) {
             $this->dispatch('toast', type: 'error', message: 'Impossible de supprimer : cette catégorie est utilisée par des dépenses.');
+
             return;
         }
         $cat->delete();
@@ -84,7 +95,7 @@ class CategorieManager extends Component
         $compagnieId = Auth::user()->compagnie_id;
 
         $categories = CategorieDepense::where('compagnie_id', $compagnieId)
-            ->when($this->search, fn ($q) => $q->where('nom', 'like', '%' . $this->search . '%'))
+            ->when($this->search, fn ($q) => $q->where('nom', 'like', '%'.$this->search.'%'))
             ->withCount('depenses')
             ->orderBy('nom')
             ->paginate(15);

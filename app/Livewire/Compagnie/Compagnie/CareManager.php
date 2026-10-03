@@ -4,6 +4,7 @@ namespace App\Livewire\Compagnie\Compagnie;
 
 use App\Enums\StatutCare;
 use App\Models\Compagnie\Care;
+use App\Traits\AutoriseLesActions;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -13,17 +14,25 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class CareManager extends Component
 {
-    use WithPagination, WithFileUploads;
+    use AutoriseLesActions;
+    use WithFileUploads, WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public string $immatrculation = '';
+
     public string $numero = '';
+
     public string $number_place = '';
+
     public string $statut = '';
+
     public string $etat = '';
+
     public $image = null;
 
     public function updatingSearch(): void
@@ -35,9 +44,9 @@ class CareManager extends Component
     {
         $care = Care::findOrFail($id);
         $this->dispatch('open-doc-panel',
-            type:     Care::class,
-            id:       (string) $id,
-            label:    $care->immatrculation,
+            type: Care::class,
+            id: (string) $id,
+            label: $care->immatrculation,
             typeName: 'Véhicule',
         );
     }
@@ -55,32 +64,33 @@ class CareManager extends Component
     public function openEdit(int $id): void
     {
         $care = Care::findOrFail($id);
-        $this->editingId      = $id;
+        $this->editingId = $id;
         $this->immatrculation = $care->immatrculation;
-        $this->numero         = $care->numero ?? '';
-        $this->number_place   = $care->number_place;
-        $this->statut         = $care->statut->value ?? '';
-        $this->etat           = $care->etat ?? '';
-        $this->showModal      = true;
+        $this->numero = $care->numero ?? '';
+        $this->number_place = $care->number_place;
+        $this->statut = $care->statut->value ?? '';
+        $this->etat = $care->etat ?? '';
+        $this->showModal = true;
     }
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'reseau.vehicule.update' : 'reseau.vehicule.create');
         $this->validate([
             'immatrculation' => 'required|string|max:100',
-            'numero'         => 'nullable|string|max:20',
-            'number_place'   => 'required|integer|min:1',
-            'statut'         => 'required|string',
-            'etat'           => 'nullable|string|max:255',
-            'image'          => 'nullable|image|max:2048',
+            'numero' => 'nullable|string|max:20',
+            'number_place' => 'required|integer|min:1',
+            'statut' => 'required|string',
+            'etat' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:2048',
         ]);
 
         $data = [
             'immatrculation' => $this->immatrculation,
-            'numero'         => $this->numero ?: null,
-            'number_place'   => $this->number_place,
-            'statut'         => $this->statut,
-            'etat'           => $this->etat ?: null,
+            'numero' => $this->numero ?: null,
+            'number_place' => $this->number_place,
+            'statut' => $this->statut,
+            'etat' => $this->etat ?: null,
         ];
 
         if ($this->image) {
@@ -101,6 +111,7 @@ class CareManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('reseau.vehicule.delete');
         Care::findOrFail($id)->delete();
         $this->dispatch('toast', message: 'Véhicule supprimé.', type: 'warning');
     }
@@ -108,7 +119,7 @@ class CareManager extends Component
     public function render()
     {
         $cares = Care::withCount('documents')
-            ->when($this->search, fn($q) => $q
+            ->when($this->search, fn ($q) => $q
                 ->where('immatrculation', 'like', "%{$this->search}%")
                 ->orWhere('numero', 'like', "%{$this->search}%")
             )

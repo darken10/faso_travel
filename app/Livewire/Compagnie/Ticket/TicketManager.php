@@ -6,6 +6,7 @@ use App\Enums\StatutTicket;
 use App\Exports\TicketsExport;
 use App\Helper\TicketValidation;
 use App\Models\Ticket\Ticket;
+use App\Traits\AutoriseLesActions;
 use App\Traits\JournaliseLesActions;
 use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,7 @@ use Maatwebsite\Excel\Facades\Excel;
 #[Layout('layouts.compagnie-panel')]
 class TicketManager extends Component
 {
+    use AutoriseLesActions;
     use JournaliseLesActions;
     use ScopedToCompagnie;
     use WithPagination;
@@ -128,6 +130,8 @@ class TicketManager extends Component
 
     public function export()
     {
+        $this->autoriser('guichet.ticket.export');
+
         return Excel::download(
             new TicketsExport($this->baseQuery()->latest()),
             'tickets-'.now()->format('Y-m-d').'.xlsx',
@@ -136,6 +140,7 @@ class TicketManager extends Component
 
     public function valider(int $id): void
     {
+        $this->autoriser('embarquement.ticket.validate');
         $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         try {
@@ -148,6 +153,7 @@ class TicketManager extends Component
 
     public function bloquer(int $id): void
     {
+        $this->autoriser('guichet.ticket.block');
         $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         try {
@@ -160,6 +166,7 @@ class TicketManager extends Component
 
     public function activer(int $id): void
     {
+        $this->autoriser('guichet.ticket.unblock');
         $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
         $statutAvant = $ticket->statut;
@@ -180,6 +187,7 @@ class TicketManager extends Component
 
     public function rembourser(int $id): void
     {
+        $this->autoriser('finance.remboursement.approve');
         $ticket = Ticket::ofCompagnie($this->compagnieId())->with('user', 'payements')->findOrFail($id);
 
         // Remboursable uniquement si en pause (voyage annulé) ou déjà annulé non remboursé.

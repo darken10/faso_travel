@@ -1,20 +1,19 @@
 <?php
 
-use App\Http\Controllers\Auth\MyRegisterController;
+use App\Enums\UserRole;
 use App\Http\Controllers\Auth\AccountActivationController;
-use App\Http\Controllers\Auth\PhoneLoginController;
+use App\Http\Controllers\Auth\MyRegisterController;
 use App\Http\Controllers\Auth\PhonePasswordResetController;
 use App\Http\Controllers\Compagnie\CompagnieController;
 use App\Http\Controllers\Divers\ConditionConfidentialiteController;
 use App\Http\Controllers\Divers\NotificationsController;
-use App\Http\Controllers\Ticket\Payement\PaymentController2;
-use App\Http\Controllers\Voyages\VoyageInstanceController;
-use App\Enums\UserRole;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\Ticket\Payement\OrangePayementController;
+use App\Http\Controllers\Ticket\Payement\PaymentController2;
 use App\Http\Controllers\Ticket\TicketController;
 use App\Http\Controllers\Ticket\VoyageController;
+use App\Http\Controllers\Voyages\VoyageInstanceController;
+use Illuminate\Support\Facades\Route;
 
 $domain = config('app.domain', 'liptra.net');
 
@@ -35,6 +34,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         if ($user->compagnie_id) {
             return redirect($scheme.'://compagnie.'.$domain.'/');
         }
+
         return redirect($scheme.'://app.'.$domain.'/');
     })->name('dashboard');
 });
@@ -42,23 +42,22 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 // ─── Callbacks paiement (appelés par les prestataires, sans auth) ────────────
 Route::prefix('/process-payment/{ticket}/{provider}')->name('controller-payment.')->group(function () {
     Route::get('/success', [PaymentController2::class, 'successFunction'])->name('success');
-    Route::get('/cancel',  [PaymentController2::class, 'cancelFunction'])->name('cancel');
+    Route::get('/cancel', [PaymentController2::class, 'cancelFunction'])->name('cancel');
     Route::post('/callback', [PaymentController2::class, 'callbackFunction'])->name('callback');
 });
 
 // ─── Activation de compte (lien email, accessible depuis n'importe quel domaine)
-Route::get('/account/activate/{token}',  [AccountActivationController::class, 'show'])->name('account.activate');
+Route::get('/account/activate/{token}', [AccountActivationController::class, 'show'])->name('account.activate');
 Route::post('/account/activate/{token}', [AccountActivationController::class, 'activate'])->name('account.activate.post');
 
 // ─── Validation tickets par agents (QR code) ─────────────────────────────────
 Route::prefix('/validation')->name('admin.validation.')->middleware('auth')
     ->controller(\App\Http\Controllers\Admin\Ticket\TicketController::class)->group(function () {
-        Route::get('/verification/{ticket}',        'verification')->name('verification')->where(['ticket' => '[0-9]+']);
-        Route::post('/validation/{ticket}',         'valider')->name('valider')->where(['ticket' => '[0-9]+']);
-        Route::get('/verification-by-numero-code',  'searchByTelAndCodePage')->name('search-by-tel-and-code-page');
+        Route::get('/verification/{ticket}', 'verification')->name('verification')->where(['ticket' => '[0-9]+']);
+        Route::post('/validation/{ticket}', 'valider')->name('valider')->where(['ticket' => '[0-9]+']);
+        Route::get('/verification-by-numero-code', 'searchByTelAndCodePage')->name('search-by-tel-and-code-page');
         Route::post('/verification-by-numero-code', 'searchByTelAndCode')->name('search-by-tel-and-code-page-post');
     });
-
 
 // ════════════════════════════════════════════════════════════════════════════
 // app.{domain} — Espace client
@@ -68,51 +67,51 @@ Route::domain('app.'.$domain)->group(function () {
     // ─── Feed / Social ────────────────────────────────────────────────────
     Route::prefix('/')->name('post.')->middleware(['auth', 'verified'])
         ->controller(PostController::class)->group(function () {
-            Route::get('/',             'index')->name('index');
-            Route::get('/{post}',       'show')->name('show')->where(['post' => '[0-9]+']);
-            Route::get('/tag/{tag}',    'filterByTag')->name('filterByTag')->where(['tag' => '[0-9]+']);
+            Route::get('/', 'index')->name('index');
+            Route::get('/{post}', 'show')->name('show')->where(['post' => '[0-9]+']);
+            Route::get('/tag/{tag}', 'filterByTag')->name('filterByTag')->where(['tag' => '[0-9]+']);
             Route::get('/like/list/{post}', 'likeList')->name('likeList')->where(['post' => '[0-9]+']);
         });
 
     // ─── Voyages ──────────────────────────────────────────────────────────
     Route::prefix('/voyage')->name('voyage.')->middleware('auth')
         ->controller(VoyageController::class)->group(function () {
-            Route::get('/',                                              'index')->name('index');
-            Route::get('/{voyage}',                                      'show')->name('show')->where(['voyage' => '[0-9]+']);
-            Route::get('/voyage-instance/{voyageInstance}',             'showVoyageInstance')->name('instance.show');
-            Route::get('/is-my-ticket/{voyageInstance}',                'is_my_ticket')->name('is_my_ticket');
-            Route::post('/is-my-ticket-achat/{voyageInstance}',         'is_my_ticket_traitement')->name('is_my_ticket_traitement');
-            Route::get('/voyage-instance/acheter/{voyageInstance}',     'acheterVoyageInstance')->name('instance.acheter');
-            Route::get('/achete/{voyage}',                              'acheter')->name('acheter')->where(['voyage' => '[0-9]+']);
-            Route::get('/my-ticket/achete/{ticket}',                   'payerAutrePersonneTicket')->name('payerAutrePersonneTicket')->where(['ticket' => '[0-9]+']);
-            Route::get('/is-my-ticket/autre-ticket-info/{voyage}',     'autre_ticket_info')->name('autre-ticket-info')->where(['voyage' => '[0-9]+']);
-            Route::post('/is-my-ticket/autre-ticket-info/{voyage}',    'register_autre_personne')->name('register-autre-personne')->where(['voyage' => '[0-9]+']);
+            Route::get('/', 'index')->name('index');
+            Route::get('/{voyage}', 'show')->name('show')->where(['voyage' => '[0-9]+']);
+            Route::get('/voyage-instance/{voyageInstance}', 'showVoyageInstance')->name('instance.show');
+            Route::get('/is-my-ticket/{voyageInstance}', 'is_my_ticket')->name('is_my_ticket');
+            Route::post('/is-my-ticket-achat/{voyageInstance}', 'is_my_ticket_traitement')->name('is_my_ticket_traitement');
+            Route::get('/voyage-instance/acheter/{voyageInstance}', 'acheterVoyageInstance')->name('instance.acheter');
+            Route::get('/achete/{voyage}', 'acheter')->name('acheter')->where(['voyage' => '[0-9]+']);
+            Route::get('/my-ticket/achete/{ticket}', 'payerAutrePersonneTicket')->name('payerAutrePersonneTicket')->where(['ticket' => '[0-9]+']);
+            Route::get('/is-my-ticket/autre-ticket-info/{voyage}', 'autre_ticket_info')->name('autre-ticket-info')->where(['voyage' => '[0-9]+']);
+            Route::post('/is-my-ticket/autre-ticket-info/{voyage}', 'register_autre_personne')->name('register-autre-personne')->where(['voyage' => '[0-9]+']);
             Route::get('/is-my-ticket/autre-ticket-info/{voyage}/{autre_personne}', 'payer_ticket_autre_personne')->name('payer-ticket-autre-personne')->where(['voyage' => '[0-9]+']);
         });
 
     // ─── Tickets ──────────────────────────────────────────────────────────
     Route::prefix('/ticket')->name('ticket.')->middleware('auth')
         ->controller(TicketController::class)->group(function () {
-            Route::post('/payer/{voyage}',                              'createTicket')->name('payer')->where(['voyage' => '[0-9]+']);
-            Route::post('/payer/voyage-instance/{voyage_instance}',    'createTicketWithVoyageInstance')->name('payer-with-voyage-instance');
-            Route::get('/mes-tickets',                                 'myTickets')->name('myTickets');
-            Route::get('/mes-tickets/{ticket}/edite',                  'editTicket')->name('editTicket');
-            Route::get('/mes-tickets/{ticket}',                        'showMyTicket')->name('show-ticket')->where(['ticket' => '[0-9]+']);
-            Route::get('/mes-tickets/{ticket}/pdf',                    'downloadPdf')->name('download-pdf')->where(['ticket' => '[0-9]+']);
-            Route::get('/mes-tickets/{ticket}/navigation',             'navigateToGare')->name('navigate-to-gare')->where(['ticket' => '[0-9]+']);
-            Route::get('/re-envoyer/{ticket}',                        'reenvoyer')->name('reenvoyer')->where(['ticket' => '[0-9]+']);
-            Route::get('/regenerer/{ticket}',                          'regenerer')->name('regenerer')->where(['ticket' => '[0-9]+']);
-            Route::post('/mes-tickets/{ticket}/pause',                 'mettreEnPause')->name('mettre-en-pause');
-            Route::get('/mes-tickets/{ticket}/payement',               'gotoPayment')->name('goto-payment');
-            Route::get('/transferer/{ticket}',                         'tranfererTicketToOtherUser')->name('transferer-ticket-to-other-user')->where(['ticket' => '[0-9]+']);
-            Route::post('/transferer/{ticket}',                        'tranfererTicketToOtherUserTraitement')->name('transferer-ticket-to-other-user-traitement')->where(['ticket' => '[0-9]+']);
-            Route::post('/transferer/{ticket}/traitement',             'tranfererTicketTraitement')->name('transferer-ticket-traitement')->where(['ticket' => '[0-9]+']);
+            Route::post('/payer/{voyage}', 'createTicket')->name('payer')->where(['voyage' => '[0-9]+']);
+            Route::post('/payer/voyage-instance/{voyage_instance}', 'createTicketWithVoyageInstance')->name('payer-with-voyage-instance');
+            Route::get('/mes-tickets', 'myTickets')->name('myTickets');
+            Route::get('/mes-tickets/{ticket}/edite', 'editTicket')->name('editTicket');
+            Route::get('/mes-tickets/{ticket}', 'showMyTicket')->name('show-ticket')->where(['ticket' => '[0-9]+']);
+            Route::get('/mes-tickets/{ticket}/pdf', 'downloadPdf')->name('download-pdf')->where(['ticket' => '[0-9]+']);
+            Route::get('/mes-tickets/{ticket}/navigation', 'navigateToGare')->name('navigate-to-gare')->where(['ticket' => '[0-9]+']);
+            Route::get('/re-envoyer/{ticket}', 'reenvoyer')->name('reenvoyer')->where(['ticket' => '[0-9]+']);
+            Route::get('/regenerer/{ticket}', 'regenerer')->name('regenerer')->where(['ticket' => '[0-9]+']);
+            Route::post('/mes-tickets/{ticket}/pause', 'mettreEnPause')->name('mettre-en-pause');
+            Route::get('/mes-tickets/{ticket}/payement', 'gotoPayment')->name('goto-payment');
+            Route::get('/transferer/{ticket}', 'tranfererTicketToOtherUser')->name('transferer-ticket-to-other-user')->where(['ticket' => '[0-9]+']);
+            Route::post('/transferer/{ticket}', 'tranfererTicketToOtherUserTraitement')->name('transferer-ticket-to-other-user-traitement')->where(['ticket' => '[0-9]+']);
+            Route::post('/transferer/{ticket}/traitement', 'tranfererTicketTraitement')->name('transferer-ticket-traitement')->where(['ticket' => '[0-9]+']);
         });
 
     // ─── Paiement Orange ──────────────────────────────────────────────────
     Route::prefix('/payement')->name('payement.')->middleware('auth')->group(function () {
         Route::prefix('/orange')->name('orange.')->controller(OrangePayementController::class)->group(function () {
-            Route::get('/{ticket}',  'paymentPage')->name('paymentPage')->where(['ticket' => '[0-9]+']);
+            Route::get('/{ticket}', 'paymentPage')->name('paymentPage')->where(['ticket' => '[0-9]+']);
             Route::post('/{ticket}', 'payer')->name('payer')->where(['ticket' => '[0-9]+']);
         });
     });
@@ -124,26 +123,26 @@ Route::domain('app.'.$domain)->group(function () {
 
     // ─── Notifications ────────────────────────────────────────────────────
     Route::middleware('auth')->group(function () {
-        Route::get('/notifications',               [NotificationsController::class, 'allNotifications'])->name('user.notifications');
-        Route::post('/notifications/lire-tout',    [NotificationsController::class, 'markAllAsRead'])->name('user.notifications.read-all');
+        Route::get('/notifications', [NotificationsController::class, 'allNotifications'])->name('user.notifications');
+        Route::post('/notifications/lire-tout', [NotificationsController::class, 'markAllAsRead'])->name('user.notifications.read-all');
         Route::get('/notifications/{notificationId}', [NotificationsController::class, 'showNotification'])->name('user.notifications.show');
     });
 
     // ─── Pages compagnies (publiques) ─────────────────────────────────────
-    Route::get('/compagnies',        [CompagnieController::class, 'index'])->name('client.compagnies.index');
+    Route::get('/compagnies', [CompagnieController::class, 'index'])->name('client.compagnies.index');
     Route::get('/compagnies/{compagnie}', [CompagnieController::class, 'show'])->name('client.compagnie.show')->where(['compagnie' => '[0-9]+']);
 
     // ─── Pages statiques ──────────────────────────────────────────────────
     Route::get('/politique-de-confidentialite', [ConditionConfidentialiteController::class, 'confidentialite'])->name('divers.politique-confidentialite');
-    Route::get('/termes-et-conditions',         [ConditionConfidentialiteController::class, 'condition'])->name('divers.termes-et-conditions');
-    Route::get('/about-us',                     [ConditionConfidentialiteController::class, 'about'])->name('divers.about-us');
-    Route::get('/contact',                      [ConditionConfidentialiteController::class, 'contact'])->name('divers.contact');
+    Route::get('/termes-et-conditions', [ConditionConfidentialiteController::class, 'condition'])->name('divers.termes-et-conditions');
+    Route::get('/about-us', [ConditionConfidentialiteController::class, 'about'])->name('divers.about-us');
+    Route::get('/contact', [ConditionConfidentialiteController::class, 'contact'])->name('divers.contact');
 
     // ─── Inscription multi-étapes ──────────────────────────────────────────
     Route::prefix('/auth/register')->name('auth.register.')->controller(MyRegisterController::class)->group(function () {
-        Route::get('/step1',  'step1')->name('step1');
-        Route::get('/step2',  'step2')->name('step2');
-        Route::get('/step3',  'step3')->name('step3');
+        Route::get('/step1', 'step1')->name('step1');
+        Route::get('/step2', 'step2')->name('step2');
+        Route::get('/step3', 'step3')->name('step3');
         Route::post('/step1', 'post_step1')->name('post_step1');
         Route::post('/step2', 'post_step2')->name('post_step2');
         Route::post('/step3', 'post_step3')->name('post_step3');
@@ -151,13 +150,12 @@ Route::domain('app.'.$domain)->group(function () {
 
     // ─── Reset mot de passe par téléphone (SMS / WhatsApp) ───────────────
     Route::prefix('/mot-de-passe-oublie/telephone')->name('password.phone.')->controller(PhonePasswordResetController::class)->group(function () {
-        Route::get('/',          'showPhoneForm')->name('form');
-        Route::post('/',         'sendOtp')->name('send');
-        Route::get('/verifier',  'showResetForm')->name('verify-form');
+        Route::get('/', 'showPhoneForm')->name('form');
+        Route::post('/', 'sendOtp')->name('send');
+        Route::get('/verifier', 'showResetForm')->name('verify-form');
         Route::post('/verifier', 'reset')->name('reset');
     });
 });
-
 
 // ════════════════════════════════════════════════════════════════════════════
 // Route publique — QR code image (utilisée dans les emails, pas d'auth)
@@ -172,73 +170,73 @@ Route::get('/qr/{code}', [\App\Http\Controllers\Ticket\QrCodeImageController::cl
 // admin.{domain} — Administration
 // ════════════════════════════════════════════════════════════════════════════
 Route::domain('admin.'.$domain)->name('panel.admin.')->middleware(['auth', 'verified', 'panel.admin'])->group(function () {
-    Route::get('/',           \App\Livewire\Admin\Dashboard::class)->name('dashboard');
-    Route::get('/pays',       \App\Livewire\Admin\PaysManager::class)->name('pays');
-    Route::get('/regions',    \App\Livewire\Admin\RegionManager::class)->name('regions');
-    Route::get('/villes',     \App\Livewire\Admin\VilleManager::class)->name('villes');
-    Route::get('/compagnies', \App\Livewire\Admin\CompagnieManager::class)->name('compagnies');
-    Route::get('/settings',   \App\Livewire\Admin\SettingsManager::class)->name('settings');
+    Route::get('/', \App\Livewire\Admin\Dashboard::class)->name('dashboard')->middleware('can.rbac:platform.stats.view');
+    Route::get('/pays', \App\Livewire\Admin\PaysManager::class)->name('pays')->middleware('can.rbac:platform.pays.manage');
+    Route::get('/regions', \App\Livewire\Admin\RegionManager::class)->name('regions')->middleware('can.rbac:platform.region.manage');
+    Route::get('/villes', \App\Livewire\Admin\VilleManager::class)->name('villes')->middleware('can.rbac:platform.ville.manage');
+    Route::get('/compagnies', \App\Livewire\Admin\CompagnieManager::class)->name('compagnies')->middleware('can.rbac:platform.compagnie.view');
+    Route::get('/settings', \App\Livewire\Admin\SettingsManager::class)->name('settings')->middleware('can.rbac:platform.settings.manage');
 
     // Génération des instances voyages
-    Route::get('/create-voyages-instances', [VoyageInstanceController::class, 'createAllInstance'])->name('create-all-voyages-instances');
+    Route::get('/create-voyages-instances', [VoyageInstanceController::class, 'createAllInstance'])->name('create-all-voyages-instances')->middleware('can.rbac:voyage.instance.generate');
 });
-
 
 // ════════════════════════════════════════════════════════════════════════════
 // compagnie.{domain} — Espace compagnie
 // ════════════════════════════════════════════════════════════════════════════
 Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth', 'verified', 'panel.compagnie'])->group(function () {
-    Route::get('/', \App\Livewire\Compagnie\Dashboard::class)->name('dashboard');
+    Route::get('/', \App\Livewire\Compagnie\Dashboard::class)->name('dashboard')->middleware('can.rbac:compagnie.dashboard.view');
 
     // ─── Voyage ───────────────────────────────────────────────────────────
-    Route::get('/trajets',   \App\Livewire\Compagnie\Voyage\TrajetManager::class)->name('trajets');
-    Route::get('/voyages',   \App\Livewire\Compagnie\Voyage\VoyageManager::class)->name('voyages');
-    Route::get('/voyages/create',          \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.create');
-    Route::get('/voyages/{voyageId}/edit', \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.edit');
-    Route::get('/voyages/{voyageId}',      \App\Livewire\Compagnie\Voyage\VoyageShow::class)->name('voyages.show');
-    Route::get('/classes',   \App\Livewire\Compagnie\Voyage\ClasseManager::class)->name('classes');
-    Route::get('/instances', \App\Livewire\Compagnie\Voyage\VoyageInstanceManager::class)->name('instances');
-    Route::get('/instances/{instanceId}', \App\Livewire\Compagnie\Voyage\VoyageInstanceShow::class)->name('instances.show');
+    Route::get('/trajets', \App\Livewire\Compagnie\Voyage\TrajetManager::class)->name('trajets')->middleware('can.rbac:voyage.trajet.view');
+    Route::get('/voyages', \App\Livewire\Compagnie\Voyage\VoyageManager::class)->name('voyages')->middleware('can.rbac:voyage.voyage.view');
+    Route::get('/voyages/create', \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.create')->middleware('can.rbac:voyage.voyage.create');
+    Route::get('/voyages/{voyageId}/edit', \App\Livewire\Compagnie\Voyage\VoyageForm::class)->name('voyages.edit')->middleware('can.rbac:voyage.voyage.update');
+    Route::get('/voyages/{voyageId}', \App\Livewire\Compagnie\Voyage\VoyageShow::class)->name('voyages.show')->middleware('can.rbac:voyage.voyage.view');
+    Route::get('/classes', \App\Livewire\Compagnie\Voyage\ClasseManager::class)->name('classes')->middleware('can.rbac:voyage.classe.manage');
+    Route::get('/instances', \App\Livewire\Compagnie\Voyage\VoyageInstanceManager::class)->name('instances')->middleware('can.rbac:voyage.instance.view');
+    Route::get('/instances/{instanceId}', \App\Livewire\Compagnie\Voyage\VoyageInstanceShow::class)->name('instances.show')->middleware('can.rbac:voyage.instance.view');
 
     // ─── Guichet ──────────────────────────────────────────────────────────
-    Route::get('/vente-ticket',       \App\Livewire\Compagnie\Ticket\VenteTicket::class)->name('vente-ticket');
-    Route::get('/tickets',            \App\Livewire\Compagnie\Ticket\TicketManager::class)->name('tickets');
-    Route::get('/conflits',           \App\Livewire\Compagnie\Ticket\ConflitManager::class)->name('conflits');
-    Route::get('/messages',           \App\Livewire\Compagnie\Message\Messagerie::class)->name('messages');
+    Route::get('/vente-ticket', \App\Livewire\Compagnie\Ticket\VenteTicket::class)->name('vente-ticket')->middleware('can.rbac:guichet.ticket.sell');
+    Route::get('/tickets', \App\Livewire\Compagnie\Ticket\TicketManager::class)->name('tickets')->middleware('can.rbac:guichet.ticket.view.gare');
+    Route::get('/conflits', \App\Livewire\Compagnie\Ticket\ConflitManager::class)->name('conflits')->middleware('can.rbac:embarquement.conflit.view');
+    Route::get('/messages', \App\Livewire\Compagnie\Message\Messagerie::class)->name('messages')->middleware('can.rbac:crm.conversation.view');
     Route::get('/tickets/{ticketId}/print', function (int $ticketId) {
         $ticket = \App\Models\Ticket\Ticket::withoutGlobalScopes()
             ->whereHas('voyageInstance.voyage', fn ($q) => $q->where('compagnie_id', auth()->user()->compagnie_id))
             ->findOrFail($ticketId);
-        return app(\App\Services\Ticket\PdfService::class)->stream($ticket, 'ticket-' . $ticket->numero_ticket . '.pdf');
-    })->name('tickets.print');
-    Route::get('/tickets/{ticketId}', \App\Livewire\Compagnie\Ticket\TicketShow::class)->name('tickets.show');
-    Route::get('/caisse',             \App\Livewire\Compagnie\Caisse\GestionCaisse::class)->name('caisse');
-    Route::get('/caisse/{caisse}',    \App\Livewire\Compagnie\Caisse\DetailCaisse::class)->name('caisse.detail');
-    Route::get('/caisses-historique', \App\Livewire\Compagnie\Caisse\HistoriqueCaisses::class)->name('caisses-historique');
+
+        return app(\App\Services\Ticket\PdfService::class)->stream($ticket, 'ticket-'.$ticket->numero_ticket.'.pdf');
+    })->name('tickets.print')->middleware('can.rbac:guichet.ticket.print');
+    Route::get('/tickets/{ticketId}', \App\Livewire\Compagnie\Ticket\TicketShow::class)->name('tickets.show')->middleware('can.rbac:guichet.ticket.view.gare');
+    Route::get('/caisse', \App\Livewire\Compagnie\Caisse\GestionCaisse::class)->name('caisse')->middleware('can.rbac:caisse.session.view.own');
+    Route::get('/caisse/{caisse}', \App\Livewire\Compagnie\Caisse\DetailCaisse::class)->name('caisse.detail')->middleware('can.rbac:caisse.session.view.own');
+    Route::get('/caisses-historique', \App\Livewire\Compagnie\Caisse\HistoriqueCaisses::class)->name('caisses-historique')->middleware('can.rbac:caisse.historique.view');
 
     // ─── Ressources ───────────────────────────────────────────────────────
-    Route::get('/gares',     \App\Livewire\Compagnie\Compagnie\GareManager::class)->name('gares');
-    Route::get('/cares',     \App\Livewire\Compagnie\Compagnie\CareManager::class)->name('cares');
-    Route::get('/cares/{careId}', \App\Livewire\Compagnie\Compagnie\CareShow::class)->name('cares.show');
-    Route::get('/chauffeurs', \App\Livewire\Compagnie\Compagnie\ChauffeurManager::class)->name('chauffeurs');
-    Route::get('/chauffeurs/{chauffeurId}', \App\Livewire\Compagnie\Compagnie\ChauffeurShow::class)->name('chauffeurs.show');
-    Route::get('/users',     \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users');
+    Route::get('/gares', \App\Livewire\Compagnie\Compagnie\GareManager::class)->name('gares')->middleware('can.rbac:reseau.gare.view');
+    Route::get('/cares', \App\Livewire\Compagnie\Compagnie\CareManager::class)->name('cares')->middleware('can.rbac:reseau.vehicule.view');
+    Route::get('/cares/{careId}', \App\Livewire\Compagnie\Compagnie\CareShow::class)->name('cares.show')->middleware('can.rbac:reseau.vehicule.view');
+    Route::get('/chauffeurs', \App\Livewire\Compagnie\Compagnie\ChauffeurManager::class)->name('chauffeurs')->middleware('can.rbac:reseau.chauffeur.view');
+    Route::get('/chauffeurs/{chauffeurId}', \App\Livewire\Compagnie\Compagnie\ChauffeurShow::class)->name('chauffeurs.show')->middleware('can.rbac:reseau.chauffeur.view');
+    Route::get('/users', \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users')->middleware('can.rbac:compagnie.user.view');
 
     // ─── Contenu ──────────────────────────────────────────────────────────
-    Route::get('/posts',              \App\Livewire\Compagnie\Post\PostManager::class)->name('posts');
-    Route::get('/posts/create',       \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.create');
-    Route::get('/posts/{postId}/edit', \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.edit');
-    Route::get('/documents', \App\Livewire\Compagnie\Document\DocumentManager::class)->name('documents');
+    Route::get('/posts', \App\Livewire\Compagnie\Post\PostManager::class)->name('posts')->middleware('can.rbac:contenu.article.view');
+    Route::get('/posts/create', \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.create')->middleware('can.rbac:contenu.article.create');
+    Route::get('/posts/{postId}/edit', \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.edit')->middleware('can.rbac:contenu.article.update');
+    Route::get('/documents', \App\Livewire\Compagnie\Document\DocumentManager::class)->name('documents')->middleware('can.rbac:reseau.document.view');
 
     // ─── Comptabilité ─────────────────────────────────────────────────────
-    Route::get('/rapports',   \App\Livewire\Compagnie\Rapport\RapportManager::class)->name('rapports');
-    Route::get('/bilan',      \App\Livewire\Compagnie\Finance\BilanFinancier::class)->name('bilan');
-    Route::get('/depenses',   \App\Livewire\Compagnie\Finance\DepenseManager::class)->name('depenses');
-    Route::get('/recettes',   \App\Livewire\Compagnie\Finance\RecetteManager::class)->name('recettes');
-    Route::get('/categories', \App\Livewire\Compagnie\Finance\CategorieManager::class)->name('categories');
-    Route::get('/promos',     \App\Livewire\Compagnie\Finance\PromoManager::class)->name('promos');
-    Route::get('/promos/{promoId}', \App\Livewire\Compagnie\Finance\PromoShow::class)->name('promos.show');
+    Route::get('/rapports', \App\Livewire\Compagnie\Rapport\RapportManager::class)->name('rapports')->middleware('can.rbac:finance.rapport.view');
+    Route::get('/bilan', \App\Livewire\Compagnie\Finance\BilanFinancier::class)->name('bilan')->middleware('can.rbac:finance.bilan.view');
+    Route::get('/depenses', \App\Livewire\Compagnie\Finance\DepenseManager::class)->name('depenses')->middleware('can.rbac:finance.depense.view');
+    Route::get('/recettes', \App\Livewire\Compagnie\Finance\RecetteManager::class)->name('recettes')->middleware('can.rbac:finance.recette.view');
+    Route::get('/categories', \App\Livewire\Compagnie\Finance\CategorieManager::class)->name('categories')->middleware('can.rbac:finance.categorie.manage');
+    Route::get('/promos', \App\Livewire\Compagnie\Finance\PromoManager::class)->name('promos')->middleware('can.rbac:finance.promo.view');
+    Route::get('/promos/{promoId}', \App\Livewire\Compagnie\Finance\PromoShow::class)->name('promos.show')->middleware('can.rbac:finance.promo.view');
 
     // ─── Configuration ────────────────────────────────────────────────────
-    Route::get('/parametres', \App\Livewire\Compagnie\Parametre\ParametreManager::class)->name('parametres');
+    Route::get('/parametres', \App\Livewire\Compagnie\Parametre\ParametreManager::class)->name('parametres')->middleware('can.rbac:compagnie.parametres.view');
 });

@@ -9,6 +9,7 @@ use App\Models\AccountActivation;
 use App\Models\Compagnie\Gare;
 use App\Models\Role;
 use App\Models\User;
+use App\Traits\AutoriseLesActions;
 use App\Traits\JournaliseLesActions;
 use App\Traits\ScopedToCompagnie;
 use App\Traits\ScopedToGare;
@@ -24,6 +25,7 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class UserManager extends Component
 {
+    use AutoriseLesActions;
     use JournaliseLesActions;
     use ScopedToCompagnie;
     use ScopedToGare;
@@ -126,6 +128,7 @@ class UserManager extends Component
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'compagnie.user.update' : 'compagnie.user.create');
         $this->validate();
 
         $compagnieId = Auth::user()->compagnie_id;
@@ -227,12 +230,14 @@ class UserManager extends Component
 
     public function bloquer(int $id): void
     {
+        $this->autoriser('compagnie.user.disable');
         $this->changerStatut($id, StatutUser::Bloquer);
         $this->dispatch('toast', type: 'success', message: 'Utilisateur bloqué.');
     }
 
     public function debloquer(int $id): void
     {
+        $this->autoriser('compagnie.user.disable');
         $this->changerStatut($id, StatutUser::Active);
         $this->dispatch('toast', type: 'success', message: 'Utilisateur débloqué.');
     }

@@ -5,23 +5,31 @@ namespace App\Livewire\Admin;
 use App\Models\Ville\Pays;
 use App\Models\Ville\Region;
 use App\Models\Ville\Ville;
-use Livewire\Component;
+use App\Traits\AutoriseLesActions;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.admin-panel')]
 class VilleManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public ?int $pays_id = null;
+
     public ?int $region_id = null;
+
     public string $name = '';
+
     public string $lat = '';
+
     public string $lng = '';
 
     public function updatingSearch(): void
@@ -54,18 +62,19 @@ class VilleManager extends Component
 
     public function save(): void
     {
+        $this->autoriser('platform.ville.manage');
         $this->validate([
             'region_id' => 'required|exists:regions,id',
-            'name'      => 'required|string|max:255',
-            'lat'       => 'required|numeric',
-            'lng'       => 'required|numeric',
+            'name' => 'required|string|max:255',
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
         ]);
 
         $data = [
-            'name'      => $this->name,
+            'name' => $this->name,
             'region_id' => $this->region_id,
-            'lat'       => $this->lat,
-            'lng'       => $this->lng,
+            'lat' => $this->lat,
+            'lng' => $this->lng,
         ];
 
         if ($this->editingId) {
@@ -82,13 +91,17 @@ class VilleManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('platform.ville.manage');
         Ville::findOrFail($id)->delete();
         session()->flash('success', 'Ville supprimée.');
     }
 
     public function getRegionsByPays()
     {
-        if (!$this->pays_id) return collect();
+        if (! $this->pays_id) {
+            return collect();
+        }
+
         return Region::where('pays_id', $this->pays_id)->orderBy('name')->get();
     }
 
@@ -96,9 +109,9 @@ class VilleManager extends Component
     {
         $villes = Ville::query()
             ->with('region.pays')
-            ->when($this->search, fn($q) => $q->where('villes.name', 'like', "%{$this->search}%")
-                ->orWhereHas('region', fn($r) => $r->where('name', 'like', "%{$this->search}%"))
-                ->orWhereHas('region.pays', fn($p) => $p->where('name', 'like', "%{$this->search}%")))
+            ->when($this->search, fn ($q) => $q->where('villes.name', 'like', "%{$this->search}%")
+                ->orWhereHas('region', fn ($r) => $r->where('name', 'like', "%{$this->search}%"))
+                ->orWhereHas('region.pays', fn ($p) => $p->where('name', 'like', "%{$this->search}%")))
             ->orderBy('name')
             ->paginate(15);
 

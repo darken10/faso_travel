@@ -53,6 +53,23 @@ trait HasPermissions
         return app(PorteeVerifier::class)->autorise($this, $portee, $sujet);
     }
 
+    /**
+     * Comme `hasPermission()`, mais tolérant tant que les contrôles ne sont pas actifs.
+     *
+     * Réservé à l'affichage. Pendant la période d'observation, les routes laissent passer
+     * et journalisent : masquer malgré tout l'entrée de menu priverait les métiers des
+     * écrans dont on cherche justement à mesurer l'usage, et aucun refus ne serait jamais
+     * observé. Un menu vide ferait conclure à une panne.
+     */
+    public function peutOuObserve(string $permission, mixed $sujet = null): bool
+    {
+        if ($this->hasPermission($permission, $sujet)) {
+            return true;
+        }
+
+        return (bool) config('rbac.enforce') !== true;
+    }
+
     /** Portée d'une permission pour ce compte, ou null s'il ne la détient pas. */
     public function porteePour(string $permission): ?string
     {

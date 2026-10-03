@@ -6,6 +6,7 @@ use App\Exports\PaiementsExport;
 use App\Exports\RapportTrajetsExport;
 use App\Mail\RapportMail;
 use App\Services\Report\ReportService;
+use App\Traits\AutoriseLesActions;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
@@ -16,8 +17,12 @@ use Maatwebsite\Excel\Facades\Excel;
 #[Layout('layouts.compagnie-panel')]
 class RapportManager extends Component
 {
+    use AutoriseLesActions;
+
     public string $preset = 'this_month';
+
     public string $dateDebut = '';
+
     public string $dateFin = '';
 
     public function mount(): void
@@ -33,20 +38,28 @@ class RapportManager extends Component
         match ($preset) {
             'this_month' => [$this->dateDebut = $now->copy()->startOfMonth()->toDateString(), $this->dateFin = $now->copy()->endOfMonth()->toDateString()],
             'last_month' => [$this->dateDebut = $now->copy()->subMonthNoOverflow()->startOfMonth()->toDateString(), $this->dateFin = $now->copy()->subMonthNoOverflow()->endOfMonth()->toDateString()],
-            'this_week'  => [$this->dateDebut = $now->copy()->startOfWeek()->toDateString(), $this->dateFin = $now->copy()->endOfWeek()->toDateString()],
-            '7d'         => [$this->dateDebut = $now->copy()->subDays(6)->toDateString(), $this->dateFin = $now->toDateString()],
-            '30d'        => [$this->dateDebut = $now->copy()->subDays(29)->toDateString(), $this->dateFin = $now->toDateString()],
-            default      => null, // custom : on garde les dates saisies
+            'this_week' => [$this->dateDebut = $now->copy()->startOfWeek()->toDateString(), $this->dateFin = $now->copy()->endOfWeek()->toDateString()],
+            '7d' => [$this->dateDebut = $now->copy()->subDays(6)->toDateString(), $this->dateFin = $now->toDateString()],
+            '30d' => [$this->dateDebut = $now->copy()->subDays(29)->toDateString(), $this->dateFin = $now->toDateString()],
+            default => null, // custom : on garde les dates saisies
         };
     }
 
-    public function updatedDateDebut(): void { $this->preset = 'custom'; }
-    public function updatedDateFin(): void { $this->preset = 'custom'; }
+    public function updatedDateDebut(): void
+    {
+        $this->preset = 'custom';
+    }
+
+    public function updatedDateFin(): void
+    {
+        $this->preset = 'custom';
+    }
 
     private function range(): array
     {
         $start = $this->dateDebut ? Carbon::parse($this->dateDebut) : now()->startOfMonth();
-        $end   = $this->dateFin ? Carbon::parse($this->dateFin) : now();
+        $end = $this->dateFin ? Carbon::parse($this->dateFin) : now();
+
         return [$start, $end];
     }
 
@@ -57,6 +70,7 @@ class RapportManager extends Component
 
     public function exportRapportPdf()
     {
+        $this->autoriser('finance.rapport.export');
         [$start, $end] = $this->range();
         $data = app(ReportService::class)->data($this->compagnieId(), $start, $end);
         $compagnie = auth()->user()->compagnie;
@@ -64,40 +78,44 @@ class RapportManager extends Component
         $pdf = Pdf::loadView('exports.rapport', compact('data', 'compagnie'));
 
         return response()->streamDownload(
-            fn () => print($pdf->output()),
-            'rapport-' . $start->format('Y-m-d') . '_' . $end->format('Y-m-d') . '.pdf',
+            fn () => print ($pdf->output()),
+            'rapport-'.$start->format('Y-m-d').'_'.$end->format('Y-m-d').'.pdf',
         );
     }
 
     public function exportPaiements()
     {
+        $this->autoriser('finance.rapport.export');
         [$start, $end] = $this->range();
         $query = app(ReportService::class)->paiementsQuery($this->compagnieId(), $start, $end);
 
         return Excel::download(
             new PaiementsExport($query),
-            'paiements-' . $start->format('Y-m-d') . '_' . $end->format('Y-m-d') . '.xlsx',
+            'paiements-'.$start->format('Y-m-d').'_'.$end->format('Y-m-d').'.xlsx',
         );
     }
 
     public function exportTrajets()
     {
+        $this->autoriser('finance.rapport.export');
         [$start, $end] = $this->range();
         $data = app(ReportService::class)->data($this->compagnieId(), $start, $end);
 
         return Excel::download(
             new RapportTrajetsExport($data['topTrajets']),
-            'rapport-trajets-' . $start->format('Y-m-d') . '_' . $end->format('Y-m-d') . '.xlsx',
+            'rapport-trajets-'.$start->format('Y-m-d').'_'.$end->format('Y-m-d').'.xlsx',
         );
     }
 
     public function envoyerEmail()
     {
+        $this->autoriser('finance.rapport.export');
         [$start, $end] = $this->range();
         $user = auth()->user();
 
         if (empty($user->email)) {
             $this->dispatch('toast', type: 'error', message: 'Aucune adresse email sur votre compte.');
+
             return;
         }
 
@@ -105,12 +123,12 @@ class RapportManager extends Component
             $data = app(ReportService::class)->data($this->compagnieId(), $start, $end);
             $compagnie = $user->compagnie;
             $pdf = Pdf::loadView('exports.rapport', compact('data', 'compagnie'))->output();
-            $label = 'Période ' . $start->format('d/m/Y') . ' → ' . $end->format('d/m/Y');
+            $label = 'Période '.$start->format('d/m/Y').' → '.$end->format('d/m/Y');
 
             Mail::to($user->email)->send(new RapportMail($compagnie, $data, $label, $pdf));
-            $this->dispatch('toast', type: 'success', message: 'Rapport envoyé à ' . $user->email);
+            $this->dispatch('toast', type: 'success', message: 'Rapport envoyé à '.$user->email);
         } catch (\Throwable $e) {
-            $this->dispatch('toast', type: 'error', message: "Échec de l'envoi : " . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: "Échec de l'envoi : ".$e->getMessage());
         }
     }
 

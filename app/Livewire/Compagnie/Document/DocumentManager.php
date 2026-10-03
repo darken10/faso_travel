@@ -9,49 +9,62 @@ use App\Models\Document;
 use App\Models\DocumentRappel;
 use App\Models\Finance\Depense;
 use App\Models\Finance\Recette;
+use App\Traits\AutoriseLesActions;
+use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
-use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class DocumentManager extends Component
 {
+    use AutoriseLesActions;
     use ScopedToCompagnie;
-
-    use WithPagination, WithFileUploads;
+    use WithFileUploads, WithPagination;
 
     // ── Filtres liste ─────────────────────────────────────────────────────────
-    public string $search        = '';
-    public string $filterType    = '';
-    public string $filterStatut  = '';
+    public string $search = '';
+
+    public string $filterType = '';
+
+    public string $filterStatut = '';
 
     // ── Modal état ────────────────────────────────────────────────────────────
-    public bool   $showModal  = false;
-    public ?int   $editingId  = null;
+    public bool $showModal = false;
+
+    public ?int $editingId = null;
 
     // ── Champs formulaire ─────────────────────────────────────────────────────
-    public string  $titre              = '';
-    public string  $description        = '';
-    public string  $documentable_type  = '';
-    public string  $documentable_id    = '';
-    public bool    $has_expiration     = false;
-    public string  $date_expiration    = '';
-    public         $fichier            = null;
-    public ?string $existingFilePath   = null;
-    public ?string $existingFileName   = null;
-    public array   $rappels            = [];
+    public string $titre = '';
+
+    public string $description = '';
+
+    public string $documentable_type = '';
+
+    public string $documentable_id = '';
+
+    public bool $has_expiration = false;
+
+    public string $date_expiration = '';
+
+    public $fichier = null;
+
+    public ?string $existingFilePath = null;
+
+    public ?string $existingFileName = null;
+
+    public array $rappels = [];
 
     // ── Types d'entités disponibles ───────────────────────────────────────────
     public const ENTITY_TYPES = [
         'App\\Models\\Compagnie\\Chauffer' => 'Chauffeur',
-        'App\\Models\\Compagnie\\Care'     => 'Véhicule',
-        'App\\Models\\Compagnie\\Gare'     => 'Gare',
-        'App\\Models\\Finance\\Depense'    => 'Dépense',
-        'App\\Models\\Finance\\Recette'    => 'Recette',
+        'App\\Models\\Compagnie\\Care' => 'Véhicule',
+        'App\\Models\\Compagnie\\Gare' => 'Gare',
+        'App\\Models\\Finance\\Depense' => 'Dépense',
+        'App\\Models\\Finance\\Recette' => 'Recette',
     ];
 
     // ── Réactivité ────────────────────────────────────────────────────────────
@@ -80,11 +93,13 @@ class DocumentManager extends Component
 
     public function addRappel(): void
     {
+        $this->autoriser('reseau.document.manageRappel');
         $this->rappels[] = ['delai_valeur' => 7, 'delai_unite' => 'jours', 'canaux' => ['email']];
     }
 
     public function removeRappel(int $index): void
     {
+        $this->autoriser('reseau.document.manageRappel');
         array_splice($this->rappels, $index, 1);
         $this->rappels = array_values($this->rappels);
     }
@@ -93,7 +108,7 @@ class DocumentManager extends Component
     {
         $canaux = $this->rappels[$index]['canaux'] ?? [];
         if (in_array($canal, $canaux)) {
-            $canaux = array_values(array_filter($canaux, fn($c) => $c !== $canal));
+            $canaux = array_values(array_filter($canaux, fn ($c) => $c !== $canal));
         } else {
             $canaux[] = $canal;
         }
@@ -116,38 +131,39 @@ class DocumentManager extends Component
     {
         $doc = Document::ofCompagnie($this->compagnieId())->with('rappels')->findOrFail($id);
 
-        $this->editingId          = $id;
-        $this->titre              = $doc->titre;
-        $this->description        = $doc->description ?? '';
-        $this->documentable_type  = $doc->documentable_type;
-        $this->documentable_id    = (string) $doc->documentable_id;
-        $this->has_expiration     = $doc->has_expiration;
-        $this->date_expiration    = $doc->date_expiration?->format('Y-m-d') ?? '';
-        $this->fichier            = null;
-        $this->existingFilePath   = $doc->file_path;
-        $this->existingFileName   = $doc->file_name;
-        $this->rappels            = $doc->rappels->map(fn($r) => [
+        $this->editingId = $id;
+        $this->titre = $doc->titre;
+        $this->description = $doc->description ?? '';
+        $this->documentable_type = $doc->documentable_type;
+        $this->documentable_id = (string) $doc->documentable_id;
+        $this->has_expiration = $doc->has_expiration;
+        $this->date_expiration = $doc->date_expiration?->format('Y-m-d') ?? '';
+        $this->fichier = null;
+        $this->existingFilePath = $doc->file_path;
+        $this->existingFileName = $doc->file_name;
+        $this->rappels = $doc->rappels->map(fn ($r) => [
             'delai_valeur' => $r->delai_valeur,
-            'delai_unite'  => $r->delai_unite,
-            'canaux'       => $r->canaux,
+            'delai_unite' => $r->delai_unite,
+            'canaux' => $r->canaux,
         ])->toArray();
         $this->showModal = true;
     }
 
     public function save(): void
     {
+        $this->autoriser('reseau.document.upload');
         $rules = [
-            'titre'             => 'required|string|max:255',
-            'description'       => 'nullable|string|max:1000',
+            'titre' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
             'documentable_type' => 'required|string',
-            'documentable_id'   => 'required|string',
-            'has_expiration'    => 'boolean',
-            'date_expiration'   => 'nullable|date|required_if:has_expiration,true',
-            'fichier'           => $this->editingId ? 'nullable|file|max:10240' : 'required|file|max:10240',
+            'documentable_id' => 'required|string',
+            'has_expiration' => 'boolean',
+            'date_expiration' => 'nullable|date|required_if:has_expiration,true',
+            'fichier' => $this->editingId ? 'nullable|file|max:10240' : 'required|file|max:10240',
             'rappels.*.delai_valeur' => 'required|integer|min:0',
-            'rappels.*.delai_unite'  => 'required|in:jours,heures',
-            'rappels.*.canaux'       => 'required|array|min:1',
-            'rappels.*.canaux.*'     => 'in:email,sms,whatsapp,telegram',
+            'rappels.*.delai_unite' => 'required|in:jours,heures',
+            'rappels.*.canaux' => 'required|array|min:1',
+            'rappels.*.canaux.*' => 'in:email,sms,whatsapp,telegram',
         ];
 
         $this->validate($rules);
@@ -156,12 +172,12 @@ class DocumentManager extends Component
 
         $data = [
             'documentable_type' => $this->documentable_type,
-            'documentable_id'   => $this->documentable_id,
-            'compagnie_id'      => $compagnieId,
-            'titre'             => $this->titre,
-            'description'       => $this->description ?: null,
-            'has_expiration'    => $this->has_expiration,
-            'date_expiration'   => $this->has_expiration && $this->date_expiration ? $this->date_expiration : null,
+            'documentable_id' => $this->documentable_id,
+            'compagnie_id' => $compagnieId,
+            'titre' => $this->titre,
+            'description' => $this->description ?: null,
+            'has_expiration' => $this->has_expiration,
+            'date_expiration' => $this->has_expiration && $this->date_expiration ? $this->date_expiration : null,
         ];
 
         if ($this->fichier) {
@@ -184,10 +200,10 @@ class DocumentManager extends Component
 
         foreach ($this->rappels as $rappel) {
             DocumentRappel::create([
-                'document_id'  => $doc->id,
+                'document_id' => $doc->id,
                 'delai_valeur' => $rappel['delai_valeur'],
-                'delai_unite'  => $rappel['delai_unite'],
-                'canaux'       => $rappel['canaux'],
+                'delai_unite' => $rappel['delai_unite'],
+                'canaux' => $rappel['canaux'],
             ]);
         }
 
@@ -202,6 +218,7 @@ class DocumentManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('reseau.document.delete');
         $doc = Document::ofCompagnie($this->compagnieId())->findOrFail($id);
         Storage::disk('public')->delete($doc->file_path);
         $doc->delete();
@@ -212,26 +229,28 @@ class DocumentManager extends Component
 
     public function getEntitiesProperty(): array
     {
-        if (!$this->documentable_type) return [];
+        if (! $this->documentable_type) {
+            return [];
+        }
         $cid = Auth::user()->compagnie_id;
 
         return match ($this->documentable_type) {
             Chauffer::class => Chauffer::where('compagnie_id', $cid)->get(['id', 'first_name', 'last_name'])
-                ->map(fn($c) => ['id' => $c->id, 'label' => $c->fullName()])->toArray(),
+                ->map(fn ($c) => ['id' => $c->id, 'label' => $c->fullName()])->toArray(),
 
             Care::class => Care::withoutGlobalScopes()->where('compagnie_id', $cid)->get(['id', 'immatrculation'])
-                ->map(fn($c) => ['id' => $c->id, 'label' => $c->immatrculation])->toArray(),
+                ->map(fn ($c) => ['id' => $c->id, 'label' => $c->immatrculation])->toArray(),
 
             Gare::class => Gare::withoutGlobalScopes()->where('compagnie_id', $cid)->get(['id', 'name'])
-                ->map(fn($g) => ['id' => $g->id, 'label' => $g->name])->toArray(),
+                ->map(fn ($g) => ['id' => $g->id, 'label' => $g->name])->toArray(),
 
             Depense::class => Depense::withoutGlobalScopes()->where('compagnie_id', $cid)
                 ->latest()->limit(100)->get(['id', 'libelle', 'montant'])
-                ->map(fn($d) => ['id' => $d->id, 'label' => $d->libelle . ' · ' . number_format($d->montant, 0, ',', ' ') . ' F'])->toArray(),
+                ->map(fn ($d) => ['id' => $d->id, 'label' => $d->libelle.' · '.number_format($d->montant, 0, ',', ' ').' F'])->toArray(),
 
             Recette::class => Recette::withoutGlobalScopes()->where('compagnie_id', $cid)
                 ->latest()->limit(100)->get(['id', 'libelle', 'montant'])
-                ->map(fn($r) => ['id' => $r->id, 'label' => $r->libelle . ' · ' . number_format($r->montant, 0, ',', ' ') . ' F'])->toArray(),
+                ->map(fn ($r) => ['id' => $r->id, 'label' => $r->libelle.' · '.number_format($r->montant, 0, ',', ' ').' F'])->toArray(),
 
             default => [],
         };
@@ -242,22 +261,22 @@ class DocumentManager extends Component
     public function render()
     {
         $compagnieId = Auth::user()->compagnie_id;
-        $today       = now()->startOfDay();
+        $today = now()->startOfDay();
 
         $documents = Document::with(['rappels'])
             ->where('compagnie_id', $compagnieId)
-            ->when($this->search, fn($q) => $q->where('titre', 'like', "%{$this->search}%"))
-            ->when($this->filterType, fn($q) => $q->where('documentable_type', $this->filterType))
-            ->when($this->filterStatut === 'expire', fn($q) => $q
+            ->when($this->search, fn ($q) => $q->where('titre', 'like', "%{$this->search}%"))
+            ->when($this->filterType, fn ($q) => $q->where('documentable_type', $this->filterType))
+            ->when($this->filterStatut === 'expire', fn ($q) => $q
                 ->where('has_expiration', true)
                 ->whereNotNull('date_expiration')
                 ->where('date_expiration', '<', $today))
-            ->when($this->filterStatut === 'expire_bientot', fn($q) => $q
+            ->when($this->filterStatut === 'expire_bientot', fn ($q) => $q
                 ->where('has_expiration', true)
                 ->whereNotNull('date_expiration')
                 ->whereBetween('date_expiration', [$today, (clone $today)->addDays(7)]))
-            ->when($this->filterStatut === 'valide', fn($q) => $q
-                ->where(fn($s) => $s
+            ->when($this->filterStatut === 'valide', fn ($q) => $q
+                ->where(fn ($s) => $s
                     ->where('has_expiration', false)
                     ->orWhereNull('date_expiration')
                     ->orWhere('date_expiration', '>', (clone $today)->addDays(7))))
@@ -265,7 +284,7 @@ class DocumentManager extends Component
             ->paginate(12);
 
         return view('livewire.compagnie.document.document-manager', [
-            'documents'   => $documents,
+            'documents' => $documents,
             'entityTypes' => self::ENTITY_TYPES,
         ]);
     }

@@ -5,6 +5,7 @@ namespace App\Livewire\Compagnie\Finance;
 use App\Exports\DepensesExport;
 use App\Models\Finance\CategorieDepense;
 use App\Models\Finance\Depense;
+use App\Traits\AutoriseLesActions;
 use App\Traits\JournaliseLesActions;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -16,6 +17,7 @@ use Maatwebsite\Excel\Facades\Excel;
 #[Layout('layouts.compagnie-panel')]
 class DepenseManager extends Component
 {
+    use AutoriseLesActions;
     use JournaliseLesActions;
     use WithPagination;
 
@@ -97,6 +99,7 @@ class DepenseManager extends Component
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'finance.depense.update' : 'finance.depense.create');
         $this->validate();
         $compagnieId = Auth::user()->compagnie_id;
 
@@ -125,6 +128,7 @@ class DepenseManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('finance.depense.delete');
         $depense = Depense::findOrFail($id);
         $avant = $depense->attributesToArray();
         $depense->delete();
@@ -137,6 +141,7 @@ class DepenseManager extends Component
 
     public function export()
     {
+        $this->autoriser('finance.rapport.export');
         $compagnieId = Auth::user()->compagnie_id;
         $query = Depense::where('compagnie_id', $compagnieId)
             ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%'.$this->search.'%'))

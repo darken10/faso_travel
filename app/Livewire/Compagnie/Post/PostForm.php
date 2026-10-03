@@ -6,8 +6,8 @@ use App\Models\Post\Category;
 use App\Models\Post\Post;
 use App\Models\Post\Tag;
 use App\Models\User;
+use App\Traits\AutoriseLesActions;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -15,21 +15,30 @@ use Livewire\WithFileUploads;
 #[Layout('layouts.compagnie-panel')]
 class PostForm extends Component
 {
+    use AutoriseLesActions;
     use WithFileUploads;
 
     public ?int $postId = null;
 
-    public string $title   = '';
+    public string $title = '';
+
     public string $content = '';
-    public ?int   $category_id = null;
-    public array  $selectedTags  = [];
-    public array  $images        = [];
-    public array  $existingImages = [];
+
+    public ?int $category_id = null;
+
+    public array $selectedTags = [];
+
+    public array $images = [];
+
+    public array $existingImages = [];
 
     public string $newCategoryName = '';
-    public string $newTagName      = '';
-    public bool   $showCategoryForm = false;
-    public bool   $showTagForm      = false;
+
+    public string $newTagName = '';
+
+    public bool $showCategoryForm = false;
+
+    public bool $showTagForm = false;
 
     public function mount(?int $postId = null): void
     {
@@ -37,10 +46,10 @@ class PostForm extends Component
 
         if ($postId) {
             $post = $this->findPostOfCompagnie($postId);
-            $this->title          = $post->title;
-            $this->content        = $post->content ?? '';
-            $this->category_id    = $post->category_id;
-            $this->selectedTags   = $post->tags()->pluck('tags.id')->toArray();
+            $this->title = $post->title;
+            $this->content = $post->content ?? '';
+            $this->category_id = $post->category_id;
+            $this->selectedTags = $post->tags()->pluck('tags.id')->toArray();
             $this->existingImages = $post->images_uri ?? [];
         }
     }
@@ -62,29 +71,31 @@ class PostForm extends Component
     protected function rules(): array
     {
         return [
-            'title'        => 'required|string|max:255',
-            'content'      => 'required|string',
-            'category_id'  => 'nullable|exists:categories,id',
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'category_id' => 'nullable|exists:categories,id',
             'selectedTags' => 'array',
-            'images.*'     => 'nullable|image|max:5120',
+            'images.*' => 'nullable|image|max:5120',
         ];
     }
 
     public function addCategory(): void
     {
+        $this->autoriser('contenu.categorie.manage');
         $this->validate(['newCategoryName' => 'required|string|max:100|unique:categories,name']);
         $cat = Category::create(['name' => trim($this->newCategoryName)]);
-        $this->category_id    = $cat->id;
+        $this->category_id = $cat->id;
         $this->newCategoryName = '';
         $this->showCategoryForm = false;
     }
 
     public function addTag(): void
     {
+        $this->autoriser('contenu.tag.manage');
         $this->validate(['newTagName' => 'required|string|max:100|unique:tags,name']);
         $tag = Tag::create(['name' => trim($this->newTagName)]);
         $this->selectedTags[] = $tag->id;
-        $this->newTagName  = '';
+        $this->newTagName = '';
         $this->showTagForm = false;
     }
 
@@ -96,6 +107,7 @@ class PostForm extends Component
 
     public function save(): void
     {
+        $this->autoriser($this->postId ? 'contenu.article.update' : 'contenu.article.create');
         $this->validate();
 
         $newUris = [];
@@ -108,17 +120,17 @@ class PostForm extends Component
         if ($this->postId) {
             $post = $this->findPostOfCompagnie($this->postId);
             $post->update([
-                'title'       => $this->title,
-                'content'     => $this->content,
+                'title' => $this->title,
+                'content' => $this->content,
                 'category_id' => $this->category_id,
-                'images_uri'  => $allImages ?: null,
+                'images_uri' => $allImages ?: null,
             ]);
         } else {
             $post = Post::create([
-                'title'       => $this->title,
-                'content'     => $this->content,
+                'title' => $this->title,
+                'content' => $this->content,
                 'category_id' => $this->category_id,
-                'images_uri'  => $allImages ?: null,
+                'images_uri' => $allImages ?: null,
             ]);
         }
 
@@ -132,7 +144,7 @@ class PostForm extends Component
     {
         return view('livewire.compagnie.post.post-form', [
             'categories' => Category::orderBy('name')->get(),
-            'allTags'    => Tag::orderBy('name')->get(),
+            'allTags' => Tag::orderBy('name')->get(),
         ]);
     }
 }

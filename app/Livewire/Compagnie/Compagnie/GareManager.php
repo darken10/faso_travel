@@ -7,6 +7,7 @@ use App\Models\Statut;
 use App\Models\Ville\Pays;
 use App\Models\Ville\Region;
 use App\Models\Ville\Ville;
+use App\Traits\AutoriseLesActions;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -15,19 +16,28 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class GareManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
-    public string $name      = '';
-    public ?int $pays_id    = null;
-    public ?int $region_id  = null;
-    public ?int $ville_id   = null;
-    public string $lat      = '';
-    public string $lng      = '';
-    public ?int $statut_id  = null;
+    public string $name = '';
+
+    public ?int $pays_id = null;
+
+    public ?int $region_id = null;
+
+    public ?int $ville_id = null;
+
+    public string $lat = '';
+
+    public string $lng = '';
+
+    public ?int $statut_id = null;
 
     public function updatingSearch(): void
     {
@@ -38,9 +48,9 @@ class GareManager extends Component
     {
         $gare = Gare::findOrFail($id);
         $this->dispatch('open-doc-panel',
-            type:     Gare::class,
-            id:       (string) $id,
-            label:    $gare->name,
+            type: Gare::class,
+            id: (string) $id,
+            label: $gare->name,
             typeName: 'Gare',
         );
     }
@@ -51,7 +61,7 @@ class GareManager extends Component
     public function updatedPaysId(): void
     {
         $this->region_id = null;
-        $this->ville_id  = null;
+        $this->ville_id = null;
     }
 
     public function updatedRegionId(): void
@@ -71,12 +81,12 @@ class GareManager extends Component
         $gare = Gare::with('ville.region')->findOrFail($id);
 
         $this->editingId = $id;
-        $this->name      = $gare->name;
-        $this->ville_id  = $gare->ville_id;
+        $this->name = $gare->name;
+        $this->ville_id = $gare->ville_id;
         $this->region_id = $gare->ville?->region_id;
-        $this->pays_id   = $gare->ville?->region?->pays_id;
-        $this->lat       = $gare->lat ?? '';
-        $this->lng       = $gare->lng ?? '';
+        $this->pays_id = $gare->ville?->region?->pays_id;
+        $this->lat = $gare->lat ?? '';
+        $this->lng = $gare->lng ?? '';
         $this->statut_id = $gare->statut_id;
         $this->showModal = true;
         $this->dispatch('gare-modal-opened',
@@ -87,19 +97,20 @@ class GareManager extends Component
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'reseau.gare.update' : 'reseau.gare.create');
         $this->validate([
-            'name'      => 'required|string|max:255',
-            'ville_id'  => 'required|exists:villes,id',
-            'lat'       => 'required|numeric|between:-90,90',
-            'lng'       => 'required|numeric|between:-180,180',
+            'name' => 'required|string|max:255',
+            'ville_id' => 'required|exists:villes,id',
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
             'statut_id' => 'nullable|exists:statuts,id',
         ]);
 
         $data = [
-            'name'      => $this->name,
-            'ville_id'  => $this->ville_id,
-            'lat'       => $this->lat,
-            'lng'       => $this->lng,
+            'name' => $this->name,
+            'ville_id' => $this->ville_id,
+            'lat' => $this->lat,
+            'lng' => $this->lng,
             'statut_id' => $this->statut_id,
         ];
 
@@ -117,9 +128,11 @@ class GareManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('reseau.gare.delete');
         $gare = Gare::findOrFail($id);
         if ($gare->is_default) {
             $this->dispatch('toast', type: 'error', message: 'Impossible de supprimer une gare par défaut.');
+
             return;
         }
         $gare->delete();
@@ -130,9 +143,9 @@ class GareManager extends Component
     {
         $gares = Gare::withCount('documents')
             ->with(['ville', 'statut'])
-            ->when($this->search, fn($q) => $q
+            ->when($this->search, fn ($q) => $q
                 ->where('name', 'like', "%{$this->search}%")
-                ->orWhereHas('ville', fn($r) => $r->where('name', 'like', "%{$this->search}%")))
+                ->orWhereHas('ville', fn ($r) => $r->where('name', 'like', "%{$this->search}%")))
             ->orderBy('name')
             ->paginate(15);
 

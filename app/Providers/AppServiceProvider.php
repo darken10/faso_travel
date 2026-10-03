@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\CompanyRole;
 use App\Enums\UserRole;
 use App\Features\Payement\PaymentGatewayFactory;
+use App\Http\Middleware\AuthorizeOrObserve;
 use App\Models\Auth\PersonalAccessToken;
 use App\Models\Compagnie\Compagnie;
 use App\Models\Permission;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
         $this->registerPolicies();
         $this->registerGates();
         $this->registerPermissionGates();
+        $this->registerLivewirePersistentMiddleware();
         $this->configureRateLimiting();
     }
 
@@ -112,6 +115,21 @@ class AppServiceProvider extends ServiceProvider
                 fn (User $user, mixed $sujet = null): bool => $user->hasPermission($nom, $sujet)
             );
         }
+    }
+
+    /**
+     * Rend le contrôle d'autorisation persistant d'une requête Livewire à l'autre.
+     *
+     * Une mise à jour Livewire ne passe pas par la route d'origine : elle tape
+     * `/livewire/update`. Sans cette déclaration, le middleware `can.rbac` posé sur une
+     * route ne protégerait que le premier chargement de la page, et chaque action du
+     * composant serait ensuite hors contrôle — or c'est là que se font les écritures.
+     */
+    private function registerLivewirePersistentMiddleware(): void
+    {
+        Livewire::addPersistentMiddleware([
+            AuthorizeOrObserve::class,
+        ]);
     }
 
     private function configureRateLimiting(): void
