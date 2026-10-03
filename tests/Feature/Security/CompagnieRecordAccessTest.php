@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\CompanyRole;
 use App\Enums\StatutUser;
 use App\Enums\UserRole;
 use App\Livewire\Compagnie\Compagnie\ChauffeurManager;
@@ -11,11 +12,13 @@ use App\Livewire\Compagnie\Voyage\VoyageInstanceManager;
 use App\Livewire\Compagnie\Voyage\VoyageManager;
 use App\Models\Compagnie\Chauffer;
 use App\Models\Compagnie\Compagnie;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -35,7 +38,7 @@ class CompagnieRecordAccessTest extends TestCase
     {
         return User::factory()->create([
             'compagnie_id' => $compagnie->id,
-            'role'         => UserRole::CompagnieBosse,
+            'role' => UserRole::CompagnieBosse,
         ]);
     }
 
@@ -156,18 +159,41 @@ class CompagnieRecordAccessTest extends TestCase
         $this->assertSame(StatutUser::Bloquer, $collegue->fresh()->statut);
     }
 
+    public function test_manage_finance_ne_leve_plus_derreur(): void
+    {
+        $compagnie = Compagnie::factory()->create();
+        $comptabilite = Role::firstOrCreate(
+            ['name' => CompanyRole::Comptabilite->value],
+            ['label' => CompanyRole::Comptabilite->label()],
+        );
+        $agent = Role::firstOrCreate(
+            ['name' => CompanyRole::Agent->value],
+            ['label' => CompanyRole::Agent->label()],
+        );
+
+        $patron = $this->agentDe($compagnie);
+        $comptable = User::factory()->create(['compagnie_id' => $compagnie->id]);
+        $comptable->roles()->attach($comptabilite);
+        $agentTerrain = User::factory()->create(['compagnie_id' => $compagnie->id]);
+        $agentTerrain->roles()->attach($agent);
+
+        foreach ([$patron, $comptable, $agentTerrain] as $user) {
+            $this->assertIsBool(Gate::forUser($user)->allows('manageFinance', $compagnie));
+        }
+    }
+
     // ── Chauffeurs ──────────────────────────────────────────────────────────
 
     public function test_ouvrir_le_chauffeur_dune_autre_compagnie_est_refuse(): void
     {
         $sienne = Compagnie::factory()->create();
         $chauffeurConcurrent = Chauffer::create([
-            'first_name'      => 'Ali',
-            'last_name'       => 'Traoré',
-            'date_naissance'  => '1985-04-12',
-            'genre'           => 'Homme',
-            'statut'          => 'Disponible',
-            'compagnie_id'    => Compagnie::factory()->create()->id,
+            'first_name' => 'Ali',
+            'last_name' => 'Traoré',
+            'date_naissance' => '1985-04-12',
+            'genre' => 'Homme',
+            'statut' => 'Disponible',
+            'compagnie_id' => Compagnie::factory()->create()->id,
         ]);
 
         $this->assertActionRefusee($this->agentDe($sienne), ChauffeurManager::class, 'openEdit', $chauffeurConcurrent->id);
@@ -182,7 +208,7 @@ class CompagnieRecordAccessTest extends TestCase
 
         $billet = \App\Models\Ticket\Ticket::factory()->create([
             'voyage_instance_id' => $instanceConcurrente->id,
-            'voyage_id'          => $instanceConcurrente->voyage_id,
+            'voyage_id' => $instanceConcurrente->voyage_id,
         ]);
 
         $this->assertActionRefusee($this->agentDe($sienne), TicketManager::class, 'bloquer', $billet->id);
@@ -195,9 +221,9 @@ class CompagnieRecordAccessTest extends TestCase
 
         return VoyageInstance::factory()->create([
             'voyage_id' => $voyage->id,
-            'date'      => now()->addDays(3)->toDateString(),
-            'heure'     => '08:00:00',
-            'nb_place'  => 50,
+            'date' => now()->addDays(3)->toDateString(),
+            'heure' => '08:00:00',
+            'nb_place' => 50,
         ]);
     }
 }

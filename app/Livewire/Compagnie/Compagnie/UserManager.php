@@ -2,58 +2,74 @@
 
 namespace App\Livewire\Compagnie\Compagnie;
 
+use App\Enums\CompanyRole;
 use App\Enums\SexeUser;
 use App\Enums\StatutUser;
 use App\Mail\CompanyAccountActivationMail;
 use App\Models\AccountActivation;
 use App\Models\Role;
 use App\Models\User;
+use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class UserManager extends Component
 {
     use ScopedToCompagnie;
-
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public string $first_name = '';
+
     public string $last_name = '';
+
     public string $email = '';
+
     public string $sexe = '';
+
     public string $numero = '';
+
     public string $numero_identifiant = '+226';
+
     public array $selectedRoles = [];
 
     protected function rules(): array
     {
         $emailRule = $this->editingId
-            ? 'required|email|unique:users,email,' . $this->editingId
+            ? 'required|email|unique:users,email,'.$this->editingId
             : 'required|email|unique:users,email';
 
         return [
-            'first_name'         => 'required|string|max:255',
-            'last_name'          => 'required|string|max:255',
-            'email'              => $emailRule,
-            'sexe'               => 'required|string',
-            'numero'             => 'nullable|numeric',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => $emailRule,
+            'sexe' => 'required|string',
+            'numero' => 'nullable|numeric',
             'numero_identifiant' => 'nullable|string|max:10',
-            'selectedRoles'      => 'required|array|min:1',
+            'selectedRoles' => 'required|array|min:1',
+            'selectedRoles.*' => [
+                'integer',
+                Rule::exists('roles', 'id')->whereIn('name', CompanyRole::values()),
+            ],
         ];
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public function openCreate(): void
     {
@@ -85,37 +101,37 @@ class UserManager extends Component
         if ($this->editingId) {
             $user = User::ofCompagnie($this->compagnieId())->findOrFail($this->editingId);
             $user->update([
-                'first_name'         => $this->first_name,
-                'last_name'          => $this->last_name,
-                'email'              => $this->email,
-                'sexe'               => $this->sexe,
-                'numero'             => $this->numero ?: null,
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name,
+                'email' => $this->email,
+                'sexe' => $this->sexe,
+                'numero' => $this->numero ?: null,
                 'numero_identifiant' => $this->numero_identifiant,
-                'name'               => $this->first_name . ' ' . $this->last_name,
+                'name' => $this->first_name.' '.$this->last_name,
             ]);
             $user->roles()->sync($this->selectedRoles);
             $this->dispatch('toast', type: 'success', message: 'Utilisateur mis à jour.');
         } else {
             $password = Str::random(12);
             $user = User::create([
-                'first_name'         => $this->first_name,
-                'last_name'          => $this->last_name,
-                'name'               => $this->first_name . ' ' . $this->last_name,
-                'email'              => $this->email,
-                'password'           => Hash::make($password),
-                'sexe'               => $this->sexe,
-                'numero'             => $this->numero ?: null,
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name,
+                'name' => $this->first_name.' '.$this->last_name,
+                'email' => $this->email,
+                'password' => Hash::make($password),
+                'sexe' => $this->sexe,
+                'numero' => $this->numero ?: null,
                 'numero_identifiant' => $this->numero_identifiant,
-                'compagnie_id'       => $compagnieId,
-                'statut'             => StatutUser::EnAttente->value,
+                'compagnie_id' => $compagnieId,
+                'statut' => StatutUser::EnAttente->value,
             ]);
 
             $user->roles()->sync($this->selectedRoles);
 
             // Send activation email
             $activation = AccountActivation::create([
-                'user_id'    => $user->id,
-                'token'      => Str::random(64),
+                'user_id' => $user->id,
+                'token' => Str::random(64),
                 'expires_at' => now()->addHours(24),
             ]);
 
@@ -161,17 +177,16 @@ class UserManager extends Component
         $compagnieId = Auth::user()->compagnie_id;
 
         $users = User::where('compagnie_id', $compagnieId)
-            ->when($this->search, fn ($q) =>
-                $q->where('first_name', 'like', '%' . $this->search . '%')
-                  ->orWhere('last_name', 'like', '%' . $this->search . '%')
-                  ->orWhere('email', 'like', '%' . $this->search . '%')
+            ->when($this->search, fn ($q) => $q->where('first_name', 'like', '%'.$this->search.'%')
+                ->orWhere('last_name', 'like', '%'.$this->search.'%')
+                ->orWhere('email', 'like', '%'.$this->search.'%')
             )
             ->with('roles')
             ->latest()
             ->paginate(15);
 
         $sexes = SexeUser::cases();
-        $roles = Role::orderBy('label')->get();
+        $roles = Role::whereIn('name', CompanyRole::values())->orderBy('label')->get();
 
         return view('livewire.compagnie.compagnie.user-manager', compact('users', 'sexes', 'roles'));
     }

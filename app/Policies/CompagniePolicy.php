@@ -42,7 +42,11 @@ class CompagniePolicy
     public function manageFinance(User $user, Compagnie $compagnie): bool
     {
         return ($user->compagnie_id === $compagnie->id
-                && in_array($user->company_role, [CompanyRole::Directeur]))
+                && ($user->role === UserRole::CompagnieBosse
+                    || $user->hasAnyRole([
+                        CompanyRole::Admin->value,
+                        CompanyRole::Comptabilite->value,
+                    ])))
             || $this->isAdmin($user);
     }
 
@@ -54,7 +58,8 @@ class CompagniePolicy
     private function isOwner(User $user, Compagnie $compagnie): bool
     {
         return $user->compagnie_id === $compagnie->id
-            && $user->company_role === CompanyRole::Directeur;
+            && ($user->role === UserRole::CompagnieBosse
+                || $user->hasAnyRole([CompanyRole::Admin->value]));
     }
 
     private function isAdmin(User $user): bool
