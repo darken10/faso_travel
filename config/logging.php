@@ -58,6 +58,19 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        /*
+         * Habilitation et piste d'audit : refus d'autorisation en mode observation, et
+         * echecs d'ecriture de la table audit_logs. Separe du log applicatif parce qu'on
+         * le relit pour decider d'activer les controles, pas pour deboguer.
+         */
+        'rbac' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/rbac.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('RBAC_LOG_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

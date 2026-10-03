@@ -5,6 +5,7 @@ namespace App\Livewire\Compagnie\Ticket;
 use App\Enums\ConflictResolution;
 use App\Enums\SyncErrorCode;
 use App\Models\Ticket\TicketValidation;
+use App\Traits\JournaliseLesActions;
 use App\Traits\ScopedToCompagnie;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -24,17 +25,24 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class ConflitManager extends Component
 {
+    use JournaliseLesActions;
     use ScopedToCompagnie;
     use WithPagination;
 
     public string $etat = 'ouverts';   // ouverts | traites | tous
+
     public string $motif = '';
+
     public string $dateFrom = '';
+
     public string $dateTo = '';
 
     public bool $showResolveModal = false;
+
     public ?int $resolvingId = null;
+
     public string $resolution = '';
+
     public string $note = '';
 
     public function mount(): void
@@ -42,10 +50,25 @@ class ConflitManager extends Component
         Gate::authorize('manage-boarding-conflicts');
     }
 
-    public function updatedEtat(): void { $this->resetPage(); }
-    public function updatedMotif(): void { $this->resetPage(); }
-    public function updatedDateFrom(): void { $this->resetPage(); }
-    public function updatedDateTo(): void { $this->resetPage(); }
+    public function updatedEtat(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedMotif(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateTo(): void
+    {
+        $this->resetPage();
+    }
 
     public function resetFilters(): void
     {
@@ -78,20 +101,28 @@ class ConflitManager extends Component
 
         $this->validate([
             'resolution' => ['required', Rule::in(ConflictResolution::values())],
-            'note'       => ['nullable', 'string', 'max:1000'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ], [
             'resolution.required' => 'Choisissez une issue.',
-            'resolution.in'       => 'Issue invalide.',
+            'resolution.in' => 'Issue invalide.',
         ]);
 
         $conflit = $this->baseQuery()->findOrFail($this->resolvingId);
 
         $conflit->update([
-            'resolution'      => $this->resolution,
+            'resolution' => $this->resolution,
             'resolution_note' => trim($this->note) ?: null,
-            'resolved_by_id'  => Auth::id(),
-            'resolved_at'     => now(),
+            'resolved_by_id' => Auth::id(),
+            'resolved_at' => now(),
         ]);
+
+        $this->journaliser(
+            'embarquement.conflit.resolve',
+            $conflit,
+            ['resolution' => null],
+            ['resolution' => $this->resolution],
+            trim($this->note) ?: null,
+        );
 
         $this->closeResolve();
         $this->dispatch('toast', type: 'success', message: 'Conflit traité.');
@@ -131,11 +162,11 @@ class ConflitManager extends Component
 
         return view('livewire.compagnie.ticket.conflit-manager', [
             'conflits' => $conflits,
-            'ouverts'  => $this->baseQuery()->whereNull('resolved_at')->count(),
-            'traites'  => $this->baseQuery()->whereNotNull('resolved_at')->count(),
+            'ouverts' => $this->baseQuery()->whereNull('resolved_at')->count(),
+            'traites' => $this->baseQuery()->whereNotNull('resolved_at')->count(),
             // ServerError n'est jamais journalisé (il est réessayé), inutile de le proposer.
-            'motifs'   => array_values(array_filter(SyncErrorCode::cases(), fn ($c) => $c !== SyncErrorCode::ServerError)),
-            'issues'   => ConflictResolution::cases(),
+            'motifs' => array_values(array_filter(SyncErrorCode::cases(), fn ($c) => $c !== SyncErrorCode::ServerError)),
+            'issues' => ConflictResolution::cases(),
         ]);
     }
 }

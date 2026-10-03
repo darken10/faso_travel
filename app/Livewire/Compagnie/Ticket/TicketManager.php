@@ -6,67 +6,92 @@ use App\Enums\StatutTicket;
 use App\Exports\TicketsExport;
 use App\Helper\TicketValidation;
 use App\Models\Ticket\Ticket;
-use Carbon\Carbon;
+use App\Traits\JournaliseLesActions;
+use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class TicketManager extends Component
 {
+    use JournaliseLesActions;
     use ScopedToCompagnie;
-
     use WithPagination;
 
     public string $search = '';
+
     public string $statutFilter = '';
+
     public string $dateFrom = '';
+
     public string $dateTo = '';
+
     public string $perPage = '15';
 
-    public bool   $showConfirmModal    = false;
-    public ?int   $confirmTicketId     = null;
-    public string $confirmAction       = '';
-    public string $confirmTitle        = '';
-    public string $confirmMessage      = '';
-    public string $confirmButtonLabel  = '';
-    public string $confirmButtonClass  = '';
+    public bool $showConfirmModal = false;
 
-    public function updatedSearch(): void { $this->resetPage(); }
-    public function updatedStatutFilter(): void { $this->resetPage(); }
-    public function updatedDateFrom(): void { $this->resetPage(); }
-    public function updatedDateTo(): void { $this->resetPage(); }
+    public ?int $confirmTicketId = null;
+
+    public string $confirmAction = '';
+
+    public string $confirmTitle = '';
+
+    public string $confirmMessage = '';
+
+    public string $confirmButtonLabel = '';
+
+    public string $confirmButtonClass = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatutFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedDateTo(): void
+    {
+        $this->resetPage();
+    }
 
     public function openConfirm(int $id, string $action): void
     {
         $this->confirmTicketId = $id;
-        $this->confirmAction   = $action;
+        $this->confirmAction = $action;
 
         match ($action) {
             'valider' => [
-                $this->confirmTitle       = 'Valider ce ticket',
-                $this->confirmMessage     = 'Êtes-vous sûr de vouloir valider ce ticket ? Cette action marquera le ticket comme validé.',
+                $this->confirmTitle = 'Valider ce ticket',
+                $this->confirmMessage = 'Êtes-vous sûr de vouloir valider ce ticket ? Cette action marquera le ticket comme validé.',
                 $this->confirmButtonLabel = 'Valider',
                 $this->confirmButtonClass = 'bg-green-600 hover:bg-green-700 text-white',
             ],
             'bloquer' => [
-                $this->confirmTitle       = 'Bloquer ce ticket',
-                $this->confirmMessage     = 'Êtes-vous sûr de vouloir bloquer ce ticket ? Le client ne pourra plus l\'utiliser.',
+                $this->confirmTitle = 'Bloquer ce ticket',
+                $this->confirmMessage = 'Êtes-vous sûr de vouloir bloquer ce ticket ? Le client ne pourra plus l\'utiliser.',
                 $this->confirmButtonLabel = 'Bloquer',
                 $this->confirmButtonClass = 'bg-red-600 hover:bg-red-700 text-white',
             ],
             'activer' => [
-                $this->confirmTitle       = 'Réactiver ce ticket',
-                $this->confirmMessage     = 'Êtes-vous sûr de vouloir réactiver ce ticket ?',
+                $this->confirmTitle = 'Réactiver ce ticket',
+                $this->confirmMessage = 'Êtes-vous sûr de vouloir réactiver ce ticket ?',
                 $this->confirmButtonLabel = 'Réactiver',
                 $this->confirmButtonClass = 'bg-blue-600 hover:bg-blue-700 text-white',
             ],
             'rembourser' => [
-                $this->confirmTitle       = 'Rembourser ce ticket',
-                $this->confirmMessage     = 'Confirmer le remboursement ? Le ticket sera annulé et le client notifié.',
+                $this->confirmTitle = 'Rembourser ce ticket',
+                $this->confirmMessage = 'Confirmer le remboursement ? Le ticket sera annulé et le client notifié.',
                 $this->confirmButtonLabel = 'Rembourser',
                 $this->confirmButtonClass = 'bg-purple-600 hover:bg-purple-700 text-white',
             ],
@@ -83,16 +108,16 @@ class TicketManager extends Component
         }
 
         match ($this->confirmAction) {
-            'valider'    => $this->valider($this->confirmTicketId),
-            'bloquer'    => $this->bloquer($this->confirmTicketId),
-            'activer'    => $this->activer($this->confirmTicketId),
+            'valider' => $this->valider($this->confirmTicketId),
+            'bloquer' => $this->bloquer($this->confirmTicketId),
+            'activer' => $this->activer($this->confirmTicketId),
             'rembourser' => $this->rembourser($this->confirmTicketId),
-            default      => null,
+            default => null,
         };
 
         $this->showConfirmModal = false;
-        $this->confirmTicketId  = null;
-        $this->confirmAction    = '';
+        $this->confirmTicketId = null;
+        $this->confirmAction = '';
     }
 
     public function resetFilters(): void
@@ -105,7 +130,7 @@ class TicketManager extends Component
     {
         return Excel::download(
             new TicketsExport($this->baseQuery()->latest()),
-            'tickets-' . now()->format('Y-m-d') . '.xlsx',
+            'tickets-'.now()->format('Y-m-d').'.xlsx',
         );
     }
 
@@ -117,7 +142,7 @@ class TicketManager extends Component
             TicketValidation::valider($ticket);
             $this->dispatch('toast', type: 'success', message: 'Ticket validé avec succès.');
         } catch (\Throwable $e) {
-            $this->dispatch('toast', type: 'error', message: 'Erreur lors de la validation : ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'Erreur lors de la validation : '.$e->getMessage());
         }
     }
 
@@ -129,7 +154,7 @@ class TicketManager extends Component
             TicketValidation::bloque($ticket);
             $this->dispatch('toast', type: 'success', message: 'Ticket bloqué.');
         } catch (\Throwable $e) {
-            $this->dispatch('toast', type: 'error', message: 'Erreur : ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'Erreur : '.$e->getMessage());
         }
     }
 
@@ -137,11 +162,19 @@ class TicketManager extends Component
     {
         $ticket = Ticket::ofCompagnie($this->compagnieId())->findOrFail($id);
 
+        $statutAvant = $ticket->statut;
+
         try {
             TicketValidation::active($ticket);
+            $this->journaliser(
+                'guichet.ticket.unblock',
+                $ticket,
+                ['statut' => $statutAvant?->value ?? $statutAvant],
+                ['statut' => $ticket->fresh()?->statut?->value],
+            );
             $this->dispatch('toast', type: 'success', message: 'Ticket réactivé.');
         } catch (\Throwable $e) {
-            $this->dispatch('toast', type: 'error', message: 'Erreur : ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'Erreur : '.$e->getMessage());
         }
     }
 
@@ -152,17 +185,27 @@ class TicketManager extends Component
         // Remboursable uniquement si en pause (voyage annulé) ou déjà annulé non remboursé.
         if ($ticket->statut !== StatutTicket::Pause) {
             $this->dispatch('toast', type: 'error', message: 'Seul un ticket en pause (voyage annulé) peut être remboursé.');
+
             return;
         }
 
         $montant = (int) $ticket->payements->sum('montant');
 
+        $statutAvant = $ticket->statut;
+
         $ticket->update([
-            'statut'            => StatutTicket::Annuler->value,
-            'rembourse_at'      => now(),
-            'rembourse_par_id'  => Auth::id(),
+            'statut' => StatutTicket::Annuler->value,
+            'rembourse_at' => now(),
+            'rembourse_par_id' => Auth::id(),
             'rembourse_montant' => $montant,
         ]);
+
+        $this->journaliser(
+            'finance.remboursement.approve',
+            $ticket,
+            ['statut' => $statutAvant?->value ?? $statutAvant],
+            ['statut' => StatutTicket::Annuler->value, 'rembourse_montant' => $montant],
+        );
 
         try {
             $ticket->user?->notify(new \App\Notifications\Ticket\RemboursementNotification($ticket, $montant));
@@ -170,7 +213,7 @@ class TicketManager extends Component
             // une notif en échec ne doit pas bloquer le remboursement
         }
 
-        $this->dispatch('toast', type: 'success', message: 'Ticket remboursé (' . number_format($montant, 0, ',', ' ') . ' XOF) et client notifié.');
+        $this->dispatch('toast', type: 'success', message: 'Ticket remboursé ('.number_format($montant, 0, ',', ' ').' XOF) et client notifié.');
     }
 
     private function baseQuery()
@@ -179,24 +222,19 @@ class TicketManager extends Component
 
         return Ticket::withoutGlobalScopes()
             ->with(['user', 'autre_personne', 'voyageInstance.voyage.trajet.depart', 'voyageInstance.voyage.trajet.arriver', 'payements'])
-            ->whereHas('voyageInstance', fn ($q) =>
-                $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
+            ->whereHas('voyageInstance', fn ($q) => $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
             )
-            ->when($this->search, fn ($q) =>
-                $q->where(fn ($inner) =>
-                    $inner->where('numero_ticket', 'like', '%' . $this->search . '%')
-                          ->orWhere('code_sms', 'like', '%' . $this->search . '%')
-                          ->orWhereHas('user', fn ($u) =>
-                              $u->where('first_name', 'like', '%' . $this->search . '%')
-                                ->orWhere('last_name', 'like', '%' . $this->search . '%')
-                                ->orWhere('numero', 'like', '%' . $this->search . '%')
-                          )
-                          ->orWhereHas('autre_personne', fn ($ap) =>
-                              $ap->where('first_name', 'like', '%' . $this->search . '%')
-                                 ->orWhere('last_name', 'like', '%' . $this->search . '%')
-                                 ->orWhere('numero', 'like', '%' . $this->search . '%')
-                          )
+            ->when($this->search, fn ($q) => $q->where(fn ($inner) => $inner->where('numero_ticket', 'like', '%'.$this->search.'%')
+                ->orWhere('code_sms', 'like', '%'.$this->search.'%')
+                ->orWhereHas('user', fn ($u) => $u->where('first_name', 'like', '%'.$this->search.'%')
+                    ->orWhere('last_name', 'like', '%'.$this->search.'%')
+                    ->orWhere('numero', 'like', '%'.$this->search.'%')
                 )
+                ->orWhereHas('autre_personne', fn ($ap) => $ap->where('first_name', 'like', '%'.$this->search.'%')
+                    ->orWhere('last_name', 'like', '%'.$this->search.'%')
+                    ->orWhere('numero', 'like', '%'.$this->search.'%')
+                )
+            )
             )
             ->when($this->statutFilter, fn ($q) => $q->where('tickets.statut', $this->statutFilter))
             ->when($this->dateFrom, fn ($q) => $q->whereDate('date', '>=', $this->dateFrom))
@@ -213,18 +251,17 @@ class TicketManager extends Component
 
         // Statistiques rapides (sans filtres de recherche pour être représentatives)
         $statsBase = Ticket::withoutGlobalScopes()
-            ->whereHas('voyageInstance', fn ($q) =>
-                $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
+            ->whereHas('voyageInstance', fn ($q) => $q->whereHas('voyage', fn ($q2) => $q2->where('compagnie_id', $compagnieId))
             );
 
         $stats = [
-            'total'   => (clone $statsBase)->count(),
-            'payes'   => (clone $statsBase)->where('tickets.statut', StatutTicket::Payer)->count(),
+            'total' => (clone $statsBase)->count(),
+            'payes' => (clone $statsBase)->where('tickets.statut', StatutTicket::Payer)->count(),
             'valides' => (clone $statsBase)->where('tickets.statut', StatutTicket::Valider)->count(),
             'bloques' => (clone $statsBase)->where('tickets.statut', StatutTicket::Bloquer)->count(),
             'recette' => (clone $statsBase)->where('tickets.statut', StatutTicket::Valider)
-                             ->join('payements', 'tickets.id', '=', 'payements.ticket_id')
-                             ->sum('payements.montant'),
+                ->join('payements', 'tickets.id', '=', 'payements.ticket_id')
+                ->sum('payements.montant'),
         ];
 
         $statuts = StatutTicket::cases();

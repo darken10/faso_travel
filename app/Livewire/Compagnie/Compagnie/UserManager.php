@@ -9,6 +9,7 @@ use App\Models\AccountActivation;
 use App\Models\Compagnie\Gare;
 use App\Models\Role;
 use App\Models\User;
+use App\Traits\JournaliseLesActions;
 use App\Traits\ScopedToCompagnie;
 use App\Traits\ScopedToGare;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,7 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class UserManager extends Component
 {
+    use JournaliseLesActions;
     use ScopedToCompagnie;
     use ScopedToGare;
     use WithPagination;
@@ -139,8 +141,10 @@ class UserManager extends Component
                 'numero_identifiant' => $this->numero_identifiant,
                 'name' => $this->first_name.' '.$this->last_name,
             ]);
+            $rolesAvant = $user->roles()->pluck('name')->sort()->values()->all();
             $user->syncRoles($this->selectedRoles);
             $user->syncGares($this->affectationsGares());
+            $this->journaliserAttributionDeRoles($user, $rolesAvant);
             $this->dispatch('toast', type: 'success', message: 'Utilisateur mis à jour.');
         } else {
             $password = Str::random(12);
@@ -159,6 +163,7 @@ class UserManager extends Component
 
             $user->syncRoles($this->selectedRoles);
             $user->syncGares($this->affectationsGares());
+            $this->journaliserAttributionDeRoles($user, []);
 
             // Send activation email
             $activation = AccountActivation::create([
@@ -176,6 +181,30 @@ class UserManager extends Component
         $this->showModal = false;
         $this->reset(['editingId', 'first_name', 'last_name', 'email', 'sexe', 'numero', 'selectedRoles', 'selectedGares', 'garePrincipale']);
         $this->numero_identifiant = '+226';
+    }
+
+    /**
+     * Journalise l'attribution de rôles et de gares.
+     *
+     * N'écrit rien si rien n'a bougé : une trace par enregistrement de formulaire noierait
+     * les attributions réelles sous les modifications de numéro de téléphone.
+     *
+     * @param  list<string>  $rolesAvant
+     */
+    private function journaliserAttributionDeRoles(User $user, array $rolesAvant): void
+    {
+        $rolesApres = $user->roles()->pluck('name')->sort()->values()->all();
+
+        if ($rolesAvant === $rolesApres) {
+            return;
+        }
+
+        $this->journaliser(
+            'compagnie.role.assign',
+            $user,
+            ['roles' => $rolesAvant],
+            ['roles' => $rolesApres, 'gares' => $user->gareIds()],
+        );
     }
 
     /**

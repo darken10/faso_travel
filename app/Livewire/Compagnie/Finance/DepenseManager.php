@@ -5,6 +5,7 @@ namespace App\Livewire\Compagnie\Finance;
 use App\Exports\DepensesExport;
 use App\Models\Finance\CategorieDepense;
 use App\Models\Finance\Depense;
+use App\Traits\JournaliseLesActions;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -15,42 +16,58 @@ use Maatwebsite\Excel\Facades\Excel;
 #[Layout('layouts.compagnie-panel')]
 class DepenseManager extends Component
 {
+    use JournaliseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public string $categorieFilter = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public string $libelle = '';
+
     public int $montant = 0;
+
     public string $date_depense = '';
+
     public ?int $categorie_depense_id = null;
+
     public string $reference = '';
+
     public string $note = '';
 
     protected function rules(): array
     {
         return [
-            'libelle'              => 'required|string|max:255',
-            'montant'              => 'required|integer|min:1',
-            'date_depense'         => 'required|date',
+            'libelle' => 'required|string|max:255',
+            'montant' => 'required|integer|min:1',
+            'date_depense' => 'required|date',
             'categorie_depense_id' => 'nullable|exists:categorie_depenses,id',
-            'reference'            => 'nullable|string|max:100',
-            'note'                 => 'nullable|string|max:500',
+            'reference' => 'nullable|string|max:100',
+            'note' => 'nullable|string|max:500',
         ];
     }
 
-    public function updatedSearch(): void { $this->resetPage(); }
-    public function updatedCategorieFilter(): void { $this->resetPage(); }
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedCategorieFilter(): void
+    {
+        $this->resetPage();
+    }
 
     public function openDocPanel(int $id): void
     {
         $dep = Depense::findOrFail($id);
         $this->dispatch('open-doc-panel',
-            type:     Depense::class,
-            id:       (string) $id,
-            label:    $dep->libelle . ' · ' . number_format($dep->montant, 0, ',', ' ') . ' F',
+            type: Depense::class,
+            id: (string) $id,
+            label: $dep->libelle.' · '.number_format($dep->montant, 0, ',', ' ').' F',
             typeName: 'Dépense',
         );
     }
@@ -84,12 +101,12 @@ class DepenseManager extends Component
         $compagnieId = Auth::user()->compagnie_id;
 
         $data = [
-            'libelle'              => $this->libelle,
-            'montant'              => $this->montant,
-            'date_depense'         => $this->date_depense,
+            'libelle' => $this->libelle,
+            'montant' => $this->montant,
+            'date_depense' => $this->date_depense,
             'categorie_depense_id' => $this->categorie_depense_id,
-            'reference'            => $this->reference ?: null,
-            'note'                 => $this->note ?: null,
+            'reference' => $this->reference ?: null,
+            'note' => $this->note ?: null,
         ];
 
         if ($this->editingId) {
@@ -97,7 +114,7 @@ class DepenseManager extends Component
         } else {
             Depense::create(array_merge($data, [
                 'compagnie_id' => $compagnieId,
-                'user_id'      => Auth::id(),
+                'user_id' => Auth::id(),
             ]));
         }
 
@@ -108,7 +125,13 @@ class DepenseManager extends Component
 
     public function delete(int $id): void
     {
-        Depense::findOrFail($id)->delete();
+        $depense = Depense::findOrFail($id);
+        $avant = $depense->attributesToArray();
+        $depense->delete();
+
+        // Journalisé avec l'état complet : une suppression ne laisse rien derrière elle,
+        // la trace est la seule façon de savoir ce qui a disparu.
+        $this->journaliser('finance.depense.delete', $depense, $avant);
         $this->dispatch('toast', type: 'success', message: 'Dépense supprimée.');
     }
 
@@ -116,12 +139,12 @@ class DepenseManager extends Component
     {
         $compagnieId = Auth::user()->compagnie_id;
         $query = Depense::where('compagnie_id', $compagnieId)
-            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
+            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%'.$this->search.'%'))
             ->when($this->categorieFilter, fn ($q) => $q->where('categorie_depense_id', $this->categorieFilter))
             ->with('categorie')
             ->latest('date_depense');
 
-        return Excel::download(new DepensesExport($query), 'depenses-' . now()->format('Y-m-d') . '.xlsx');
+        return Excel::download(new DepensesExport($query), 'depenses-'.now()->format('Y-m-d').'.xlsx');
     }
 
     public function render()
@@ -130,7 +153,7 @@ class DepenseManager extends Component
 
         $depenses = Depense::withCount('documents')
             ->where('compagnie_id', $compagnieId)
-            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
+            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%'.$this->search.'%'))
             ->when($this->categorieFilter, fn ($q) => $q->where('categorie_depense_id', $this->categorieFilter))
             ->with('categorie')
             ->latest('date_depense')
@@ -138,7 +161,7 @@ class DepenseManager extends Component
 
         $categories = CategorieDepense::where('compagnie_id', $compagnieId)->orderBy('nom')->get();
         $totalFiltre = Depense::where('compagnie_id', $compagnieId)
-            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%' . $this->search . '%'))
+            ->when($this->search, fn ($q) => $q->where('libelle', 'like', '%'.$this->search.'%'))
             ->when($this->categorieFilter, fn ($q) => $q->where('categorie_depense_id', $this->categorieFilter))
             ->sum('montant');
 
