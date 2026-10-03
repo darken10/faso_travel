@@ -7,12 +7,14 @@ use App\Enums\UserRole;
 use App\Features\Payement\PaymentGatewayFactory;
 use App\Http\Middleware\AuthorizeOrObserve;
 use App\Models\Auth\PersonalAccessToken;
+use App\Models\Compagnie\Care;
 use App\Models\Compagnie\Compagnie;
 use App\Models\Permission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
+use App\Policies\CarePolicy;
 use App\Policies\CompagniePolicy;
 use App\Policies\CompagnieSettingPolicy;
 use App\Policies\TicketPolicy;
@@ -59,6 +61,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Voyage::class, VoyagePolicy::class);
         Gate::policy(VoyageInstance::class, VoyageInstancePolicy::class);
         Gate::policy(Compagnie::class, CompagniePolicy::class);
+        // La découverte automatique chercherait App\Policies\Compagnie\CarePolicy pour un
+        // modèle rangé sous App\Models\Compagnie : sans cet enregistrement explicite, la
+        // policy du parc n'était jamais appliquée.
+        Gate::policy(Care::class, CarePolicy::class);
     }
 
     /**
@@ -77,11 +83,15 @@ class AppServiceProvider extends ServiceProvider
         // l'administration et à la comptabilité. Un agent terrain ou un guichetier
         // ne doit pas pouvoir classer sans suite le refus qui le concerne.
         Gate::define('manage-boarding-conflicts', function (User $user): bool {
-            return $user->compagnie_id !== null
-                && (
-                    $user->role === UserRole::CompagnieBosse
-                    || $user->hasAnyRole([CompanyRole::Admin->value, CompanyRole::Comptabilite->value])
-                );
+            if ($user->compagnie_id === null) {
+                return false;
+            }
+
+            // Les permissions du catalogue s'ajoutent aux rôles historiques : un compte
+            // déjà migré doit passer, un compte pas encore migré doit continuer à passer.
+            return $user->role === UserRole::CompagnieBosse
+                || $user->hasAnyRole([CompanyRole::Admin->value, CompanyRole::Comptabilite->value])
+                || $user->hasPermission('embarquement.conflit.view');
         });
     }
 

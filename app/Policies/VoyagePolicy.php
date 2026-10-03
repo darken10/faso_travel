@@ -2,10 +2,15 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\Voyage\Voyage;
 
+/**
+ * Autorisations de l'offre de voyage.
+ *
+ * La consultation reste ouverte : le catalogue des voyages est public, c'est ce qu'un
+ * voyageur parcourt avant même de créer un compte. Seules les écritures sont gardées.
+ */
 class VoyagePolicy
 {
     public function viewAny(User $user): bool
@@ -20,32 +25,31 @@ class VoyagePolicy
 
     public function create(User $user): bool
     {
-        return $user->compagnie_id !== null || $this->isAdmin($user);
+        return $user->hasPermission('voyage.voyage.create');
     }
 
     public function update(User $user, Voyage $voyage): bool
     {
-        return $this->ownsVoyage($user, $voyage) || $this->isAdmin($user);
+        return $user->hasPermission('voyage.voyage.update', $voyage);
     }
 
     public function delete(User $user, Voyage $voyage): bool
     {
-        return $this->ownsVoyage($user, $voyage) || $this->isAdmin($user);
+        return $user->hasPermission('voyage.voyage.delete', $voyage);
+    }
+
+    public function publish(User $user, Voyage $voyage): bool
+    {
+        return $user->hasPermission('voyage.voyage.publish', $voyage);
     }
 
     public function manageInstances(User $user, Voyage $voyage): bool
     {
-        return $this->ownsVoyage($user, $voyage) || $this->isAdmin($user);
+        return $user->hasPermission('voyage.instance.update', $voyage);
     }
 
-    private function ownsVoyage(User $user, Voyage $voyage): bool
+    public function updateTarif(User $user, Voyage $voyage): bool
     {
-        return $user->compagnie_id !== null
-            && $user->compagnie_id === $voyage->compagnie_id;
-    }
-
-    private function isAdmin(User $user): bool
-    {
-        return in_array($user->role, [UserRole::Admin, UserRole::Root]);
+        return $user->hasPermission('voyage.tarif.update', $voyage);
     }
 }
