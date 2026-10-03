@@ -238,5 +238,6 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/promos/{promoId}', \App\Livewire\Compagnie\Finance\PromoShow::class)->name('promos.show')->middleware('can.rbac:finance.promo.view');
 
     // ─── Configuration ────────────────────────────────────────────────────
+    Route::get('/habilitations', \App\Livewire\Compagnie\Habilitation\RoleManager::class)->name('habilitations')->middleware('can.rbac:compagnie.role.manage');
     Route::get('/parametres', \App\Livewire\Compagnie\Parametre\ParametreManager::class)->name('parametres')->middleware('can.rbac:compagnie.parametres.view');
 });

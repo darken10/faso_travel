@@ -9,6 +9,7 @@ use App\Http\Middleware\AuthorizeOrObserve;
 use App\Models\Auth\PersonalAccessToken;
 use App\Models\Compagnie\Care;
 use App\Models\Compagnie\Compagnie;
+use App\Models\Finance\Depense;
 use App\Models\Permission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -17,6 +18,7 @@ use App\Models\Voyage\VoyageInstance;
 use App\Policies\CarePolicy;
 use App\Policies\CompagniePolicy;
 use App\Policies\CompagnieSettingPolicy;
+use App\Policies\DepensePolicy;
 use App\Policies\TicketPolicy;
 use App\Policies\VoyageInstancePolicy;
 use App\Policies\VoyagePolicy;
@@ -65,6 +67,7 @@ class AppServiceProvider extends ServiceProvider
         // modèle rangé sous App\Models\Compagnie : sans cet enregistrement explicite, la
         // policy du parc n'était jamais appliquée.
         Gate::policy(Care::class, CarePolicy::class);
+        Gate::policy(Depense::class, DepensePolicy::class);
     }
 
     /**

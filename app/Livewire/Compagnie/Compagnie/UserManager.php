@@ -9,6 +9,7 @@ use App\Models\AccountActivation;
 use App\Models\Compagnie\Gare;
 use App\Models\Role;
 use App\Models\User;
+use App\Rbac\ReglesSeparation;
 use App\Traits\AutoriseLesActions;
 use App\Traits\JournaliseLesActions;
 use App\Traits\ScopedToCompagnie;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -130,6 +132,7 @@ class UserManager extends Component
     {
         $this->autoriser($this->editingId ? 'compagnie.user.update' : 'compagnie.user.create');
         $this->validate();
+        $this->verifierSeparationDesPouvoirs();
 
         $compagnieId = Auth::user()->compagnie_id;
 
@@ -184,6 +187,33 @@ class UserManager extends Component
         $this->showModal = false;
         $this->reset(['editingId', 'first_name', 'last_name', 'email', 'sexe', 'numero', 'selectedRoles', 'selectedGares', 'garePrincipale']);
         $this->numero_identifiant = '+226';
+    }
+
+    /**
+     * Refuse les cumuls dangereux, le dépassement de rang et l'auto-administration.
+     *
+     * Le contrôle est ici et non dans `rules()` : il porte sur la combinaison des rôles et
+     * sur l'identité de l'auteur, pas sur la forme d'un champ.
+     */
+    private function verifierSeparationDesPouvoirs(): void
+    {
+        $roles = Role::whereIn('id', $this->selectedRoles)->get();
+
+        $cible = $this->editingId
+            ? User::ofCompagnie($this->compagnieId())->findOrFail($this->editingId)
+            : new User;
+
+        $erreurs = app(ReglesSeparation::class)->verifierAttribution(Auth::user(), $cible, $roles);
+
+        if ($erreurs === []) {
+            return;
+        }
+
+        foreach ($erreurs as $i => $erreur) {
+            $this->addError('selectedRoles'.($i === 0 ? '' : '.'.$i), $erreur);
+        }
+
+        throw ValidationException::withMessages(['selectedRoles' => $erreurs[0]]);
     }
 
     /**
