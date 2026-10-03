@@ -14,19 +14,22 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'role'               => \App\Http\Middleware\Role::class,
+            'role' => \App\Http\Middleware\Role::class,
             'requires.compagnie' => \App\Http\Middleware\RequiresCompagnie::class,
-            'panel.admin'        => \App\Http\Middleware\EnsureIsAdmin::class,
-            'panel.compagnie'    => \App\Http\Middleware\EnsureHasWebCompagnie::class,
-            'client'             => \App\Http\Middleware\EnsureIsClient::class,
+            'panel.admin' => \App\Http\Middleware\EnsureIsAdmin::class,
+            'panel.compagnie' => \App\Http\Middleware\EnsureHasWebCompagnie::class,
+            'client' => \App\Http\Middleware\EnsureIsClient::class,
+            // Contrôle une permission du catalogue RBAC. Bloque ou observe selon
+            // config('rbac.enforce') — voir AuthorizeOrObserve.
+            'can.rbac' => \App\Http\Middleware\AuthorizeOrObserve::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Gestion des erreurs pour les requêtes API
         $exceptions->renderable(function (\Throwable $e, $request) {
             if ($request->is('api/*')) {
-                $statusCode = $e->getCode() >= 100 && $e->getCode() < 600 
-                    ? $e->getCode() 
+                $statusCode = $e->getCode() >= 100 && $e->getCode() < 600
+                    ? $e->getCode()
                     : 500;
 
                 $response = [
@@ -41,7 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         'exception' => get_class($e),
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
-                        'trace' => $e->getTrace()
+                        'trace' => $e->getTrace(),
                     ];
                 }
 

@@ -9,6 +9,7 @@ use App\Enums\CompagnieSettingKey;
 use App\Enums\CompagnieSettingType;
 use App\Models\Compagnie\Compagnie;
 use App\Models\CompagnieSetting;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -94,15 +95,51 @@ class CompagnieSettingService
                     ['compagnie_id' => $compagnieId, 'key' => $key],
                     [
                         'value' => $definition->type->serialize($value),
-                        'type'  => $definition->type->value,
+                        'type' => $definition->type->value,
                     ],
                 );
             }
         });
 
         $this->forget($compagnieId);
+        $this->journaliserParametresSensibles($compagnieId, $validated, $allowAdminOnly);
 
         return $validated;
+    }
+
+    /**
+     * Journalise l'écriture des paramètres réservés à la direction.
+     *
+     * Seules les clés marquées `adminOnly` sont tracées : journaliser le changement de
+     * devise ou de couleur primaire rendrait la piste d'audit illisible, alors que modifier
+     * une commission ou un plafond de vente engage la compagnie.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function journaliserParametresSensibles(int $compagnieId, array $validated, bool $allowAdminOnly): void
+    {
+        if (! $allowAdminOnly) {
+            return;
+        }
+
+        $sensibles = [];
+
+        foreach ($validated as $key => $value) {
+            if (CompagnieSettingKey::from($key)->definition()->isAdminOnly()) {
+                $sensibles[$key] = $value;
+            }
+        }
+
+        if ($sensibles === []) {
+            return;
+        }
+
+        app(AuditLogger::class)->log(
+            'compagnie.parametres.updateAdvanced',
+            Compagnie::find($compagnieId),
+            [],
+            $sensibles,
+        );
     }
 
     /**
@@ -147,6 +184,7 @@ class CompagnieSettingService
         });
 
         $this->forget($compagnieId);
+        $this->journaliserParametresSensibles($compagnieId, $validated, $allowAdminOnly);
 
         return $validated;
     }

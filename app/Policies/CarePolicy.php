@@ -4,63 +4,55 @@ namespace App\Policies;
 
 use App\Models\Compagnie\Care;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
+/**
+ * Autorisations du parc roulant.
+ *
+ * Cette policy était un squelette généré qui renvoyait `true` sur toutes ses abilities,
+ * et elle n'était même pas enregistrée : la découverte automatique cherche
+ * `App\Policies\Compagnie\CarePolicy` pour un modèle rangé sous `App\Models\Compagnie`.
+ * Un `can()` écrit un jour sur un véhicule aurait donc tout autorisé en silence.
+ */
 class CarePolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
+    /** Le filtrage des lignes relève du scope de compagnie, pas de l'autorisation. */
     public function viewAny(User $user): bool
     {
         return true;
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Care $care): bool
     {
-        return true;
+        return $user->hasPermission('reseau.vehicule.view', $care);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
     public function create(User $user): bool
     {
-        return true;
+        return $user->hasPermission('reseau.vehicule.create');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, Care $care): bool
     {
-        return true;
+        return $user->hasPermission('reseau.vehicule.update', $care);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Care $care): bool
     {
-        return true;
+        return $user->hasPermission('reseau.vehicule.delete', $care);
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
     public function restore(User $user, Care $care): bool
     {
-        return true;
+        return $user->hasPermission('reseau.vehicule.update', $care);
     }
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
     public function forceDelete(User $user, Care $care): bool
     {
-        return true;
+        return $user->hasPermission('reseau.vehicule.delete', $care);
+    }
+
+    public function setStatut(User $user, Care $care): bool
+    {
+        return $user->hasPermission('reseau.vehicule.setStatut', $care);
     }
 }

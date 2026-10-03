@@ -68,50 +68,73 @@
 
             @php
             // Compteur des conflits à traiter, affiché seulement à ceux qui peuvent les instruire.
-            $conflitsOuverts = auth()->user()->can('manage-boarding-conflicts')
+            $conflitsOuverts = auth()->user()->peutOuObserve('embarquement.conflit.view')
                 ? \App\Models\Ticket\TicketValidation::openConflicts()->ofAgentsOfCompagnie((int) auth()->user()->compagnie_id)->count()
                 : 0;
             // Conversations de clients en attente de réponse (compteur du menu).
             $messagesNonLus = app(\App\Services\Messages\CompagnieMessagerieService::class)
                 ->unreadCount((int) auth()->user()->compagnie_id);
             $compagnieNav = [
-                ['route' => 'panel.compagnie.dashboard', 'label' => 'Tableau de bord', 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
+                ['route' => 'panel.compagnie.dashboard', 'can_rbac' => 'compagnie.dashboard.view', 'label' => 'Tableau de bord', 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
                 ['section' => 'Voyage'],
-                ['route' => 'panel.compagnie.trajets', 'label' => 'Trajets', 'icon' => 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'],
-                ['route' => 'panel.compagnie.voyages', 'label' => 'Voyages', 'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
-                ['route' => 'panel.compagnie.classes', 'label' => 'Classes', 'icon' => 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
-                ['route' => 'panel.compagnie.instances', 'label' => 'Instances', 'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                ['route' => 'panel.compagnie.trajets', 'can_rbac' => 'voyage.trajet.view', 'label' => 'Trajets', 'icon' => 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'],
+                ['route' => 'panel.compagnie.voyages', 'can_rbac' => 'voyage.voyage.view', 'label' => 'Voyages', 'icon' => 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+                ['route' => 'panel.compagnie.classes', 'can_rbac' => 'voyage.classe.manage', 'label' => 'Classes', 'icon' => 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
+                ['route' => 'panel.compagnie.instances', 'can_rbac' => 'voyage.instance.view', 'label' => 'Instances', 'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h16'],
                 ['section' => 'Guichet'],
-                ['route' => 'panel.compagnie.messages', 'label' => 'Messages', 'badge' => $messagesNonLus, 'icon' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'],
-                ['route' => 'panel.compagnie.vente-ticket', 'label' => 'Vente de ticket', 'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'],
-                ['route' => 'panel.compagnie.tickets', 'label' => 'Tickets', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-                ['route' => 'panel.compagnie.conflits', 'label' => 'Conflits', 'can' => 'manage-boarding-conflicts', 'badge' => $conflitsOuverts, 'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
-                ['route' => 'panel.compagnie.caisse', 'label' => 'Ma Caisse', 'icon' => 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
-                ['route' => 'panel.compagnie.caisses-historique', 'label' => 'Historique caisses', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                ['route' => 'panel.compagnie.messages', 'can_rbac' => 'crm.conversation.view', 'label' => 'Messages', 'badge' => $messagesNonLus, 'icon' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'],
+                ['route' => 'panel.compagnie.vente-ticket', 'can_rbac' => 'guichet.ticket.sell', 'label' => 'Vente de ticket', 'icon' => 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'],
+                ['route' => 'panel.compagnie.tickets', 'can_rbac' => 'guichet.ticket.view.gare', 'label' => 'Tickets', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+                ['route' => 'panel.compagnie.conflits', 'can' => 'manage-boarding-conflicts', 'can_rbac' => 'embarquement.conflit.view', 'label' => 'Conflits', 'badge' => $conflitsOuverts, 'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
+                ['route' => 'panel.compagnie.caisse', 'can_rbac' => 'caisse.session.view.own', 'label' => 'Ma Caisse', 'icon' => 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
+                ['route' => 'panel.compagnie.caisses-historique', 'can_rbac' => 'caisse.historique.view', 'label' => 'Historique caisses', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
                 ['section' => 'Ressources'],
-                ['route' => 'panel.compagnie.gares', 'label' => 'Gares', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z'],
-                ['route' => 'panel.compagnie.cares', 'label' => 'Véhicules', 'icon' => 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4'],
-                ['route' => 'panel.compagnie.chauffeurs', 'label' => 'Chauffeurs', 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
-                ['route' => 'panel.compagnie.documents', 'label' => 'Documents', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-                ['route' => 'panel.compagnie.users', 'label' => 'Équipe', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
+                ['route' => 'panel.compagnie.gares', 'can_rbac' => 'reseau.gare.view', 'label' => 'Gares', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z'],
+                ['route' => 'panel.compagnie.cares', 'can_rbac' => 'reseau.vehicule.view', 'label' => 'Véhicules', 'icon' => 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4'],
+                ['route' => 'panel.compagnie.chauffeurs', 'can_rbac' => 'reseau.chauffeur.view', 'label' => 'Chauffeurs', 'icon' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+                ['route' => 'panel.compagnie.documents', 'can_rbac' => 'reseau.document.view', 'label' => 'Documents', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+                ['route' => 'panel.compagnie.users', 'can_rbac' => 'compagnie.user.view', 'label' => 'Équipe', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
                 ['section' => 'Contenu'],
-                ['route' => 'panel.compagnie.posts', 'label' => 'Articles', 'icon' => 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z'],
+                ['route' => 'panel.compagnie.posts', 'can_rbac' => 'contenu.article.view', 'label' => 'Articles', 'icon' => 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z'],
                 ['section' => 'Comptabilité'],
-                ['route' => 'panel.compagnie.rapports', 'label' => 'Rapports', 'icon' => 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-                ['route' => 'panel.compagnie.bilan', 'label' => 'Bilan financier', 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
-                ['route' => 'panel.compagnie.depenses', 'label' => 'Dépenses', 'icon' => 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'],
-                ['route' => 'panel.compagnie.recettes', 'label' => 'Recettes', 'icon' => 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'],
-                ['route' => 'panel.compagnie.categories', 'label' => 'Catégories', 'icon' => 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z'],
-                ['route' => 'panel.compagnie.promos', 'label' => 'Codes promo', 'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                ['route' => 'panel.compagnie.rapports', 'can_rbac' => 'finance.rapport.view', 'label' => 'Rapports', 'icon' => 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+                ['route' => 'panel.compagnie.bilan', 'can_rbac' => 'finance.bilan.view', 'label' => 'Bilan financier', 'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
+                ['route' => 'panel.compagnie.depenses', 'can_rbac' => 'finance.depense.view', 'label' => 'Dépenses', 'icon' => 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'],
+                ['route' => 'panel.compagnie.recettes', 'can_rbac' => 'finance.recette.view', 'label' => 'Recettes', 'icon' => 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'],
+                ['route' => 'panel.compagnie.categories', 'can_rbac' => 'finance.categorie.manage', 'label' => 'Catégories', 'icon' => 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z'],
+                ['route' => 'panel.compagnie.promos', 'can_rbac' => 'finance.promo.view', 'label' => 'Codes promo', 'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
                 ['section' => 'Configuration'],
-                ['route' => 'panel.compagnie.parametres', 'label' => 'Paramètres', 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
+                ['route' => 'panel.compagnie.habilitations', 'can_rbac' => 'compagnie.role.manage', 'label' => 'Rôles et habilitations', 'icon' => 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z'],
+                ['route' => 'panel.compagnie.parametres', 'can_rbac' => 'compagnie.parametres.view', 'label' => 'Paramètres', 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
             ];
+
+            // Filtrage du menu sur les permissions, avant l'affichage : une section dont
+            // toutes les entrées sont masquées ne doit pas rester comme un titre orphelin.
+            // Deux types de garde dans ce menu :
+            //   'can'      — une ability déjà appliquée en dur par l'écran, donc à masquer
+            //                sans condition : y renvoyer afficherait un lien vers un 403 ;
+            //   'can_rbac' — une permission du catalogue, encore en observation. Tant que
+            //                rbac.enforce est faux l'entrée reste visible, sinon la période
+            //                d'observation ne mesurerait aucun usage.
+            $entrees = collect($compagnieNav)
+                ->reject(fn (array $item): bool => (isset($item['can']) && ! auth()->user()->can($item['can']))
+                    || (isset($item['can_rbac']) && ! auth()->user()->peutOuObserve($item['can_rbac'])))
+                ->values();
+
+            $compagnieNav = $entrees
+                ->reject(function (array $item, int $i) use ($entrees): bool {
+                    if (! isset($item['section'])) {
+                        return false;
+                    }
+                    $suivant = $entrees->get($i + 1);
+
+                    return $suivant === null || isset($suivant['section']);
+                })
+                ->values()
+                ->all();
             @endphp
 
             @foreach($compagnieNav as $item)
-                @if(isset($item['can']) && ! auth()->user()->can($item['can']))
-                    @continue
-                @endif
                 @if(isset($item['section']))
                     <div x-show="sidebarOpen || mobileSidebarOpen" x-cloak class="pt-4 pb-1 px-2">
                         <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">{{ $item['section'] }}</p>

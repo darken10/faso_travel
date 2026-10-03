@@ -8,27 +8,33 @@ use App\Models\Compagnie\Care;
 use App\Models\Compagnie\Chauffer;
 use App\Models\Voyage\VoyageInstance;
 use App\Notifications\Ticket\TicketNotification;
+use App\Traits\AutoriseLesActions;
+use App\Traits\ScopedToCompagnie;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VoyageInstanceShow extends Component
 {
+    use AutoriseLesActions;
     use ScopedToCompagnie;
 
     public string $instanceId;
 
     // Affectation
-    public bool    $showAssignModal   = false;
-    public ?int    $assignCareId       = null;
-    public ?string $assignChauffeurId  = null;
+    public bool $showAssignModal = false;
+
+    public ?int $assignCareId = null;
+
+    public ?string $assignChauffeurId = null;
 
     // Alerte (annulation / retard)
-    public bool   $showAlertModal = false;
-    public string $alertType      = 'ANNULE';
-    public string $alertReason    = '';
+    public bool $showAlertModal = false;
+
+    public string $alertType = 'ANNULE';
+
+    public string $alertReason = '';
 
     public function mount(string $instanceId): void
     {
@@ -55,6 +61,7 @@ class VoyageInstanceShow extends Component
     /** Export PDF du manifeste d'embarquement. */
     public function exportManifeste()
     {
+        $this->autoriser('embarquement.manifeste.view');
         $instance = $this->instance();
         $passengers = $instance->tickets
             ->filter(fn ($t) => $t->statut !== StatutTicket::Annuler)
@@ -63,8 +70,8 @@ class VoyageInstanceShow extends Component
         $pdf = Pdf::loadView('exports.manifeste', compact('instance', 'passengers'));
 
         return response()->streamDownload(
-            fn () => print($pdf->output()),
-            'manifeste-' . \Carbon\Carbon::parse($instance->date)->format('Y-m-d') . '.pdf',
+            fn () => print ($pdf->output()),
+            'manifeste-'.\Carbon\Carbon::parse($instance->date)->format('Y-m-d').'.pdf',
         );
     }
 
@@ -72,29 +79,30 @@ class VoyageInstanceShow extends Component
     public function openAssignModal(): void
     {
         $instance = $this->instance();
-        $this->assignCareId      = $instance->care_id;
+        $this->assignCareId = $instance->care_id;
         $this->assignChauffeurId = $instance->chauffer_id;
-        $this->showAssignModal   = true;
+        $this->showAssignModal = true;
     }
 
     public function saveAssignment(): void
     {
+        $this->autoriser('voyage.instance.assignVehicule');
         $this->validate([
-            'assignCareId'      => 'nullable|exists:cares,id',
+            'assignCareId' => 'nullable|exists:cares,id',
             'assignChauffeurId' => 'nullable|exists:chauffers,id',
         ]);
 
         $instance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->instanceId);
-        $nbPlace  = $instance->nb_place;
+        $nbPlace = $instance->nb_place;
         if ($this->assignCareId) {
-            $care    = Care::find($this->assignCareId);
+            $care = Care::find($this->assignCareId);
             $nbPlace = $care?->number_place ?: ($instance->voyage?->nb_pace ?: $nbPlace);
         }
 
         $instance->update([
-            'care_id'     => $this->assignCareId ?: null,
+            'care_id' => $this->assignCareId ?: null,
             'chauffer_id' => $this->assignChauffeurId ?: null,
-            'nb_place'    => $nbPlace,
+            'nb_place' => $nbPlace,
         ]);
 
         $this->showAssignModal = false;
@@ -104,15 +112,16 @@ class VoyageInstanceShow extends Component
     // ── Alerte annulation / retard ─────────────────────────────────────────────
     public function openAlertModal(string $type): void
     {
-        $this->alertType      = $type;
-        $this->alertReason    = '';
+        $this->alertType = $type;
+        $this->alertReason = '';
         $this->showAlertModal = true;
     }
 
     public function confirmAlert(): void
     {
+        $this->autoriser('voyage.instance.update');
         $this->validate([
-            'alertType'   => 'required|in:ANNULE,RETARDE',
+            'alertType' => 'required|in:ANNULE,RETARDE',
             'alertReason' => 'nullable|string|max:500',
         ]);
 
@@ -130,9 +139,9 @@ class VoyageInstanceShow extends Component
             ->with('user')
             ->get();
 
-        $notifType  = $isAnnule ? TypeNotification::VOYAGE_ANNULE : TypeNotification::VOYAGE_RETARDE;
+        $notifType = $isAnnule ? TypeNotification::VOYAGE_ANNULE : TypeNotification::VOYAGE_RETARDE;
         $notifTitle = $isAnnule ? 'Voyage annulé' : 'Voyage retardé';
-        $notifMsg   = $this->alertReason ?: ($isAnnule
+        $notifMsg = $this->alertReason ?: ($isAnnule
             ? 'Votre voyage a été annulé. Votre ticket est suspendu en attente de remboursement.'
             : 'Votre voyage a été retardé. Nous vous tiendrons informé des nouvelles horaires.');
 
@@ -167,13 +176,13 @@ class VoyageInstanceShow extends Component
         // Plan des sièges.
         $seats = collect(range(1, max(1, (int) $instance->nb_place)))
             ->map(fn ($n) => [
-                'number'   => $n,
+                'number' => $n,
                 'occupied' => $bySeat->has($n),
-                'ticket'   => $bySeat->get($n),
+                'ticket' => $bySeat->get($n),
             ]);
 
-        $occupied  = $activeTickets->count();
-        $total     = (int) $instance->nb_place;
+        $occupied = $activeTickets->count();
+        $total = (int) $instance->nb_place;
         $available = max(0, $total - $occupied);
 
         // Recette = somme des paiements des tickets payés.
@@ -182,14 +191,14 @@ class VoyageInstanceShow extends Component
             ->sum(fn ($t) => $t->payements->sum('montant'));
 
         return view('livewire.compagnie.voyage.voyage-instance-show', [
-            'instance'   => $instance,
-            'seats'      => $seats,
+            'instance' => $instance,
+            'seats' => $seats,
             'passengers' => $activeTickets->sortBy('numero_chaise'),
-            'occupied'   => $occupied,
-            'total'      => $total,
-            'available'  => $available,
-            'revenue'    => $revenue,
-            'cares'      => Care::where('compagnie_id', $compagnieId)->orderBy('immatrculation')->get(),
+            'occupied' => $occupied,
+            'total' => $total,
+            'available' => $available,
+            'revenue' => $revenue,
+            'cares' => Care::where('compagnie_id', $compagnieId)->orderBy('immatrculation')->get(),
             'chauffeurs' => Chauffer::where('compagnie_id', $compagnieId)->get(),
         ]);
     }

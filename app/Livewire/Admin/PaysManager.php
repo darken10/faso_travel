@@ -4,47 +4,58 @@ namespace App\Livewire\Admin;
 
 use App\Models\Ville\Pays;
 use App\Models\Ville\Region;
-use Livewire\Component;
+use App\Traits\AutoriseLesActions;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.admin-panel')]
 class PaysManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public bool $showRegionsModal = false;
+
     public ?int $editingId = null;
+
     public ?int $selectedPaysId = null;
 
     // Pays form
     public string $name = '';
+
     public string $money = '';
+
     public string $identity_number = '';
+
     public string $iso2 = '';
 
     // Region inline form
     public string $region_name = '';
+
     public bool $showRegionForm = false;
+
     public ?int $editingRegionId = null;
 
     protected function rules(): array
     {
         return [
-            'name'            => 'required|string|max:255',
-            'money'           => 'required|string|max:10',
+            'name' => 'required|string|max:255',
+            'money' => 'required|string|max:10',
             'identity_number' => 'required|numeric',
-            'iso2'            => 'required|string|max:5',
+            'iso2' => 'required|string|max:5',
         ];
     }
 
     protected $messages = [
-        'name.required'            => 'Le nom est obligatoire.',
-        'money.required'           => 'La devise est obligatoire.',
+        'name.required' => 'Le nom est obligatoire.',
+        'money.required' => 'La devise est obligatoire.',
         'identity_number.required' => 'Le numéro identifiant est obligatoire.',
-        'iso2.required'            => 'Le code ISO est obligatoire.',
+        'iso2.required' => 'Le code ISO est obligatoire.',
     ];
 
     public function updatingSearch(): void
@@ -71,13 +82,14 @@ class PaysManager extends Component
 
     public function save(): void
     {
+        $this->autoriser('platform.pays.manage');
         $this->validate();
 
         $data = [
-            'name'            => $this->name,
-            'money'           => $this->money,
+            'name' => $this->name,
+            'money' => $this->money,
             'identity_number' => $this->identity_number,
-            'iso2'            => $this->iso2,
+            'iso2' => $this->iso2,
         ];
 
         if ($this->editingId) {
@@ -94,6 +106,7 @@ class PaysManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('platform.pays.manage');
         Pays::findOrFail($id)->delete();
         session()->flash('success', 'Pays supprimé.');
     }
@@ -122,6 +135,7 @@ class PaysManager extends Component
 
     public function saveRegion(): void
     {
+        $this->autoriser('platform.region.manage');
         $this->validateOnly('region_name', ['region_name' => 'required|string|max:255']);
 
         $data = ['name' => $this->region_name, 'pays_id' => $this->selectedPaysId];
@@ -137,13 +151,14 @@ class PaysManager extends Component
 
     public function deleteRegion(int $id): void
     {
+        $this->autoriser('platform.region.manage');
         Region::findOrFail($id)->delete();
     }
 
     public function render()
     {
         $pays = Pays::query()
-            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
                 ->orWhere('iso2', 'like', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);

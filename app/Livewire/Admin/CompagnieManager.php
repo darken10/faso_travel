@@ -4,39 +4,50 @@ namespace App\Livewire\Admin;
 
 use App\Models\Compagnie\Compagnie;
 use App\Models\Statut;
+use App\Traits\AutoriseLesActions;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 #[Layout('layouts.admin-panel')]
 class CompagnieManager extends Component
 {
-    use WithPagination, WithFileUploads;
+    use AutoriseLesActions;
+    use WithFileUploads, WithPagination;
 
     public string $search = '';
+
     public ?int $statutFilter = null;
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public string $name = '';
+
     public string $sigle = '';
+
     public string $slogant = '';
+
     public string $description = '';
+
     public ?int $statut_id = 2;
+
     public $logo = null;
+
     public ?string $existingLogo = null;
 
     protected function rules(): array
     {
         return [
-            'name'        => 'required|string|max:255|unique:compagnies,name,'.$this->editingId,
-            'sigle'       => 'required|string|max:50|unique:compagnies,sigle,'.$this->editingId,
-            'slogant'     => 'nullable|string|max:255',
+            'name' => 'required|string|max:255|unique:compagnies,name,'.$this->editingId,
+            'sigle' => 'required|string|max:50|unique:compagnies,sigle,'.$this->editingId,
+            'slogant' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:2000',
-            'statut_id'   => 'required|exists:statuts,id',
-            'logo'        => 'nullable|image|mimes:jpeg,jpg,png,webp,svg|max:2048',
+            'statut_id' => 'required|exists:statuts,id',
+            'logo' => 'nullable|image|mimes:jpeg,jpg,png,webp,svg|max:2048',
         ];
     }
 
@@ -44,13 +55,13 @@ class CompagnieManager extends Component
     protected function messages(): array
     {
         return [
-            'name.required'   => 'Le nom de la compagnie est obligatoire.',
-            'name.unique'     => 'Une compagnie porte déjà ce nom.',
-            'sigle.required'  => 'Le sigle est obligatoire.',
-            'sigle.unique'    => 'Ce sigle est déjà utilisé.',
-            'logo.image'      => 'Le logo doit être une image.',
-            'logo.mimes'      => 'Formats acceptés : JPG, PNG, WEBP ou SVG.',
-            'logo.max'        => 'Le logo ne doit pas dépasser 2 Mo.',
+            'name.required' => 'Le nom de la compagnie est obligatoire.',
+            'name.unique' => 'Une compagnie porte déjà ce nom.',
+            'sigle.required' => 'Le sigle est obligatoire.',
+            'sigle.unique' => 'Ce sigle est déjà utilisé.',
+            'logo.image' => 'Le logo doit être une image.',
+            'logo.mimes' => 'Formats acceptés : JPG, PNG, WEBP ou SVG.',
+            'logo.max' => 'Le logo ne doit pas dépasser 2 Mo.',
             'statut_id.required' => 'Choisissez un statut.',
         ];
     }
@@ -78,14 +89,14 @@ class CompagnieManager extends Component
         $compagnie = Compagnie::findOrFail($id);
 
         $this->resetForm();
-        $this->editingId    = $id;
-        $this->name         = $compagnie->name;
-        $this->sigle        = $compagnie->sigle;
-        $this->slogant      = $compagnie->slogant ?? '';
-        $this->description  = $compagnie->description ?? '';
-        $this->statut_id    = $compagnie->statut_id;
+        $this->editingId = $id;
+        $this->name = $compagnie->name;
+        $this->sigle = $compagnie->sigle;
+        $this->slogant = $compagnie->slogant ?? '';
+        $this->description = $compagnie->description ?? '';
+        $this->statut_id = $compagnie->statut_id;
         $this->existingLogo = $compagnie->logo_uri;
-        $this->showModal    = true;
+        $this->showModal = true;
     }
 
     public function closeModal(): void
@@ -100,6 +111,7 @@ class CompagnieManager extends Component
      */
     public function removeLogo(): void
     {
+        $this->autoriser('platform.compagnie.update');
         if ($this->logo) {
             $this->reset('logo');
 
@@ -122,14 +134,15 @@ class CompagnieManager extends Component
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'platform.compagnie.update' : 'platform.compagnie.create');
         $this->validate();
 
         $data = [
-            'name'        => $this->name,
-            'sigle'       => $this->sigle,
-            'slogant'     => $this->slogant ?: null,
+            'name' => $this->name,
+            'sigle' => $this->sigle,
+            'slogant' => $this->slogant ?: null,
             'description' => $this->description ?: null,
-            'statut_id'   => $this->statut_id,
+            'statut_id' => $this->statut_id,
         ];
 
         $compagnie = $this->editingId ? Compagnie::findOrFail($this->editingId) : null;
@@ -160,6 +173,7 @@ class CompagnieManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('platform.compagnie.delete');
         $compagnie = Compagnie::findOrFail($id);
         $logo = $compagnie->logo_uri;
 
@@ -186,6 +200,7 @@ class CompagnieManager extends Component
     /** Change le statut d'une compagnie directement depuis sa carte. */
     public function changeStatut(int $id, int $statutId): void
     {
+        $this->autoriser('platform.compagnie.activate');
         $statut = Statut::findOrFail($statutId);
         $compagnie = Compagnie::findOrFail($id);
 
@@ -208,9 +223,9 @@ class CompagnieManager extends Component
         $compagnies = Compagnie::query()
             ->with(['statut', 'user'])
             ->withCount(['voyages', 'gares', 'users'])
-            ->when($this->search, fn($q) => $q->where(fn($sub) => $sub->where('name', 'like', "%{$this->search}%")
+            ->when($this->search, fn ($q) => $q->where(fn ($sub) => $sub->where('name', 'like', "%{$this->search}%")
                 ->orWhere('sigle', 'like', "%{$this->search}%")))
-            ->when($this->statutFilter, fn($q) => $q->where('statut_id', $this->statutFilter))
+            ->when($this->statutFilter, fn ($q) => $q->where('statut_id', $this->statutFilter))
             ->latest()
             ->paginate(12);
 

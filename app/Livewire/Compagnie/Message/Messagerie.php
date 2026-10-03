@@ -3,6 +3,7 @@
 namespace App\Livewire\Compagnie\Message;
 
 use App\Services\Messages\CompagnieMessagerieService;
+use App\Traits\AutoriseLesActions;
 use App\Traits\ScopedToCompagnie;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -18,16 +19,21 @@ use Livewire\Component;
 #[Layout('layouts.compagnie-panel')]
 class Messagerie extends Component
 {
+    use AutoriseLesActions;
     use ScopedToCompagnie;
 
     private const PAGE = 40;
+
     private const THREAD_LIMIT = 200;
 
     public string $search = '';
+
     public string $filtre = 'tous';      // tous | non_lus
+
     public int $limite = self::PAGE;
 
     public ?string $selectedId = null;
+
     public string $reponse = '';
 
     public function select(string $id, CompagnieMessagerieService $service): void
@@ -45,8 +51,15 @@ class Messagerie extends Component
         $this->reset(['selectedId', 'reponse']);
     }
 
-    public function updatedSearch(): void { $this->limite = self::PAGE; }
-    public function updatedFiltre(): void { $this->limite = self::PAGE; }
+    public function updatedSearch(): void
+    {
+        $this->limite = self::PAGE;
+    }
+
+    public function updatedFiltre(): void
+    {
+        $this->limite = self::PAGE;
+    }
 
     public function loadMore(): void
     {
@@ -55,16 +68,18 @@ class Messagerie extends Component
 
     public function send(CompagnieMessagerieService $service): void
     {
+        $this->autoriser('crm.conversation.reply');
         $this->validate([
-            'reponse' => ['required', 'string', 'max:' . CompagnieMessagerieService::MAX_LENGTH],
+            'reponse' => ['required', 'string', 'max:'.CompagnieMessagerieService::MAX_LENGTH],
         ], [
             'reponse.required' => 'Écrivez un message avant d\'envoyer.',
-            'reponse.max'      => 'Message trop long (' . CompagnieMessagerieService::MAX_LENGTH . ' caractères maximum).',
+            'reponse.max' => 'Message trop long ('.CompagnieMessagerieService::MAX_LENGTH.' caractères maximum).',
         ]);
 
         // Un texte d'espaces passe « required » ; le service le refuse proprement.
         if (trim($this->reponse) === '') {
             $this->addError('reponse', 'Écrivez un message avant d\'envoyer.');
+
             return;
         }
 
@@ -83,7 +98,7 @@ class Messagerie extends Component
         $conversations = $service->conversations($compagnieId)
             ->with('client:id,name,first_name,last_name,profile_photo_path')
             ->when($this->search !== '', function ($q) {
-                $terme = '%' . addcslashes($this->search, '\\%_') . '%';
+                $terme = '%'.addcslashes($this->search, '\\%_').'%';
                 $q->whereHas('client', fn ($c) => $c->where('name', 'like', $terme));
             })
             ->when($this->filtre === 'non_lus', fn ($q) => $q->where('unread_count_agent', '>', 0))
@@ -124,11 +139,11 @@ class Messagerie extends Component
 
         return view('livewire.compagnie.message.messagerie', [
             'conversations' => $conversations,
-            'aPlus'         => $aPlus,
-            'selected'      => $selected,
-            'messages'      => $messages,
-            'totalNonLus'   => $service->unreadCount($compagnieId),
-            'maxLength'     => CompagnieMessagerieService::MAX_LENGTH,
+            'aPlus' => $aPlus,
+            'selected' => $selected,
+            'messages' => $messages,
+            'totalNonLus' => $service->unreadCount($compagnieId),
+            'maxLength' => CompagnieMessagerieService::MAX_LENGTH,
         ]);
     }
 }

@@ -2,13 +2,22 @@
 
 namespace App\Policies;
 
-use App\Enums\CompanyRole;
-use App\Enums\UserRole;
 use App\Models\Compagnie\Compagnie;
 use App\Models\User;
 
+/**
+ * Autorisations d'une compagnie de transport.
+ *
+ * Deux niveaux se superposent : la plateforme, qui crée, active et suspend les compagnies,
+ * et la compagnie elle-même, qui administre son propre profil.
+ *
+ * La version précédente référençait `CompanyRole::Directeur` et `$user->company_role`,
+ * qui n'existent ni l'un ni l'autre : toute évaluation de `manageFinance()` levait une
+ * erreur fatale.
+ */
 class CompagniePolicy
 {
+    /** La liste des compagnies est publique : c'est l'offre de transport. */
     public function viewAny(User $user): bool
     {
         return true;
@@ -21,44 +30,38 @@ class CompagniePolicy
 
     public function create(User $user): bool
     {
-        return $this->isAdmin($user);
+        return $user->hasPermission('platform.compagnie.create');
     }
 
     public function update(User $user, Compagnie $compagnie): bool
     {
-        return $this->isOwner($user, $compagnie) || $this->isAdmin($user);
+        return $user->hasPermission('platform.compagnie.update', $compagnie)
+            || $user->hasPermission('compagnie.profil.update', $compagnie);
     }
 
     public function delete(User $user, Compagnie $compagnie): bool
     {
-        return $this->isAdmin($user);
-    }
-
-    public function manageUsers(User $user, Compagnie $compagnie): bool
-    {
-        return $this->isOwner($user, $compagnie) || $this->isAdmin($user);
-    }
-
-    public function manageFinance(User $user, Compagnie $compagnie): bool
-    {
-        return ($user->compagnie_id === $compagnie->id
-                && in_array($user->company_role, [CompanyRole::Directeur]))
-            || $this->isAdmin($user);
+        return $user->hasPermission('platform.compagnie.delete', $compagnie);
     }
 
     public function activate(User $user, Compagnie $compagnie): bool
     {
-        return $this->isAdmin($user);
+        return $user->hasPermission('platform.compagnie.activate', $compagnie);
     }
 
-    private function isOwner(User $user, Compagnie $compagnie): bool
+    public function suspend(User $user, Compagnie $compagnie): bool
     {
-        return $user->compagnie_id === $compagnie->id
-            && $user->company_role === CompanyRole::Directeur;
+        return $user->hasPermission('platform.compagnie.suspend', $compagnie);
     }
 
-    private function isAdmin(User $user): bool
+    public function manageUsers(User $user, Compagnie $compagnie): bool
     {
-        return in_array($user->role, [UserRole::Admin, UserRole::Root]);
+        return $user->hasPermission('compagnie.user.update', $compagnie)
+            || $user->hasPermission('platform.user.update', $compagnie);
+    }
+
+    public function manageFinance(User $user, Compagnie $compagnie): bool
+    {
+        return $user->hasPermission('finance.bilan.view', $compagnie);
     }
 }

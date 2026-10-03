@@ -2,10 +2,16 @@
 
 namespace App\Policies;
 
-use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\Voyage\VoyageInstance;
 
+/**
+ * Autorisations des départs programmés.
+ *
+ * Comme pour l'offre, la consultation reste ouverte : un voyageur doit pouvoir voir les
+ * départs disponibles. La portée d'une permission remonte la compagnie d'un départ par
+ * son voyage, le modèle ne portant pas de `compagnie_id`.
+ */
 class VoyageInstancePolicy
 {
     public function viewAny(User $user): bool
@@ -20,32 +26,32 @@ class VoyageInstancePolicy
 
     public function create(User $user): bool
     {
-        return $user->compagnie_id !== null || $this->isAdmin($user);
+        return $user->hasPermission('voyage.instance.generate');
     }
 
     public function update(User $user, VoyageInstance $instance): bool
     {
-        return $this->ownsInstance($user, $instance) || $this->isAdmin($user);
+        return $user->hasPermission('voyage.instance.update', $instance);
     }
 
+    /** Un départ ne se supprime pas : il s'annule, et ses tickets suivent. */
     public function delete(User $user, VoyageInstance $instance): bool
     {
-        return $this->ownsInstance($user, $instance) || $this->isAdmin($user);
+        return $user->hasPermission('voyage.instance.cancel', $instance);
     }
 
     public function cancel(User $user, VoyageInstance $instance): bool
     {
-        return $this->ownsInstance($user, $instance) || $this->isAdmin($user);
+        return $user->hasPermission('voyage.instance.cancel', $instance);
     }
 
-    private function ownsInstance(User $user, VoyageInstance $instance): bool
+    public function close(User $user, VoyageInstance $instance): bool
     {
-        return $user->compagnie_id !== null
-            && $user->compagnie_id === $instance->voyage?->compagnie_id;
+        return $user->hasPermission('voyage.instance.close', $instance);
     }
 
-    private function isAdmin(User $user): bool
+    public function assign(User $user, VoyageInstance $instance): bool
     {
-        return in_array($user->role, [UserRole::Admin, UserRole::Root]);
+        return $user->hasPermission('voyage.instance.assignVehicule', $instance);
     }
 }

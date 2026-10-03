@@ -4,51 +4,65 @@ namespace App\Livewire\Compagnie\Document;
 
 use App\Models\Document;
 use App\Models\DocumentRappel;
+use App\Traits\AutoriseLesActions;
+use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use App\Traits\ScopedToCompagnie;
 
 class DocumentSlideOver extends Component
 {
+    use AutoriseLesActions;
     use ScopedToCompagnie;
-
     use WithFileUploads;
 
-    public bool    $open           = false;
-    public string  $entityType     = '';
-    public string  $entityId       = '';
-    public string  $entityLabel    = '';
-    public string  $entityTypeName = '';
-    public bool    $showForm       = false;
-    public ?int    $editingDocId   = null;
+    public bool $open = false;
 
-    public string  $titre           = '';
-    public string  $description     = '';
-    public bool    $has_expiration  = false;
-    public string  $date_expiration = '';
-    public         $fichier         = null;
+    public string $entityType = '';
+
+    public string $entityId = '';
+
+    public string $entityLabel = '';
+
+    public string $entityTypeName = '';
+
+    public bool $showForm = false;
+
+    public ?int $editingDocId = null;
+
+    public string $titre = '';
+
+    public string $description = '';
+
+    public bool $has_expiration = false;
+
+    public string $date_expiration = '';
+
+    public $fichier = null;
+
     public ?string $existingFilePath = null;
+
     public ?string $existingFileName = null;
-    public array   $rappels          = [];
+
+    public array $rappels = [];
 
     #[On('open-doc-panel')]
     public function openPanel(string $type, string $id, string $label, string $typeName = ''): void
     {
-        $this->entityType     = $type;
-        $this->entityId       = $id;
-        $this->entityLabel    = $label;
+        $this->entityType = $type;
+        $this->entityId = $id;
+        $this->entityLabel = $label;
         $this->entityTypeName = $typeName;
-        $this->showForm       = false;
+        $this->showForm = false;
         $this->resetDocForm();
         $this->open = true;
     }
 
     public function close(): void
     {
-        $this->open     = false;
+        $this->open = false;
         $this->showForm = false;
     }
 
@@ -61,18 +75,18 @@ class DocumentSlideOver extends Component
     public function openEditForm(int $id): void
     {
         $doc = Document::ofCompagnie($this->compagnieId())->with('rappels')->findOrFail($id);
-        $this->editingDocId     = $id;
-        $this->titre            = $doc->titre;
-        $this->description      = $doc->description ?? '';
-        $this->has_expiration   = $doc->has_expiration;
-        $this->date_expiration  = $doc->date_expiration?->format('Y-m-d') ?? '';
-        $this->fichier          = null;
+        $this->editingDocId = $id;
+        $this->titre = $doc->titre;
+        $this->description = $doc->description ?? '';
+        $this->has_expiration = $doc->has_expiration;
+        $this->date_expiration = $doc->date_expiration?->format('Y-m-d') ?? '';
+        $this->fichier = null;
         $this->existingFilePath = $doc->file_path;
         $this->existingFileName = $doc->file_name;
-        $this->rappels          = $doc->rappels->map(fn($r) => [
+        $this->rappels = $doc->rappels->map(fn ($r) => [
             'delai_valeur' => $r->delai_valeur,
-            'delai_unite'  => $r->delai_unite,
-            'canaux'       => $r->canaux,
+            'delai_unite' => $r->delai_unite,
+            'canaux' => $r->canaux,
         ])->toArray();
         $this->showForm = true;
     }
@@ -85,24 +99,26 @@ class DocumentSlideOver extends Component
 
     private function resetDocForm(): void
     {
-        $this->editingDocId     = null;
-        $this->titre            = '';
-        $this->description      = '';
-        $this->has_expiration   = false;
-        $this->date_expiration  = '';
-        $this->fichier          = null;
+        $this->editingDocId = null;
+        $this->titre = '';
+        $this->description = '';
+        $this->has_expiration = false;
+        $this->date_expiration = '';
+        $this->fichier = null;
         $this->existingFilePath = null;
         $this->existingFileName = null;
-        $this->rappels          = [];
+        $this->rappels = [];
     }
 
     public function addRappel(): void
     {
+        $this->autoriser('reseau.document.manageRappel');
         $this->rappels[] = ['delai_valeur' => 7, 'delai_unite' => 'jours', 'canaux' => ['email']];
     }
 
     public function removeRappel(int $index): void
     {
+        $this->autoriser('reseau.document.manageRappel');
         array_splice($this->rappels, $index, 1);
         $this->rappels = array_values($this->rappels);
     }
@@ -111,7 +127,7 @@ class DocumentSlideOver extends Component
     {
         $canaux = $this->rappels[$index]['canaux'] ?? [];
         if (in_array($canal, $canaux)) {
-            $canaux = array_values(array_filter($canaux, fn($c) => $c !== $canal));
+            $canaux = array_values(array_filter($canaux, fn ($c) => $c !== $canal));
         } else {
             $canaux[] = $canal;
         }
@@ -120,26 +136,27 @@ class DocumentSlideOver extends Component
 
     public function save(): void
     {
+        $this->autoriser('reseau.document.upload');
         $this->validate([
-            'titre'                  => 'required|string|max:255',
-            'description'            => 'nullable|string|max:1000',
-            'has_expiration'         => 'boolean',
-            'date_expiration'        => 'nullable|date|required_if:has_expiration,true',
-            'fichier'                => $this->editingDocId ? 'nullable|file|max:10240' : 'required|file|max:10240',
+            'titre' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'has_expiration' => 'boolean',
+            'date_expiration' => 'nullable|date|required_if:has_expiration,true',
+            'fichier' => $this->editingDocId ? 'nullable|file|max:10240' : 'required|file|max:10240',
             'rappels.*.delai_valeur' => 'required|integer|min:0',
-            'rappels.*.delai_unite'  => 'required|in:jours,heures',
-            'rappels.*.canaux'       => 'required|array|min:1',
-            'rappels.*.canaux.*'     => 'in:email,sms,whatsapp,telegram',
+            'rappels.*.delai_unite' => 'required|in:jours,heures',
+            'rappels.*.canaux' => 'required|array|min:1',
+            'rappels.*.canaux.*' => 'in:email,sms,whatsapp,telegram',
         ]);
 
         $data = [
             'documentable_type' => $this->entityType,
-            'documentable_id'   => $this->entityId,
-            'compagnie_id'      => Auth::user()->compagnie_id,
-            'titre'             => $this->titre,
-            'description'       => $this->description ?: null,
-            'has_expiration'    => $this->has_expiration,
-            'date_expiration'   => $this->has_expiration && $this->date_expiration ? $this->date_expiration : null,
+            'documentable_id' => $this->entityId,
+            'compagnie_id' => Auth::user()->compagnie_id,
+            'titre' => $this->titre,
+            'description' => $this->description ?: null,
+            'has_expiration' => $this->has_expiration,
+            'date_expiration' => $this->has_expiration && $this->date_expiration ? $this->date_expiration : null,
         ];
 
         if ($this->fichier) {
@@ -162,10 +179,10 @@ class DocumentSlideOver extends Component
 
         foreach ($this->rappels as $rappel) {
             DocumentRappel::create([
-                'document_id'  => $doc->id,
+                'document_id' => $doc->id,
                 'delai_valeur' => $rappel['delai_valeur'],
-                'delai_unite'  => $rappel['delai_unite'],
-                'canaux'       => $rappel['canaux'],
+                'delai_unite' => $rappel['delai_unite'],
+                'canaux' => $rappel['canaux'],
             ]);
         }
 
@@ -176,6 +193,7 @@ class DocumentSlideOver extends Component
 
     public function deleteDoc(int $id): void
     {
+        $this->autoriser('reseau.document.delete');
         $doc = Document::ofCompagnie($this->compagnieId())->findOrFail($id);
         if ($doc->file_path) {
             Storage::disk('public')->delete($doc->file_path);

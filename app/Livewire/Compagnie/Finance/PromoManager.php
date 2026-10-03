@@ -4,6 +4,7 @@ namespace App\Livewire\Compagnie\Finance;
 
 use App\Models\Finance\PromoCode;
 use App\Models\Ticket\Ticket;
+use App\Traits\AutoriseLesActions;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -14,22 +15,35 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class PromoManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public ?int $editingId = null;
 
     public string $code = '';
+
     public string $type = 'pourcentage';
+
     public string $valeur = '';
+
     public string $date_debut = '';
+
     public string $date_fin = '';
+
     public string $usage_limit = '';
+
     public string $min_montant = '';
+
     public bool $active = true;
 
-    public function updatingSearch(): void { $this->resetPage(); }
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public function openCreate(): void
     {
@@ -42,41 +56,42 @@ class PromoManager extends Component
     public function openEdit(int $id): void
     {
         $p = PromoCode::where('compagnie_id', Auth::user()->compagnie_id)->findOrFail($id);
-        $this->editingId   = $p->id;
-        $this->code        = $p->code;
-        $this->type        = $p->type;
-        $this->valeur      = (string) $p->valeur;
-        $this->date_debut  = $p->date_debut?->toDateString() ?? '';
-        $this->date_fin    = $p->date_fin?->toDateString() ?? '';
+        $this->editingId = $p->id;
+        $this->code = $p->code;
+        $this->type = $p->type;
+        $this->valeur = (string) $p->valeur;
+        $this->date_debut = $p->date_debut?->toDateString() ?? '';
+        $this->date_fin = $p->date_fin?->toDateString() ?? '';
         $this->usage_limit = (string) ($p->usage_limit ?? '');
         $this->min_montant = (string) ($p->min_montant ?? '');
-        $this->active      = $p->active;
-        $this->showModal   = true;
+        $this->active = $p->active;
+        $this->showModal = true;
     }
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'finance.promo.update' : 'finance.promo.create');
         $compagnieId = Auth::user()->compagnie_id;
 
         $this->validate([
-            'code'        => ['required', 'string', 'max:50', Rule::unique('promo_codes', 'code')->where('compagnie_id', $compagnieId)->ignore($this->editingId)],
-            'type'        => 'required|in:pourcentage,montant',
-            'valeur'      => 'required|integer|min:1' . ($this->type === 'pourcentage' ? '|max:100' : ''),
-            'date_debut'  => 'nullable|date',
-            'date_fin'    => 'nullable|date|after_or_equal:date_debut',
+            'code' => ['required', 'string', 'max:50', Rule::unique('promo_codes', 'code')->where('compagnie_id', $compagnieId)->ignore($this->editingId)],
+            'type' => 'required|in:pourcentage,montant',
+            'valeur' => 'required|integer|min:1'.($this->type === 'pourcentage' ? '|max:100' : ''),
+            'date_debut' => 'nullable|date',
+            'date_fin' => 'nullable|date|after_or_equal:date_debut',
             'usage_limit' => 'nullable|integer|min:1',
             'min_montant' => 'nullable|integer|min:0',
         ]);
 
         $data = [
-            'code'        => strtoupper(trim($this->code)),
-            'type'        => $this->type,
-            'valeur'      => (int) $this->valeur,
-            'date_debut'  => $this->date_debut ?: null,
-            'date_fin'    => $this->date_fin ?: null,
+            'code' => strtoupper(trim($this->code)),
+            'type' => $this->type,
+            'valeur' => (int) $this->valeur,
+            'date_debut' => $this->date_debut ?: null,
+            'date_fin' => $this->date_fin ?: null,
             'usage_limit' => $this->usage_limit !== '' ? (int) $this->usage_limit : null,
             'min_montant' => $this->min_montant !== '' ? (int) $this->min_montant : null,
-            'active'      => $this->active,
+            'active' => $this->active,
         ];
 
         if ($this->editingId) {
@@ -92,23 +107,26 @@ class PromoManager extends Component
 
     public function toggleActive(int $id): void
     {
+        $this->autoriser('finance.promo.deactivate');
         $p = PromoCode::where('compagnie_id', Auth::user()->compagnie_id)->findOrFail($id);
-        $p->update(['active' => !$p->active]);
+        $p->update(['active' => ! $p->active]);
         $this->dispatch('toast', type: 'success', message: $p->active ? 'Code activé.' : 'Code désactivé.');
     }
 
     public function delete(int $id): void
     {
+        $this->autoriser('finance.promo.deactivate');
         PromoCode::where('compagnie_id', Auth::user()->compagnie_id)->findOrFail($id)->delete();
         $this->dispatch('toast', type: 'success', message: 'Code promo supprimé.');
     }
 
     public function exportPdf()
     {
+        $this->autoriser('finance.rapport.export');
         $compagnieId = Auth::user()->compagnie_id;
 
         $promos = PromoCode::where('compagnie_id', $compagnieId)
-            ->when($this->search, fn ($q) => $q->where('code', 'like', '%' . strtoupper($this->search) . '%'))
+            ->when($this->search, fn ($q) => $q->where('code', 'like', '%'.strtoupper($this->search).'%'))
             ->latest()
             ->get();
 
@@ -121,32 +139,32 @@ class PromoManager extends Component
             ->keyBy('promo_code_id');
 
         $rows = $promos->map(fn ($p) => [
-            'code'         => $p->code,
-            'type'         => $p->type,
-            'valeur'       => $p->valeur,
-            'periode'      => ($p->date_debut?->format('d/m/Y') ?? '—') . ' → ' . ($p->date_fin?->format('d/m/Y') ?? '∞'),
-            'active'       => $p->active,
-            'usage_limit'  => $p->usage_limit,
+            'code' => $p->code,
+            'type' => $p->type,
+            'valeur' => $p->valeur,
+            'periode' => ($p->date_debut?->format('d/m/Y') ?? '—').' → '.($p->date_fin?->format('d/m/Y') ?? '∞'),
+            'active' => $p->active,
+            'usage_limit' => $p->usage_limit,
             'utilisations' => (int) ($stats[$p->id]->utilisations ?? 0),
-            'reduction'    => (int) ($stats[$p->id]->reduction ?? 0),
+            'reduction' => (int) ($stats[$p->id]->reduction ?? 0),
         ]);
 
         $totalUtilisations = (int) $rows->sum('utilisations');
-        $totalReduction    = (int) $rows->sum('reduction');
-        $compagnie         = Auth::user()->compagnie;
+        $totalReduction = (int) $rows->sum('reduction');
+        $compagnie = Auth::user()->compagnie;
 
         $pdf = Pdf::loadView('exports.promos', compact('rows', 'totalUtilisations', 'totalReduction', 'compagnie'));
 
         return response()->streamDownload(
-            fn () => print($pdf->output()),
-            'codes-promo-' . now()->format('Y-m-d') . '.pdf',
+            fn () => print ($pdf->output()),
+            'codes-promo-'.now()->format('Y-m-d').'.pdf',
         );
     }
 
     public function render()
     {
         $promos = PromoCode::where('compagnie_id', Auth::user()->compagnie_id)
-            ->when($this->search, fn ($q) => $q->where('code', 'like', '%' . strtoupper($this->search) . '%'))
+            ->when($this->search, fn ($q) => $q->where('code', 'like', '%'.strtoupper($this->search).'%'))
             ->latest()
             ->paginate(15);
 

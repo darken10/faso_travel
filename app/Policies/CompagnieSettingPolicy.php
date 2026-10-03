@@ -12,6 +12,11 @@ use App\Models\User;
  *
  * Un administrateur de la plateforme configure n'importe quelle compagnie ;
  * une compagnie ne configure qu'elle-même, et jamais les paramètres avancés.
+ *
+ * Les permissions du catalogue sont ajoutées *en plus* de la logique de rôles existante,
+ * jamais à sa place : cette policy est la seule du dossier réellement appelée en
+ * production, et la remplacer d'un coup couperait le paramétrage aux comptes qui n'ont pas
+ * encore reçu leurs permissions.
  */
 class CompagnieSettingPolicy
 {
@@ -24,26 +29,31 @@ class CompagnieSettingPolicy
     /** Consultation des paramètres d'une compagnie donnée. */
     public function view(User $user, Compagnie $compagnie): bool
     {
-        return $this->isPlatformAdmin($user) || $this->belongsTo($user, $compagnie);
+        return $this->isPlatformAdmin($user)
+            || $this->belongsTo($user, $compagnie)
+            || $user->hasPermission('compagnie.parametres.view', $compagnie);
     }
 
     /** Modification des paramètres courants d'une compagnie. */
     public function update(User $user, Compagnie $compagnie): bool
     {
         return $this->isPlatformAdmin($user)
-            || ($this->belongsTo($user, $compagnie) && $this->manageCompagnie($user, $compagnie));
+            || ($this->belongsTo($user, $compagnie) && $this->manageCompagnie($user, $compagnie))
+            || $user->hasPermission('compagnie.parametres.update', $compagnie);
     }
 
     /** Modification des paramètres avancés (commission, maintenance, plafonds). */
     public function updateAdvanced(User $user): bool
     {
-        return $this->isPlatformAdmin($user);
+        return $this->isPlatformAdmin($user)
+            || $user->hasPermission('compagnie.parametres.updateAdvanced');
     }
 
     /** Remise à zéro d'un groupe ou de l'ensemble du paramétrage. */
     public function reset(User $user, Compagnie $compagnie): bool
     {
-        return $this->update($user, $compagnie);
+        return $this->update($user, $compagnie)
+            || $user->hasPermission('compagnie.parametres.reset', $compagnie);
     }
 
     private function isPlatformAdmin(User $user): bool

@@ -14,38 +14,49 @@ use App\Models\Ticket\AutrePersonne;
 use App\Models\Ticket\Payement;
 use App\Models\Ticket\Ticket;
 use App\Models\Voyage\VoyageInstance;
+use App\Traits\AutoriseLesActions;
+use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class VenteTicket extends Component
 {
+    use AutoriseLesActions;
     use ScopedToCompagnie;
 
     public int $step = 1;
 
     // Step 1
     public ?string $voyage_instance_id = null;
+
     public string $type_ticket = '';
+
     public $prix = 0;
+
     public ?int $numero_chaise = null;
 
     // Code promo
     public string $promoCode = '';
+
     public ?int $promoId = null;
+
     public int $promoReduction = 0;
+
     public string $promoMessage = '';
 
     // Step 2
     public string $client_nom = '';
+
     public string $client_prenom = '';
+
     public string $client_telephone = '';
 
     // Step 3
     public $montant_recu = 0;
+
     public $monnaie = 0;
 
     // Result
@@ -55,11 +66,11 @@ class VenteTicket extends Component
     {
         return [
             'voyage_instance_id' => 'required|exists:voyage_instances,id',
-            'type_ticket'        => 'required|in:' . implode(',', TypeTicket::values()),
-            'client_nom'         => 'required|string|max:255',
-            'client_prenom'      => 'required|string|max:255',
-            'client_telephone'   => 'nullable|string|max:20',
-            'montant_recu'       => 'required|numeric|min:0',
+            'type_ticket' => 'required|in:'.implode(',', TypeTicket::values()),
+            'client_nom' => 'required|string|max:255',
+            'client_prenom' => 'required|string|max:255',
+            'client_telephone' => 'nullable|string|max:20',
+            'montant_recu' => 'required|numeric|min:0',
         ];
     }
 
@@ -90,6 +101,7 @@ class VenteTicket extends Component
 
     public function appliquerPromo(): void
     {
+        $this->autoriser('guichet.ticket.sell');
         $this->resetPromo();
         $code = strtoupper(trim($this->promoCode));
         if ($code === '') {
@@ -100,21 +112,23 @@ class VenteTicket extends Component
             ->where('code', $code)
             ->first();
 
-        if (!$promo) {
+        if (! $promo) {
             $this->promoMessage = 'Code promo introuvable.';
+
             return;
         }
 
         $prix = (int) $this->prix;
-        if (!$promo->isValide($prix)) {
+        if (! $promo->isValide($prix)) {
             $this->promoMessage = $promo->raisonInvalide($prix);
+
             return;
         }
 
         $this->promoId = $promo->id;
         $this->promoReduction = $promo->reductionPour($prix);
         $this->promoMessage = '';
-        $this->dispatch('toast', type: 'success', message: 'Code promo appliqué : -' . number_format($this->promoReduction, 0, ',', ' ') . ' F');
+        $this->dispatch('toast', type: 'success', message: 'Code promo appliqué : -'.number_format($this->promoReduction, 0, ',', ' ').' F');
     }
 
     public function retirerPromo(): void
@@ -126,13 +140,14 @@ class VenteTicket extends Component
     /** Sièges occupés (tickets non annulés) de l'instance sélectionnée. */
     public function occupiedSeats(): array
     {
-        if (!$this->voyage_instance_id) {
+        if (! $this->voyage_instance_id) {
             return [];
         }
         $instance = VoyageInstance::ofCompagnie($this->compagnieId())->find($this->voyage_instance_id);
-        if (!$instance) {
+        if (! $instance) {
             return [];
         }
+
         return $instance->tickets()
             ->where('statut', '!=', StatutTicket::Annuler)
             ->pluck('numero_chaise')
@@ -156,13 +171,15 @@ class VenteTicket extends Component
 
     private function computePrix(): void
     {
-        if (!$this->voyage_instance_id) {
+        if (! $this->voyage_instance_id) {
             $this->prix = 0;
+
             return;
         }
         $instance = VoyageInstance::ofCompagnie($this->compagnieId())->find($this->voyage_instance_id);
-        if (!$instance) {
+        if (! $instance) {
             $this->prix = 0;
+
             return;
         }
         $type = TypeTicket::tryFrom($this->type_ticket) ?? TypeTicket::AllerSimple;
@@ -173,14 +190,16 @@ class VenteTicket extends Component
     {
         if (! Caisse::sessionOuverte()) {
             $this->dispatch('toast', type: 'error', message: 'Vous devez ouvrir une caisse avant de pouvoir vendre un ticket.');
+
             return;
         }
 
         if ($this->step === 1) {
             $this->validateOnly('voyage_instance_id');
             $this->validateOnly('type_ticket');
-            if (!$this->numero_chaise) {
+            if (! $this->numero_chaise) {
                 $this->addError('numero_chaise', 'Veuillez choisir une chaise.');
+
                 return;
             }
         }
@@ -203,23 +222,26 @@ class VenteTicket extends Component
 
     public function vendreTicket(): void
     {
+        $this->autoriser('guichet.ticket.sell');
         $this->validate([
             'voyage_instance_id' => 'required|exists:voyage_instances,id',
-            'type_ticket'        => 'required|in:' . implode(',', TypeTicket::values()),
-            'client_nom'         => 'required|string|max:255',
-            'client_prenom'      => 'required|string|max:255',
-            'client_telephone'   => 'nullable|string|max:20',
-            'montant_recu'       => 'required|numeric|min:0',
+            'type_ticket' => 'required|in:'.implode(',', TypeTicket::values()),
+            'client_nom' => 'required|string|max:255',
+            'client_prenom' => 'required|string|max:255',
+            'client_telephone' => 'nullable|string|max:20',
+            'montant_recu' => 'required|numeric|min:0',
         ]);
 
         if (! Caisse::sessionOuverte()) {
             $this->dispatch('toast', type: 'error', message: 'Aucune caisse ouverte. Ouvrez une caisse avant de vendre un ticket.');
             $this->step = 1;
+
             return;
         }
 
         if ($this->montant_recu < $this->montantAPayer) {
             $this->addError('montant_recu', 'Le montant reçu est inférieur au prix à payer.');
+
             return;
         }
 
@@ -227,9 +249,9 @@ class VenteTicket extends Component
         try {
             $autrePersonne = AutrePersonne::create([
                 'first_name' => $this->client_nom,
-                'last_name'  => $this->client_prenom,
-                'sexe'       => SexeUser::Homme->value,
-                'numero'     => !empty($this->client_telephone)
+                'last_name' => $this->client_prenom,
+                'sexe' => SexeUser::Homme->value,
+                'numero' => ! empty($this->client_telephone)
                     ? (int) preg_replace('/\D/', '', $this->client_telephone)
                     : null,
             ]);
@@ -237,10 +259,11 @@ class VenteTicket extends Component
             $voyageInstance = VoyageInstance::ofCompagnie($this->compagnieId())->findOrFail($this->voyage_instance_id);
 
             // Vérifie qu'une chaise est choisie et toujours libre.
-            if (!$this->numero_chaise) {
+            if (! $this->numero_chaise) {
                 DB::rollBack();
                 $this->step = 1;
                 $this->addError('numero_chaise', 'Veuillez choisir une chaise.');
+
                 return;
             }
 
@@ -254,6 +277,7 @@ class VenteTicket extends Component
                 $this->numero_chaise = null;
                 $this->step = 1;
                 $this->dispatch('toast', type: 'error', message: 'Cette chaise vient d\'être prise. Choisissez-en une autre.');
+
                 return;
             }
 
@@ -272,28 +296,28 @@ class VenteTicket extends Component
             $montantNet = max(0, $prix - $reduction);
 
             $ticket = Ticket::create([
-                'user_id'             => Auth::id(),
-                'voyage_id'           => $voyageInstance->voyage_id,
-                'voyage_instance_id'  => $voyageInstance->id,
-                'date'                => $voyageInstance->date->format('Y-m-d'),
-                'type'                => $typeTicket->value,
-                'statut'              => StatutTicket::Payer->value,
-                'numero_ticket'       => TicketHelpers::generateTicketNumber(),
-                'numero_chaise'       => $this->numero_chaise,
-                'code_sms'            => TicketHelpers::generateTicketCodeSms(),
-                'code_qr'             => TicketHelpers::generateTicketCodeQr(),
-                'is_my_ticket'        => false,
-                'autre_personne_id'   => $autrePersonne->id,
-                'a_bagage'            => false,
-                'caisse_id'           => $caisse?->id,
-                'promo_code_id'       => $promo?->id,
-                'reduction'           => $reduction ?: null,
+                'user_id' => Auth::id(),
+                'voyage_id' => $voyageInstance->voyage_id,
+                'voyage_instance_id' => $voyageInstance->id,
+                'date' => $voyageInstance->date->format('Y-m-d'),
+                'type' => $typeTicket->value,
+                'statut' => StatutTicket::Payer->value,
+                'numero_ticket' => TicketHelpers::generateTicketNumber(),
+                'numero_chaise' => $this->numero_chaise,
+                'code_sms' => TicketHelpers::generateTicketCodeSms(),
+                'code_qr' => TicketHelpers::generateTicketCodeQr(),
+                'is_my_ticket' => false,
+                'autre_personne_id' => $autrePersonne->id,
+                'a_bagage' => false,
+                'caisse_id' => $caisse?->id,
+                'promo_code_id' => $promo?->id,
+                'reduction' => $reduction ?: null,
             ]);
 
             Payement::create([
-                'ticket_id'     => $ticket->id,
-                'montant'       => $montantNet,
-                'statut'        => StatutPayement::Complete->value,
+                'ticket_id' => $ticket->id,
+                'montant' => $montantNet,
+                'statut' => StatutPayement::Complete->value,
                 'moyen_payment' => MoyenPayment::ESPECE->value,
             ]);
 

@@ -4,6 +4,7 @@ namespace App\Livewire\Compagnie\Finance;
 
 use App\Models\Finance\PromoCode;
 use App\Models\Ticket\Ticket;
+use App\Traits\AutoriseLesActions;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -13,6 +14,7 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class PromoShow extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public int $promoId;
@@ -24,12 +26,13 @@ class PromoShow extends Component
 
     public function exportPdf()
     {
+        $this->autoriser('finance.rapport.export');
         $compagnieId = Auth::user()->compagnie_id;
         $promo = PromoCode::where('compagnie_id', $compagnieId)->findOrFail($this->promoId);
 
         $base = Ticket::withoutGlobalScopes()->where('promo_code_id', $promo->id);
         $totalUtilisations = (clone $base)->count();
-        $totalReduction    = (int) (clone $base)->sum('reduction');
+        $totalReduction = (int) (clone $base)->sum('reduction');
 
         $tickets = (clone $base)
             ->with([
@@ -48,8 +51,8 @@ class PromoShow extends Component
         ));
 
         return response()->streamDownload(
-            fn () => print($pdf->output()),
-            'code-promo-' . $promo->code . '-' . now()->format('Y-m-d') . '.pdf',
+            fn () => print ($pdf->output()),
+            'code-promo-'.$promo->code.'-'.now()->format('Y-m-d').'.pdf',
         );
     }
 
@@ -62,7 +65,7 @@ class PromoShow extends Component
         $base = Ticket::withoutGlobalScopes()->where('promo_code_id', $promo->id);
 
         $totalUtilisations = (clone $base)->count();
-        $totalReduction    = (int) (clone $base)->sum('reduction');
+        $totalReduction = (int) (clone $base)->sum('reduction');
 
         $tickets = (clone $base)
             ->with([

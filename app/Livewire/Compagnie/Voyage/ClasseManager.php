@@ -4,6 +4,7 @@ namespace App\Livewire\Compagnie\Voyage;
 
 use App\Models\Voyage\Classe;
 use App\Models\Voyage\Confort;
+use App\Traits\AutoriseLesActions;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -11,20 +12,28 @@ use Livewire\WithPagination;
 #[Layout('layouts.compagnie-panel')]
 class ClasseManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public bool $showConfortsModal = false;
+
     public ?int $editingId = null;
+
     public ?int $selectedClasseId = null;
 
     public string $name = '';
+
     public string $description = '';
 
     // Confort inline form
     public string $confort_title = '';
+
     public bool $showConfortForm = false;
+
     public array $attachedConfortIds = [];
 
     public function updatingSearch(): void
@@ -41,16 +50,17 @@ class ClasseManager extends Component
     public function openEdit(int $id): void
     {
         $classe = Classe::findOrFail($id);
-        $this->editingId    = $id;
-        $this->name         = $classe->name;
-        $this->description  = $classe->description ?? '';
-        $this->showModal    = true;
+        $this->editingId = $id;
+        $this->name = $classe->name;
+        $this->description = $classe->description ?? '';
+        $this->showModal = true;
     }
 
     public function save(): void
     {
+        $this->autoriser('voyage.classe.manage');
         $this->validate([
-            'name'        => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
@@ -70,9 +80,11 @@ class ClasseManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('voyage.classe.manage');
         $classe = Classe::findOrFail($id);
         if ($classe->is_default) {
             $this->dispatch('toast', type: 'error', message: 'Impossible de supprimer une classe par défaut.');
+
             return;
         }
         $classe->delete();
@@ -81,17 +93,20 @@ class ClasseManager extends Component
 
     public function openConforts(int $classeId): void
     {
-        $this->selectedClasseId   = $classeId;
+        $this->selectedClasseId = $classeId;
         $classe = Classe::with('conforts')->findOrFail($classeId);
         $this->attachedConfortIds = $classe->conforts->pluck('id')->toArray();
-        $this->showConfortForm    = false;
-        $this->confort_title      = '';
-        $this->showConfortsModal  = true;
+        $this->showConfortForm = false;
+        $this->confort_title = '';
+        $this->showConfortsModal = true;
     }
 
     public function toggleConfort(int $confortId): void
     {
-        if (!$this->selectedClasseId) return;
+        $this->autoriser('voyage.confort.manage');
+        if (! $this->selectedClasseId) {
+            return;
+        }
         $classe = Classe::findOrFail($this->selectedClasseId);
         if (in_array($confortId, $this->attachedConfortIds)) {
             $classe->conforts()->detach($confortId);
@@ -104,6 +119,7 @@ class ClasseManager extends Component
 
     public function saveConfort(): void
     {
+        $this->autoriser('voyage.confort.manage');
         $this->validate(['confort_title' => 'required|string|max:255']);
 
         $confort = Confort::create(['title' => $this->confort_title]);
@@ -114,7 +130,7 @@ class ClasseManager extends Component
             $this->attachedConfortIds[] = $confort->id;
         }
 
-        $this->confort_title  = '';
+        $this->confort_title = '';
         $this->showConfortForm = false;
     }
 
@@ -122,7 +138,7 @@ class ClasseManager extends Component
     {
         $classes = Classe::query()
             ->withCount('conforts')
-            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
 

@@ -5,29 +5,40 @@ namespace App\Livewire\Admin;
 use App\Models\Ville\Pays;
 use App\Models\Ville\Region;
 use App\Models\Ville\Ville;
-use Livewire\Component;
+use App\Traits\AutoriseLesActions;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.admin-panel')]
 class RegionManager extends Component
 {
+    use AutoriseLesActions;
     use WithPagination;
 
     public string $search = '';
+
     public bool $showModal = false;
+
     public bool $showVillesModal = false;
+
     public ?int $editingId = null;
+
     public ?int $selectedRegionId = null;
 
     public string $name = '';
+
     public ?int $pays_id = null;
 
     // Ville inline form
     public string $ville_name = '';
+
     public string $ville_lat = '';
+
     public string $ville_lng = '';
+
     public bool $showVilleForm = false;
+
     public ?int $editingVilleId = null;
 
     public function updatingSearch(): void
@@ -52,8 +63,9 @@ class RegionManager extends Component
 
     public function save(): void
     {
+        $this->autoriser('platform.region.manage');
         $this->validate([
-            'name'    => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'pays_id' => 'required|exists:pays,id',
         ]);
 
@@ -73,6 +85,7 @@ class RegionManager extends Component
 
     public function delete(int $id): void
     {
+        $this->autoriser('platform.region.manage');
         Region::findOrFail($id)->delete();
         session()->flash('success', 'Région supprimée.');
     }
@@ -103,16 +116,17 @@ class RegionManager extends Component
 
     public function saveVille(): void
     {
+        $this->autoriser('platform.ville.manage');
         $this->validate([
             'ville_name' => 'required|string|max:255',
-            'ville_lat'  => 'required|numeric',
-            'ville_lng'  => 'required|numeric',
+            'ville_lat' => 'required|numeric',
+            'ville_lng' => 'required|numeric',
         ]);
 
         $data = [
-            'name'      => $this->ville_name,
-            'lat'       => $this->ville_lat,
-            'lng'       => $this->ville_lng,
+            'name' => $this->ville_name,
+            'lat' => $this->ville_lat,
+            'lng' => $this->ville_lng,
             'region_id' => $this->selectedRegionId,
         ];
 
@@ -127,6 +141,7 @@ class RegionManager extends Component
 
     public function deleteVille(int $id): void
     {
+        $this->autoriser('platform.ville.manage');
         Ville::findOrFail($id)->delete();
     }
 
@@ -134,7 +149,7 @@ class RegionManager extends Component
     {
         $regions = Region::query()
             ->with('pays')
-            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(15);
 

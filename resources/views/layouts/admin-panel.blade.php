@@ -67,15 +67,40 @@
 
             @php
             $adminNav = [
-                ['route' => 'panel.admin.dashboard', 'label' => 'Tableau de bord', 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
+                ['route' => 'panel.admin.dashboard', 'can_rbac' => 'platform.stats.view', 'label' => 'Tableau de bord', 'icon' => 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
                 ['section' => 'Géographie'],
-                ['route' => 'panel.admin.pays', 'label' => 'Pays', 'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
-                ['route' => 'panel.admin.regions', 'label' => 'Régions', 'icon' => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
-                ['route' => 'panel.admin.villes', 'label' => 'Villes', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z'],
+                ['route' => 'panel.admin.pays', 'can_rbac' => 'platform.pays.manage', 'label' => 'Pays', 'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
+                ['route' => 'panel.admin.regions', 'can_rbac' => 'platform.region.manage', 'label' => 'Régions', 'icon' => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
+                ['route' => 'panel.admin.villes', 'can_rbac' => 'platform.ville.manage', 'label' => 'Villes', 'icon' => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z'],
                 ['section' => 'Compagnies'],
-                ['route' => 'panel.admin.compagnies', 'label' => 'Compagnies', 'icon' => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
-                ['route' => 'panel.admin.settings', 'label' => 'Paramètres', 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
+                ['route' => 'panel.admin.compagnies', 'can_rbac' => 'platform.compagnie.view', 'label' => 'Compagnies', 'icon' => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
+                ['route' => 'panel.admin.settings', 'can_rbac' => 'platform.settings.manage', 'label' => 'Paramètres', 'icon' => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
             ];
+
+            // Filtrage du menu sur les permissions, avant l'affichage : une section dont
+            // toutes les entrées sont masquées ne doit pas rester comme un titre orphelin.
+            // Deux types de garde dans ce menu :
+            //   'can'      — une ability déjà appliquée en dur par l'écran, donc à masquer
+            //                sans condition : y renvoyer afficherait un lien vers un 403 ;
+            //   'can_rbac' — une permission du catalogue, encore en observation. Tant que
+            //                rbac.enforce est faux l'entrée reste visible, sinon la période
+            //                d'observation ne mesurerait aucun usage.
+            $entrees = collect($adminNav)
+                ->reject(fn (array $item): bool => (isset($item['can']) && ! auth()->user()->can($item['can']))
+                    || (isset($item['can_rbac']) && ! auth()->user()->peutOuObserve($item['can_rbac'])))
+                ->values();
+
+            $adminNav = $entrees
+                ->reject(function (array $item, int $i) use ($entrees): bool {
+                    if (! isset($item['section'])) {
+                        return false;
+                    }
+                    $suivant = $entrees->get($i + 1);
+
+                    return $suivant === null || isset($suivant['section']);
+                })
+                ->values()
+                ->all();
             @endphp
 
             @foreach($adminNav as $item)

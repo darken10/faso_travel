@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin;
 
 use App\Models\Compagnie\Compagnie;
+use App\Traits\AutoriseLesActions;
 use App\Traits\ManagesCompagnieSettings;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -19,6 +20,7 @@ use Livewire\Component;
 #[Layout('layouts.admin-panel')]
 class SettingsManager extends Component
 {
+    use AutoriseLesActions;
     use ManagesCompagnieSettings;
 
     #[Url(as: 'compagnie', history: true)]
@@ -49,6 +51,7 @@ class SettingsManager extends Component
     /** Rétablit l'intégralité des défauts pour la compagnie sélectionnée. */
     public function resetAll(): void
     {
+        $this->autoriser('platform.settings.manage');
         $compagnie = $this->compagnie();
 
         if (! $compagnie) {
@@ -71,10 +74,10 @@ class SettingsManager extends Component
             ->get(['id', 'name', 'sigle']);
 
         return view('livewire.admin.settings-manager', [
-            'compagnies'        => $compagnies,
-            'compagnie'         => $this->compagnie(),
-            'catalogue'         => $this->catalogue(),
-            'readOnly'          => $this->isReadOnly(),
+            'compagnies' => $compagnies,
+            'compagnie' => $this->compagnie(),
+            'catalogue' => $this->catalogue(),
+            'readOnly' => $this->isReadOnly(),
             'canManageAdvanced' => $this->canManageAdvanced(),
         ]);
     }

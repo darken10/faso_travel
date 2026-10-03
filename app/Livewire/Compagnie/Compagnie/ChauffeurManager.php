@@ -3,6 +3,8 @@
 namespace App\Livewire\Compagnie\Compagnie;
 
 use App\Models\Compagnie\Chauffer;
+use App\Traits\AutoriseLesActions;
+use App\Traits\ScopedToCompagnie;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -11,28 +13,37 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
-use App\Traits\ScopedToCompagnie;
 
 #[Layout('layouts.compagnie-panel')]
 class ChauffeurManager extends Component
 {
+    use AutoriseLesActions;
     use ScopedToCompagnie;
+    use WithFileUploads, WithPagination;
 
-    use WithPagination, WithFileUploads;
+    public string $search = '';
 
-    public string  $search       = '';
-    public bool    $showModal    = false;
-    public ?string $editingId    = null;
+    public bool $showModal = false;
 
-    public string  $first_name     = '';
-    public string  $last_name      = '';
-    public string  $matricule      = '';
-    public string  $telephone      = '';
-    public string  $date_naissance = '';
-    public string  $genre          = '';
-    public string  $statut         = 'actif';
-    public ?string $existingPhoto  = null;
-    public         $photo          = null;
+    public ?string $editingId = null;
+
+    public string $first_name = '';
+
+    public string $last_name = '';
+
+    public string $matricule = '';
+
+    public string $telephone = '';
+
+    public string $date_naissance = '';
+
+    public string $genre = '';
+
+    public string $statut = 'actif';
+
+    public ?string $existingPhoto = null;
+
+    public $photo = null;
 
     public function updatingSearch(): void
     {
@@ -43,9 +54,9 @@ class ChauffeurManager extends Component
     {
         $c = Chauffer::ofCompagnie($this->compagnieId())->findOrFail($id);
         $this->dispatch('open-doc-panel',
-            type:     Chauffer::class,
-            id:       $id,
-            label:    $c->fullName(),
+            type: Chauffer::class,
+            id: $id,
+            label: $c->fullName(),
             typeName: 'Chauffeur',
         );
     }
@@ -67,44 +78,45 @@ class ChauffeurManager extends Component
     {
         $c = Chauffer::ofCompagnie($this->compagnieId())->findOrFail($id);
 
-        $this->editingId      = $id;
-        $this->first_name     = $c->first_name;
-        $this->last_name      = $c->last_name;
-        $this->matricule      = $c->matricule ?? '';
-        $this->telephone      = $c->telephone ?? '';
+        $this->editingId = $id;
+        $this->first_name = $c->first_name;
+        $this->last_name = $c->last_name;
+        $this->matricule = $c->matricule ?? '';
+        $this->telephone = $c->telephone ?? '';
         $this->date_naissance = $c->date_naissance ? $c->date_naissance->format('Y-m-d') : '';
-        $this->genre          = $c->genre;
-        $this->statut         = $c->statut;
-        $this->existingPhoto  = $c->photo;
-        $this->photo          = null;
-        $this->showModal      = true;
+        $this->genre = $c->genre;
+        $this->statut = $c->statut;
+        $this->existingPhoto = $c->photo;
+        $this->photo = null;
+        $this->showModal = true;
     }
 
     public function save(): void
     {
+        $this->autoriser($this->editingId ? 'reseau.chauffeur.update' : 'reseau.chauffeur.create');
         $this->validate([
-            'first_name'     => 'required|string|max:100',
-            'last_name'      => 'required|string|max:100',
-            'matricule'      => [
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'matricule' => [
                 'nullable', 'string', 'max:50',
                 Rule::unique('chauffers', 'matricule')->ignore($this->editingId, 'id'),
             ],
-            'telephone'      => 'nullable|string|max:20',
+            'telephone' => 'nullable|string|max:20',
             'date_naissance' => 'required|date',
-            'genre'          => 'required|in:Homme,Femme',
-            'statut'         => 'required|in:actif,inactif,suspendu',
-            'photo'          => 'nullable|image|max:2048',
+            'genre' => 'required|in:Homme,Femme',
+            'statut' => 'required|in:actif,inactif,suspendu',
+            'photo' => 'nullable|image|max:2048',
         ]);
 
         $data = [
-            'first_name'     => $this->first_name,
-            'last_name'      => $this->last_name,
-            'matricule'      => $this->matricule ?: null,
-            'telephone'      => $this->telephone ?: null,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'matricule' => $this->matricule ?: null,
+            'telephone' => $this->telephone ?: null,
             'date_naissance' => $this->date_naissance,
-            'genre'          => $this->genre,
-            'statut'         => $this->statut,
-            'compagnie_id'   => Auth::user()->compagnie_id,
+            'genre' => $this->genre,
+            'statut' => $this->statut,
+            'compagnie_id' => Auth::user()->compagnie_id,
         ];
 
         if ($this->photo) {
@@ -132,6 +144,7 @@ class ChauffeurManager extends Component
 
     public function delete(string $id): void
     {
+        $this->autoriser('reseau.chauffeur.delete');
         $c = Chauffer::ofCompagnie($this->compagnieId())->findOrFail($id);
         if ($c->photo) {
             Storage::disk('public')->delete($c->photo);
@@ -144,7 +157,7 @@ class ChauffeurManager extends Component
     {
         $chauffeurs = Chauffer::withCount('documents')
             ->where('compagnie_id', Auth::user()->compagnie_id)
-            ->when($this->search, fn($q) => $q
+            ->when($this->search, fn ($q) => $q
                 ->where('first_name', 'like', "%{$this->search}%")
                 ->orWhere('last_name', 'like', "%{$this->search}%")
                 ->orWhere('matricule', 'like', "%{$this->search}%")
