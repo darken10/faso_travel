@@ -188,7 +188,7 @@ class CatalogueTest extends TestCase
 
         foreach (RoleGabarits::tous() as $gabarit) {
             foreach ($gabarit['permissions'] as $nom => $portee) {
-                if ($portee !== 'gare' || str_ends_with($nom, '.gare')) {
+                if ($portee !== 'gare') {
                     continue;
                 }
 

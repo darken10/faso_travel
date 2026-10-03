@@ -7,6 +7,7 @@ use App\Models\Role;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -65,7 +66,14 @@ class SchemaRbacTest extends TestCase
 
     public function test_rollback_restaure_le_schema_precedent(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 5, '--env' => 'testing']);
+        // Le nombre de pas est calculé, pas écrit en dur : toute migration ajoutée après
+        // celles du RBAC décalerait un compteur figé, et le test échouerait pour une
+        // raison qui n'a rien à voir avec le schéma qu'il vérifie.
+        $pas = DB::table('migrations')
+            ->where('migration', '>=', '2026_10_03_164402_extend_roles_table_for_rbac')
+            ->count();
+
+        Artisan::call('migrate:rollback', ['--step' => $pas, '--env' => 'testing']);
 
         try {
             $this->assertFalse(Schema::hasTable('permissions'));

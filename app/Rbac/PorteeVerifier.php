@@ -3,8 +3,10 @@
 namespace App\Rbac;
 
 use App\Models\Compagnie\Compagnie;
+use App\Models\Compagnie\Gare;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use Illuminate\Database\Eloquent\Model;
 
@@ -61,15 +63,82 @@ class PorteeVerifier
     }
 
     /**
-     * Portée « gare » — neutralisée jusqu'à la livraison de la table `gare_user`.
+     * Portée « gare » : le sujet doit relever d'une gare d'affectation du compte.
      *
-     * Tant qu'aucune affectation de gare n'existe, traiter cette portée comme une portée
-     * compagnie est le seul comportement sûr : la traiter comme un refus retirerait d'un
-     * coup l'accès des guichetiers et des agents, qui n'ont aujourd'hui aucune gare.
+     * Un compte sans aucune affectation ne voit rien. C'est volontaire : seuls les quatre
+     * rôles de terrain reçoivent cette portée, et un compte de terrain sans gare est une
+     * affectation oubliée, pas un compte qui travaille partout. La commande
+     * `rbac:gares-manquantes` existe précisément pour détecter ces oublis avant que les
+     * contrôles ne deviennent bloquants.
      */
     private function memeGare(User $user, mixed $sujet): bool
     {
-        return $this->memeCompagnie($user, $sujet);
+        if (! $this->memeCompagnie($user, $sujet)) {
+            return false;
+        }
+
+        $affectations = $user->gareIds();
+
+        if ($affectations === []) {
+            return false;
+        }
+
+        $garesDuSujet = $this->garesDuSujet($sujet);
+
+        if ($garesDuSujet === []) {
+            // Gare indéterminable : on refuse. Un doute sur la localisation d'un
+            // enregistrement ne doit jamais se résoudre en autorisation.
+            return false;
+        }
+
+        return array_intersect($affectations, $garesDuSujet) !== [];
+    }
+
+    /**
+     * Gares auxquelles un sujet se rattache.
+     *
+     * Un voyage en porte deux — départ et arrivée — et les deux comptent : sur un
+     * aller-retour, le retour part de la gare d'arrivée, et c'est l'agent de cette gare
+     * qui le contrôle.
+     *
+     * @return list<int>
+     */
+    private function garesDuSujet(mixed $sujet): array
+    {
+        if ($sujet instanceof Gare) {
+            return [(int) $sujet->getKey()];
+        }
+
+        if ($sujet instanceof User) {
+            return $sujet->gareIds();
+        }
+
+        $voyage = match (true) {
+            $sujet instanceof Voyage => $sujet,
+            $sujet instanceof VoyageInstance => $sujet->voyage,
+            $sujet instanceof Ticket => $sujet->voyageInstance?->voyage,
+            default => null,
+        };
+
+        if ($voyage !== null) {
+            return array_values(array_map(
+                'intval',
+                array_filter([$voyage->depart_id, $voyage->arrive_id])
+            ));
+        }
+
+        // Une référence directe à la gare primera toujours sur une déduction.
+        if ($sujet instanceof Model && $sujet->getAttribute('gare_id') !== null) {
+            return [(int) $sujet->getAttribute('gare_id')];
+        }
+
+        // Une session de caisse appartient à un agent, pas à une gare : elle hérite des
+        // affectations de son titulaire.
+        if ($sujet instanceof Model && $sujet->getAttribute('user_id') !== null && $sujet->isRelation('user')) {
+            return $sujet->user?->gareIds() ?? [];
+        }
+
+        return [];
     }
 
     private function luiAppartient(User $user, mixed $sujet): bool

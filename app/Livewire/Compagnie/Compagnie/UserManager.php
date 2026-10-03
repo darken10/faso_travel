@@ -2,14 +2,15 @@
 
 namespace App\Livewire\Compagnie\Compagnie;
 
-use App\Enums\CompanyRole;
 use App\Enums\SexeUser;
 use App\Enums\StatutUser;
 use App\Mail\CompanyAccountActivationMail;
 use App\Models\AccountActivation;
+use App\Models\Compagnie\Gare;
 use App\Models\Role;
 use App\Models\User;
 use App\Traits\ScopedToCompagnie;
+use App\Traits\ScopedToGare;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -23,6 +24,7 @@ use Livewire\WithPagination;
 class UserManager extends Component
 {
     use ScopedToCompagnie;
+    use ScopedToGare;
     use WithPagination;
 
     public string $search = '';
@@ -45,6 +47,10 @@ class UserManager extends Component
 
     public array $selectedRoles = [];
 
+    public array $selectedGares = [];
+
+    public ?int $garePrincipale = null;
+
     protected function rules(): array
     {
         $emailRule = $this->editingId
@@ -59,10 +65,32 @@ class UserManager extends Component
             'numero' => 'nullable|numeric',
             'numero_identifiant' => 'nullable|string|max:10',
             'selectedRoles' => 'required|array|min:1',
+            // Seuls les rôles de compagnie sont attribuables ici, gabarits comme rôles
+            // historiques. Restreindre aux six valeurs de CompanyRole excluait les rôles
+            // gabarits, et un compte créé depuis cet écran se retrouvait avec un rôle sans
+            // aucune permission. Les rôles plateforme restent inaccessibles : c'est la
+            // protection contre l'élévation de privilèges.
             'selectedRoles.*' => [
                 'integer',
-                Rule::exists('roles', 'id')->whereIn('name', CompanyRole::values()),
+                Rule::exists('roles', 'id')->where(
+                    fn ($query) => $query->where('scope', 'compagnie')
+                        ->where(
+                            fn ($q) => $q->whereNull('compagnie_id')
+                                ->orWhere('compagnie_id', $this->compagnieId())
+                        )
+                ),
             ],
+            'selectedGares' => 'array',
+            // Une gare d'une autre compagnie ne peut pas être affectée : `selectedGares`
+            // est une propriété publique Livewire, donc pilotable depuis le navigateur.
+            'selectedGares.*' => [
+                'integer',
+                Rule::exists('gares', 'id')->where(
+                    fn ($query) => $query->where('compagnie_id', $this->compagnieId())
+                        ->orWhere('is_default', true)
+                ),
+            ],
+            'garePrincipale' => ['nullable', 'integer', Rule::in($this->selectedGares)],
         ];
     }
 
@@ -73,7 +101,7 @@ class UserManager extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['editingId', 'first_name', 'last_name', 'email', 'sexe', 'numero', 'selectedRoles']);
+        $this->reset(['editingId', 'first_name', 'last_name', 'email', 'sexe', 'numero', 'selectedRoles', 'selectedGares', 'garePrincipale']);
         $this->numero_identifiant = '+226';
         $this->showModal = true;
     }
@@ -89,6 +117,8 @@ class UserManager extends Component
         $this->numero = $user->numero ?? '';
         $this->numero_identifiant = $user->numero_identifiant ?? '+226';
         $this->selectedRoles = $user->roles()->pluck('roles.id')->toArray();
+        $this->selectedGares = $user->gareIds();
+        $this->garePrincipale = $user->garePrincipale()?->id;
         $this->showModal = true;
     }
 
@@ -110,6 +140,7 @@ class UserManager extends Component
                 'name' => $this->first_name.' '.$this->last_name,
             ]);
             $user->syncRoles($this->selectedRoles);
+            $user->syncGares($this->affectationsGares());
             $this->dispatch('toast', type: 'success', message: 'Utilisateur mis à jour.');
         } else {
             $password = Str::random(12);
@@ -127,6 +158,7 @@ class UserManager extends Component
             ]);
 
             $user->syncRoles($this->selectedRoles);
+            $user->syncGares($this->affectationsGares());
 
             // Send activation email
             $activation = AccountActivation::create([
@@ -142,8 +174,26 @@ class UserManager extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['editingId', 'first_name', 'last_name', 'email', 'sexe', 'numero', 'selectedRoles']);
+        $this->reset(['editingId', 'first_name', 'last_name', 'email', 'sexe', 'numero', 'selectedRoles', 'selectedGares', 'garePrincipale']);
         $this->numero_identifiant = '+226';
+    }
+
+    /**
+     * Affectations de gare au format attendu par le pivot.
+     *
+     * @return array<int, array{is_principale: bool}>
+     */
+    private function affectationsGares(): array
+    {
+        $affectations = [];
+
+        foreach ($this->selectedGares as $gareId) {
+            $affectations[(int) $gareId] = [
+                'is_principale' => (int) $gareId === $this->garePrincipale,
+            ];
+        }
+
+        return $affectations;
     }
 
     public function bloquer(int $id): void
@@ -181,13 +231,17 @@ class UserManager extends Component
                 ->orWhere('last_name', 'like', '%'.$this->search.'%')
                 ->orWhere('email', 'like', '%'.$this->search.'%')
             )
-            ->with('roles')
+            ->with(['roles', 'gares'])
             ->latest()
             ->paginate(15);
 
         $sexes = SexeUser::cases();
-        $roles = Role::whereIn('name', CompanyRole::values())->orderBy('label')->get();
+        $roles = Role::where('scope', 'compagnie')
+            ->where(fn ($q) => $q->whereNull('compagnie_id')->orWhere('compagnie_id', $compagnieId))
+            ->orderBy('label')
+            ->get();
+        $gares = Gare::orderBy('name')->get(['id', 'name', 'is_default']);
 
-        return view('livewire.compagnie.compagnie.user-manager', compact('users', 'sexes', 'roles'));
+        return view('livewire.compagnie.compagnie.user-manager', compact('users', 'sexes', 'roles', 'gares'));
     }
 }

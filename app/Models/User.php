@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\StatutUser;
 use App\Enums\UserRole;
 use App\Models\Compagnie\Compagnie;
+use App\Models\Compagnie\Gare;
 use App\Models\Post\Comment;
 use App\Models\Post\Like;
 use App\Models\Post\Post;
@@ -73,6 +74,16 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @var array<int, string>
      */
+    /**
+     * Mémo d'instance des gares d'affectation.
+     *
+     * Une vérification de portée est appelée plusieurs fois par requête : sans ce mémo,
+     * chaque appel rejouerait la même requête sur le pivot.
+     *
+     * @var list<int>|null
+     */
+    private ?array $gareIdsMemo = null;
+
     protected $appends = [
         'profile_photo_url',
         'is_verified',
@@ -174,6 +185,59 @@ class User extends Authenticatable implements MustVerifyEmail
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    /** Gares auxquelles le compte est affecté. */
+    public function gares(): BelongsToMany
+    {
+        return $this->belongsToMany(Gare::class)->withPivot('is_principale');
+    }
+
+    /**
+     * Identifiants des gares d'affectation.
+     *
+     * Les scopes globaux de `Gare` sont écartés volontairement : ils filtrent sur la
+     * compagnie de l'utilisateur *connecté*, qui n'est pas toujours celui dont on lit les
+     * affectations. Le pivot suffit à garantir le rattachement.
+     *
+     * @return list<int>
+     */
+    public function gareIds(): array
+    {
+        if (! $this->exists) {
+            return [];
+        }
+
+        return $this->gareIdsMemo ??= $this->gares()
+            ->withoutGlobalScopes()
+            ->pluck('gares.id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+    }
+
+    /** Gare principale, ou la première affectation à défaut. */
+    public function garePrincipale(): ?Gare
+    {
+        return $this->gares()
+            ->withoutGlobalScopes()
+            ->orderByDesc('gare_user.is_principale')
+            ->first();
+    }
+
+    public function estAffecteALaGare(int $gareId): bool
+    {
+        return in_array($gareId, $this->gareIds(), true);
+    }
+
+    /**
+     * Remplace les affectations de gare et vide le mémo.
+     *
+     * @param  array<int, array{is_principale?: bool}>|list<int>  $gares
+     */
+    public function syncGares(array $gares): void
+    {
+        $this->gares()->sync($gares);
+        $this->gareIdsMemo = null;
     }
 
     public function hasRole(string $roleName): bool

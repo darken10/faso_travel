@@ -216,6 +216,44 @@
                         </div>
                         @error('selectedRoles') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Gares d'affectation
+                            <span class="text-xs text-gray-400">(laisser vide = toute la compagnie)</span>
+                        </label>
+                        @if($gares->isEmpty())
+                            <p class="text-xs text-gray-500 px-3 py-2 border border-gray-200 rounded-lg">
+                                Aucune gare enregistrée. Créez-en une avant d'affecter du personnel.
+                            </p>
+                        @else
+                            <div class="grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
+                                @foreach($gares as $gare)
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" wire:model.live="selectedGares" value="{{ $gare->id }}" class="rounded text-blue-600">
+                                        <span class="text-sm text-gray-700">
+                                            {{ $gare->name }}
+                                            @if($gare->is_default)
+                                                <span class="text-xs text-gray-400">(commune)</span>
+                                            @endif
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('selectedGares.*') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                            @if(count($selectedGares) > 1)
+                                <div class="mt-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Gare principale</label>
+                                    <select wire:model="garePrincipale" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                        <option value="">— Aucune —</option>
+                                        @foreach($gares->whereIn('id', $selectedGares) as $gare)
+                                            <option value="{{ $gare->id }}">{{ $gare->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('garePrincipale') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                                </div>
+                            @endif
+                        @endif
+                    </div>
                     @if(!$editingId)
                         <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
                             Un email d'activation sera envoyé automatiquement à cet utilisateur.

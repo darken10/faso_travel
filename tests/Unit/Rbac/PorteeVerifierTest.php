@@ -98,11 +98,15 @@ class PorteeVerifierTest extends TestCase
         );
     }
 
-    public function test_portee_gare_se_comporte_comme_la_portee_compagnie(): void
+    public function test_portee_gare_refuse_un_compte_sans_affectation(): void
     {
-        // Comportement voulu tant que la table gare_user n'existe pas : refuser
-        // retirerait d'un coup l'accès des guichetiers et des agents.
-        $this->assertTrue($this->verifieur->autorise($this->agent(7), 'gare', $this->vehicule(7)));
+        // Un compte de terrain sans gare est une affectation oubliée, pas un compte qui
+        // travaille partout. Voir la commande rbac:gares-manquantes.
+        $this->assertFalse($this->verifieur->autorise($this->agent(7), 'gare', $this->vehicule(7)));
+    }
+
+    public function test_portee_gare_refuse_d_abord_sur_la_compagnie(): void
+    {
         $this->assertFalse($this->verifieur->autorise($this->agent(7), 'gare', $this->vehicule(8)));
     }
 
