@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Permission;
+use App\Providers\AppServiceProvider;
 use App\Rbac\PermissionCatalogue;
 use Illuminate\Database\Seeder;
 
@@ -30,5 +31,10 @@ class PermissionSeeder extends Seeder
                 ]
             );
         }
+
+        // Les abilities sont derivees de cette table au boot et mises en cache : sans cet
+        // oubli, une permission fraichement semee ne serait pas controlable avant une
+        // heure.
+        \Illuminate\Support\Facades\Cache::forget(AppServiceProvider::CLE_CACHE_PERMISSIONS);
     }
 }

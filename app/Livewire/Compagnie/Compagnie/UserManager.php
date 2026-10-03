@@ -109,7 +109,7 @@ class UserManager extends Component
                 'numero_identifiant' => $this->numero_identifiant,
                 'name' => $this->first_name.' '.$this->last_name,
             ]);
-            $user->roles()->sync($this->selectedRoles);
+            $user->syncRoles($this->selectedRoles);
             $this->dispatch('toast', type: 'success', message: 'Utilisateur mis à jour.');
         } else {
             $password = Str::random(12);
@@ -126,7 +126,7 @@ class UserManager extends Component
                 'statut' => StatutUser::EnAttente->value,
             ]);
 
-            $user->roles()->sync($this->selectedRoles);
+            $user->syncRoles($this->selectedRoles);
 
             // Send activation email
             $activation = AccountActivation::create([

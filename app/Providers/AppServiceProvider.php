@@ -4,9 +4,12 @@ namespace App\Providers;
 
 use App\Enums\CompanyRole;
 use App\Enums\UserRole;
+use App\Features\Payement\PaymentGatewayFactory;
+use App\Models\Auth\PersonalAccessToken;
 use App\Models\Compagnie\Compagnie;
-use App\Models\User;
+use App\Models\Permission;
 use App\Models\Ticket\Ticket;
+use App\Models\User;
 use App\Models\Voyage\Voyage;
 use App\Models\Voyage\VoyageInstance;
 use App\Policies\CompagniePolicy;
@@ -17,18 +20,20 @@ use App\Policies\VoyagePolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use App\Features\Payement\PaymentGatewayFactory;
-use App\Models\Auth\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /** Liste des abilities dérivées du catalogue de permissions. */
+    public const CLE_CACHE_PERMISSIONS = 'rbac:permissions:noms';
+
     public function register(): void
     {
-        $this->app->singleton(PaymentGatewayFactory::class, fn () => new PaymentGatewayFactory());
+        $this->app->singleton(PaymentGatewayFactory::class, fn () => new PaymentGatewayFactory);
     }
 
     public function boot(): void
@@ -41,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->registerPolicies();
         $this->registerGates();
+        $this->registerPermissionGates();
         $this->configureRateLimiting();
     }
 
@@ -58,11 +64,11 @@ class AppServiceProvider extends ServiceProvider
      */
     private function registerGates(): void
     {
-        Gate::define('compagnie-settings.viewAny',       [CompagnieSettingPolicy::class, 'viewAny']);
-        Gate::define('compagnie-settings.view',          [CompagnieSettingPolicy::class, 'view']);
-        Gate::define('compagnie-settings.update',        [CompagnieSettingPolicy::class, 'update']);
+        Gate::define('compagnie-settings.viewAny', [CompagnieSettingPolicy::class, 'viewAny']);
+        Gate::define('compagnie-settings.view', [CompagnieSettingPolicy::class, 'view']);
+        Gate::define('compagnie-settings.update', [CompagnieSettingPolicy::class, 'update']);
         Gate::define('compagnie-settings.updateAdvanced', [CompagnieSettingPolicy::class, 'updateAdvanced']);
-        Gate::define('compagnie-settings.reset',         [CompagnieSettingPolicy::class, 'reset']);
+        Gate::define('compagnie-settings.reset', [CompagnieSettingPolicy::class, 'reset']);
 
         // Instruction des validations refusées : réservée à la direction, à
         // l'administration et à la comptabilité. Un agent terrain ou un guichetier
@@ -74,6 +80,38 @@ class AppServiceProvider extends ServiceProvider
                     || $user->hasAnyRole([CompanyRole::Admin->value, CompanyRole::Comptabilite->value])
                 );
         });
+    }
+
+    /**
+     * Expose chaque permission du catalogue comme une ability nommée.
+     *
+     * `Gate::before` traite le cas racine en amont : un compte `root` reste opérationnel
+     * même sur une base dont les permissions ne sont pas encore semées.
+     *
+     * La liste est mise en cache et l'accès est encadré par un `try` : au `boot` d'un
+     * `artisan migrate` sur une base vide, la table `permissions` n'existe pas encore et
+     * l'application doit démarrer quand même.
+     */
+    private function registerPermissionGates(): void
+    {
+        Gate::before(fn (User $user, string $ability): ?bool => $user->isRoot() ? true : null);
+
+        try {
+            $noms = Cache::remember(
+                self::CLE_CACHE_PERMISSIONS,
+                3600,
+                fn (): array => Permission::pluck('name')->all()
+            );
+        } catch (\Throwable) {
+            return;
+        }
+
+        foreach ($noms as $nom) {
+            Gate::define(
+                $nom,
+                fn (User $user, mixed $sujet = null): bool => $user->hasPermission($nom, $sujet)
+            );
+        }
     }
 
     private function configureRateLimiting(): void

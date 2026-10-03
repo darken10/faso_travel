@@ -3,40 +3,39 @@
 namespace App\Models;
 
 use App\Enums\StatutUser;
-use App\Notifications\Auth\ResetPasswordNotification;
-use App\Notifications\Auth\VerifyEmailNotification;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-
-use App\Models\Compagnie\Compagnie;
-use Carbon\Carbon;
 use App\Enums\UserRole;
+use App\Models\Compagnie\Compagnie;
+use App\Models\Post\Comment;
 use App\Models\Post\Like;
 use App\Models\Post\Post;
-use App\Models\Post\Comment;
 use App\Models\Ticket\Ticket;
-use App\Models\Role;
+use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Auth\VerifyEmailNotification;
+use App\Traits\HasPermissions;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Jetstream\HasTeams;
 use Laravel\Sanctum\HasApiTokens;
-use Laravel\Jetstream\HasProfilePhoto;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
     use HasFactory;
+    use HasPermissions;
     use HasProfilePhoto;
     use HasTeams;
     use Notifiable;
     use TwoFactorAuthenticatable;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -115,22 +114,21 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         parent::boot();
         static::creating(callback: function (User $user) {
-            $user->name = Str::upper($user->first_name) .' '. $user->last_name;
+            $user->name = Str::upper($user->first_name).' '.$user->last_name;
         });
     }
 
-
-    function posts(): HasMany
+    public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
     }
 
-    function pushTokens(): HasMany
+    public function pushTokens(): HasMany
     {
         return $this->hasMany(\App\Models\PushToken::class);
     }
 
-    function loyaltyTransactions(): HasMany
+    public function loyaltyTransactions(): HasMany
     {
         return $this->hasMany(\App\Models\LoyaltyTransaction::class)->latest();
     }
@@ -147,16 +145,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->pushTokens()->pluck('token')->all();
     }
 
-    function comments():HasMany{
+    public function comments(): HasMany
+    {
         return $this->hasMany(Comment::class);
     }
 
-    function likes():HasMany{
+    public function likes(): HasMany
+    {
         return $this->hasMany(Like::class);
     }
 
-
-    function tickets():HasMany{
+    public function tickets(): HasMany
+    {
         return $this->hasMany(Ticket::class);
     }
 
@@ -166,47 +166,49 @@ class User extends Authenticatable implements MustVerifyEmail
         return $query->where('compagnie_id', $compagnieId);
     }
 
-    function compagnie(): BelongsTo
+    public function compagnie(): BelongsTo
     {
         return $this->belongsTo(Compagnie::class);
     }
 
-    function roles(): BelongsToMany
+    public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
     }
 
-    function hasRole(string $roleName): bool
+    public function hasRole(string $roleName): bool
     {
         return $this->roles()->where('name', $roleName)->exists();
     }
 
-    function hasAnyRole(array $roleNames): bool
+    public function hasAnyRole(array $roleNames): bool
     {
         return $this->roles()->whereIn('name', $roleNames)->exists();
     }
 
-    function assignRole(string ...$roleNames): void
+    public function assignRole(string ...$roleNames): void
     {
         $roles = Role::whereIn('name', $roleNames)->get();
         $this->roles()->syncWithoutDetaching($roles);
+        $this->invaliderCachePermissions();
     }
 
-    function removeRole(string ...$roleNames): void
+    public function removeRole(string ...$roleNames): void
     {
         $roles = Role::whereIn('name', $roleNames)->get();
         $this->roles()->detach($roles);
+        $this->invaliderCachePermissions();
     }
 
-    function autrePersonnes():HasMany
+    public function autrePersonnes(): HasMany
     {
         return $this->hasMany(Authenticatable::class);
 
     }
 
-    function ticketsAutrePersonne()
+    public function ticketsAutrePersonne()
     {
-        return $this->morphMany(Ticket::class,'autre_personne');
+        return $this->morphMany(Ticket::class, 'autre_personne');
     }
 
     public function sendPasswordResetNotification($token): void
@@ -216,7 +218,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new VerifyEmailNotification());
+        $this->notify(new VerifyEmailNotification);
     }
-
 }
