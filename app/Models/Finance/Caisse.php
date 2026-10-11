@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 
 class Caisse extends Model
@@ -64,6 +65,11 @@ class Caisse extends Model
         return $this->hasMany(Ticket::class);
     }
 
+    public function bordereauVersement(): HasOne
+    {
+        return $this->hasOne(BordereauVersement::class);
+    }
+
     public function isOuverte(): bool
     {
         return $this->statut === StatutCaisse::Ouverte;
@@ -74,9 +80,19 @@ class Caisse extends Model
      */
     public function totalVentes(): int
     {
+        return $this->totalEspeces();
+    }
+
+    /** Montant effectivement détenu par l'agent, hors paiements électroniques. */
+    public function totalEspeces(): int
+    {
         return (int) $this->tickets()
-            ->whereHas('payements', fn ($q) => $q->where('statut', StatutPayement::Complete->value))
-            ->withSum(['payements as total' => fn ($q) => $q->where('statut', StatutPayement::Complete->value)], 'montant')
+            ->whereHas('payements', fn ($q) => $q
+                ->where('statut', StatutPayement::Complete->value)
+                ->where('moyen_payment', \App\Enums\MoyenPayment::ESPECE->value))
+            ->withSum(['payements as total' => fn ($q) => $q
+                ->where('statut', StatutPayement::Complete->value)
+                ->where('moyen_payment', \App\Enums\MoyenPayment::ESPECE->value)], 'montant')
             ->get()
             ->sum('total');
     }

@@ -106,7 +106,7 @@ class CatalogueTest extends TestCase
         $this->assertSame($pivots, \DB::table('permission_role')->count());
     }
 
-    public function test_dix_neuf_roles_gabarits_sont_crees(): void
+    public function test_vingt_roles_gabarits_sont_crees(): void
     {
         $this->seedRbac();
 
@@ -117,7 +117,7 @@ class CatalogueTest extends TestCase
             $this->assertTrue($role->is_system, "Le rôle gabarit {$nom} devrait être système.");
         }
 
-        $this->assertCount(19, RoleGabarits::noms());
+        $this->assertCount(20, RoleGabarits::noms());
     }
 
     public function test_les_roles_historiques_sont_conserves(): void
@@ -141,6 +141,9 @@ class CatalogueTest extends TestCase
             'guichet.ticket.unblock',
             'caisse.session.forceClose',
             'caisse.ecart.validate',
+            'caisse.bordereau.receive',
+            'caisse.bordereau.transfer',
+            'caisse.bordereau.account',
             'finance.recette.delete',
             'finance.depense.delete',
             'finance.depense.approve',

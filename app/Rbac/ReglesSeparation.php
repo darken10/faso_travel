@@ -28,8 +28,10 @@ class ReglesSeparation
     public const CUMULS_INTERDITS = [
         ['guichetier', 'chef_caisse', 'le vendeur validerait ses propres écarts de caisse'],
         ['guichetier', 'comptable', 'encaissement et écriture comptable sur le même compte'],
+        ['guichetier', 'dsf_finance', 'le vendeur réceptionnerait son propre versement de caisse'],
         ['guichetier', 'agent_embarquement', 'vendre et contrôler le même siège rend un siège revendu indétectable'],
         ['agent_embarquement', 'comptable', "l'agent arbitrerait les conflits qu'il a lui-même générés"],
+        ['dsf_finance', 'comptable', 'la réception financière et la comptabilisation d’un même versement doivent rester séparées'],
         ['comptable', 'auditeur', "un auditeur qui écrit n'audite plus"],
     ];
 

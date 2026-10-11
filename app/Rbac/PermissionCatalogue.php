@@ -138,6 +138,12 @@ class PermissionCatalogue
             ['name' => 'caisse.ecart.validate', 'domaine' => 'caisse', 'label' => 'Valider un écart de caisse', 'scope' => 'compagnie', 'is_sensitive' => true],
             ['name' => 'caisse.historique.view', 'domaine' => 'caisse', 'label' => 'Consulter l\'historique des caisses', 'scope' => 'compagnie'],
             ['name' => 'caisse.historique.export', 'domaine' => 'caisse', 'label' => 'Exporter l\'historique des caisses', 'scope' => 'compagnie'],
+            ['name' => 'caisse.bordereau.emit', 'domaine' => 'caisse', 'label' => 'Émettre un bordereau de versement', 'scope' => 'compagnie'],
+            ['name' => 'caisse.bordereau.view', 'domaine' => 'caisse', 'label' => 'Consulter les bordereaux de versement', 'scope' => 'compagnie'],
+            ['name' => 'caisse.bordereau.export', 'domaine' => 'caisse', 'label' => 'Imprimer un bordereau de versement', 'scope' => 'compagnie'],
+            ['name' => 'caisse.bordereau.receive', 'domaine' => 'caisse', 'label' => 'Prendre en charge un versement de caisse', 'scope' => 'compagnie', 'is_sensitive' => true],
+            ['name' => 'caisse.bordereau.transfer', 'domaine' => 'caisse', 'label' => 'Transmettre un versement à la comptabilité', 'scope' => 'compagnie', 'is_sensitive' => true],
+            ['name' => 'caisse.bordereau.account', 'domaine' => 'caisse', 'label' => 'Comptabiliser un versement de caisse', 'scope' => 'compagnie', 'is_sensitive' => true],
 
             // ── finance ───────────────────────────────────────────────────────
             ['name' => 'finance.bilan.view', 'domaine' => 'finance', 'label' => 'Consulter le bilan financier', 'scope' => 'compagnie'],

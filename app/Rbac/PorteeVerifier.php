@@ -151,6 +151,10 @@ class PorteeVerifier
             return (int) $sujet->getAttribute('user_id') === (int) $user->getKey();
         }
 
+        if ($sujet instanceof Model && $sujet->getAttribute('emitted_by_id') !== null) {
+            return (int) $sujet->getAttribute('emitted_by_id') === (int) $user->getKey();
+        }
+
         // Propriété indéterminable : on refuse. Un doute sur l'appartenance d'un
         // enregistrement ne doit jamais se résoudre en autorisation.
         return false;

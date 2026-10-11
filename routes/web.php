@@ -213,6 +213,7 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/caisse', \App\Livewire\Compagnie\Caisse\GestionCaisse::class)->name('caisse')->middleware('can.rbac:caisse.session.view.own');
     Route::get('/caisse/{caisse}', \App\Livewire\Compagnie\Caisse\DetailCaisse::class)->name('caisse.detail')->middleware('can.rbac:caisse.session.view.own');
     Route::get('/caisses-historique', \App\Livewire\Compagnie\Caisse\HistoriqueCaisses::class)->name('caisses-historique')->middleware('can.rbac:caisse.historique.view');
+    Route::get('/bordereaux-versement', \App\Livewire\Compagnie\Caisse\BordereauxVersement::class)->name('bordereaux-versement')->middleware('can.rbac:caisse.bordereau.view');
 
     // ─── Ressources ───────────────────────────────────────────────────────
     Route::get('/gares', \App\Livewire\Compagnie\Compagnie\GareManager::class)->name('gares')->middleware('can.rbac:reseau.gare.view');

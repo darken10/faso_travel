@@ -12,6 +12,15 @@
         </div>
         @php $isOpen = $caisse->isOuverte(); @endphp
         <div class="ml-auto flex items-center gap-2">
+            @if(! $isOpen && ! $caisse->bordereauVersement && auth()->user()->peutOuObserve('caisse.bordereau.emit', $caisse))
+                <button wire:click="emettreBordereau" wire:confirm="Émettre le bordereau de versement de cette caisse ?" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Émettre le bordereau
+                </button>
+            @elseif($caisse->bordereauVersement)
+                <a href="{{ route('panel.compagnie.bordereaux-versement') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50">
+                    {{ $caisse->bordereauVersement->numero }}
+                </a>
+            @endif
             <button wire:click="exportPdf" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50">
                 <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                 Rapport PDF
