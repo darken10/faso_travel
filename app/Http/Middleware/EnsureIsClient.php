@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,7 +19,7 @@ class EnsureIsClient
         }
 
         // Les admins ne passent pas par l'espace client
-        if (in_array($user->role, [UserRole::Admin, UserRole::Root])) {
+        if ($user->isPlatformUser()) {
             return redirect($scheme.'://admin.'.$domain.'/');
         }
 

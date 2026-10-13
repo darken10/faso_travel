@@ -2,178 +2,44 @@
 
 namespace App\Livewire\Compagnie;
 
-use App\Enums\StatutCaisse;
-use App\Enums\StatutPayement;
-use App\Enums\StatutTicket;
-use App\Enums\StatutVoyageInstance;
-use App\Helper\QueryHelpers;
-use App\Models\Compagnie\Gare;
-use App\Models\Finance\Caisse;
-use App\Models\Finance\Depense;
-use App\Models\Finance\Recette;
-use App\Models\Ticket\Ticket;
-use App\Models\Voyage\VoyageInstance;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Component;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 
 #[Layout('layouts.compagnie-panel')]
 class Dashboard extends Component
 {
     public function render()
     {
-        $compagnieId = Auth::user()?->compagnie_id;
+        /** @var User $user */
+        $user = Auth::user();
 
-        $dateHeure = "STR_TO_DATE(CONCAT(date,' ',TIME_FORMAT(heure,'%H:%i:%s')), '%Y-%m-%d %H:%i:%s')";
+        // Le tableau de bord ne charge pas de statistiques globales : chaque carte est
+        // filtrée par la même permission que la route vers laquelle elle mène.
+        $actions = collect([
+            ['guichet.ticket.sell', 'panel.compagnie.vente-ticket', 'Vente de tickets', 'Créer une vente au guichet.', 'blue', 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'],
+            ['guichet.ticket.view.gare', 'panel.compagnie.tickets', 'Tickets', 'Consulter les tickets de votre périmètre.', 'indigo', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012 2h2a2 2 0 00-2-2'],
+            ['caisse.session.view.own', 'panel.compagnie.caisse', 'Ma caisse', 'Ouvrir ou suivre votre session de caisse.', 'emerald', 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'],
+            ['caisse.historique.view', 'panel.compagnie.caisses-historique', 'Historique des caisses', 'Suivre les sessions et les écarts.', 'emerald', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+            ['voyage.instance.view', 'panel.compagnie.instances', 'Départs programmés', 'Consulter les départs à venir.', 'amber', 'M4 6h16M4 10h16M4 14h16M4 18h16'],
+            ['reseau.chauffeur.view', 'panel.compagnie.chauffeurs', 'Chauffeurs', 'Suivre les chauffeurs et affectations.', 'violet', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+            ['compagnie.user.view', 'panel.compagnie.users', 'Équipe', 'Consulter les collaborateurs.', 'violet', 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857'],
+            ['rh.payroll.view', 'panel.compagnie.bulletins-paie', 'Bulletins de paie', 'Accéder aux bulletins du personnel.', 'emerald', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+            ['rh.leave.view', 'panel.compagnie.absences-conges', 'Absences et congés', 'Suivre les absences et demandes de congé.', 'violet', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+            ['finance.depense.view', 'panel.compagnie.depenses', 'Dépenses', 'Consulter les dépenses autorisées.', 'rose', 'M13 17h8m0 0V9m0 8l-8-8-4 4-6-6'],
+            ['finance.rapport.view', 'panel.compagnie.rapports', 'Rapports', 'Accéder aux rapports de votre périmètre.', 'amber', 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+            ['crm.conversation.view', 'panel.compagnie.messages', 'Messages clients', 'Traiter les échanges clients.', 'blue', 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'],
+            ['reseau.document.view', 'panel.compagnie.documents', 'Documents', 'Consulter les documents autorisés.', 'slate', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+        ])->filter(fn (array $action): bool => $user->hasPermission($action[0]))
+            ->map(fn (array $action): array => [
+                'route' => $action[1], 'label' => $action[2], 'description' => $action[3],
+                'color' => $action[4], 'icon' => $action[5],
+            ])->values();
 
-        // ── KPIs opérationnels du jour ──
-        $ventesJour = Ticket::withoutGlobalScopes()
-            ->whereHas('voyageInstance.voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
-            ->whereIn('statut', [StatutTicket::Payer, StatutTicket::Valider])
-            ->whereDate('created_at', today())
-            ->count();
-
-        $recetteJour = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
-            ->whereDate('created_at', today())
-            ->sum('montant');
-
-        // ── Vue agent : mes ventes + ma caisse ──
-        $mesVentesJour = Ticket::withoutGlobalScopes()
-            ->where('user_id', Auth::id())
-            ->whereIn('statut', [StatutTicket::Payer, StatutTicket::Valider])
-            ->whereDate('created_at', today())
-            ->count();
-        $maCaisse = Caisse::sessionOuverte();
-
-        // ── Prochains départs (7 prochains jours) ──
-        $upcoming = VoyageInstance::query()
-            ->whereHas('voyage', fn($q) => $q->where('compagnie_id', $compagnieId))
-            ->with(['voyage.trajet.depart', 'voyage.trajet.arriver', 'care'])
-            ->withCount(['tickets as occupied_count' => fn($q) => $q->where('statut', '!=', StatutTicket::Annuler)])
-            ->where('statut', '!=', StatutVoyageInstance::ANNULE)
-            ->whereRaw("{$dateHeure} >= NOW()")
-            ->whereRaw("{$dateHeure} <= DATE_ADD(NOW(), INTERVAL 7 DAY)")
-            ->orderByRaw("{$dateHeure} ASC")
-            ->get();
-
-        $prochainsDeparts = $upcoming->take(6);
-
-        // Taux de remplissage moyen des départs à venir (7 j).
-        $placesTotales = $upcoming->sum('nb_place');
-        $tauxRemplissage = $placesTotales > 0
-            ? (int) round($upcoming->sum('occupied_count') / $placesTotales * 100)
-            : 0;
-
-        // ── Alertes ──
-        $caissesNonCloturees = Caisse::where('compagnie_id', $compagnieId)
-            ->where('statut', StatutCaisse::Ouverte->value)
-            ->whereDate('opened_at', '<', today())
-            ->count();
-
-        // Départs sous-remplis : dans les 48h et < 30% d'occupation.
-        $departsSousRemplis = $upcoming
-            ->filter(fn($i) => $i->nb_place > 0
-                && ($i->occupied_count / $i->nb_place) < 0.30
-                && $i->getHeureDepart()->lte(now()->addHours(48)))
-            ->count();
-
-        // ── Stat cards ──
-        $totalVoyages = QueryHelpers::AllVoyagesOfMyCompagnie()->count();
-        $totalGares   = Gare::where('compagnie_id', $compagnieId)->count();
-        $totalPosts   = QueryHelpers::AllPostsOfMyCompagnie()->count();
-        $totalUsers   = QueryHelpers::AllUsersOfMyCompagnie()->count();
-
-        $ticketsPayes   = QueryHelpers::AllTicketOfMyCompagnie()->count();
-        $ticketsValides = QueryHelpers::AllTicketOfMyCompagnie(StatutTicket::Valider)->count();
-        $ticketsBloques = QueryHelpers::AllTicketOfMyCompagnie(StatutTicket::Bloquer)->count();
-
-        // ── Finance ──
-        $recetteTickets    = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])->sum('montant');
-        $recetteManuelles  = Recette::where('compagnie_id', $compagnieId)->sum('montant');
-        $totalRecettes     = $recetteTickets + $recetteManuelles;
-        $totalDepenses     = Depense::where('compagnie_id', $compagnieId)->sum('montant');
-        $solde             = $totalRecettes - $totalDepenses;
-
-        $depensesMois      = Depense::where('compagnie_id', $compagnieId)
-            ->whereMonth('date_depense', now()->month)
-            ->whereYear('date_depense', now()->year)
-            ->sum('montant');
-
-        $recettesMois = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('montant')
-            + Recette::where('compagnie_id', $compagnieId)
-            ->whereMonth('date_recette', now()->month)
-            ->whereYear('date_recette', now()->year)
-            ->sum('montant');
-
-        // ── Chart: 6-month recettes vs dépenses ──
-        $chartLabels   = [];
-        $chartRecettes = [];
-        $chartDepenses = [];
-
-        for ($i = 5; $i >= 0; $i--) {
-            $date  = now()->subMonths($i);
-            $month = $date->month;
-            $year  = $date->year;
-
-            $chartLabels[] = $date->translatedFormat('M Y');
-
-            $ticketRev = QueryHelpers::AllPaymentsOfMyCompagnie(StatutPayement::Complete, [StatutTicket::Payer, StatutTicket::Valider])
-                ->whereMonth('created_at', $month)
-                ->whereYear('created_at', $year)
-                ->sum('montant');
-
-            $manualRev = Recette::where('compagnie_id', $compagnieId)
-                ->whereMonth('date_recette', $month)
-                ->whereYear('date_recette', $year)
-                ->sum('montant');
-
-            $chartRecettes[] = $ticketRev + $manualRev;
-
-            $chartDepenses[] = Depense::where('compagnie_id', $compagnieId)
-                ->whereMonth('date_depense', $month)
-                ->whereYear('date_depense', $year)
-                ->sum('montant');
-        }
-
-        // ── Doughnut: dépenses by category (top 8) ──
-        $depensesCategories = Depense::withoutGlobalScopes()
-            ->where('depenses.compagnie_id', $compagnieId)
-            ->join('categorie_depenses', 'depenses.categorie_depense_id', '=', 'categorie_depenses.id')
-            ->selectRaw('categorie_depenses.nom, SUM(depenses.montant) as total')
-            ->groupBy('categorie_depenses.id', 'categorie_depenses.nom')
-            ->orderByDesc('total')
-            ->limit(8)
-            ->get();
-
-        $doughnutLabels = $depensesCategories->pluck('nom')->toArray();
-        $doughnutData   = $depensesCategories->pluck('total')->toArray();
-
-        // ── Carte : gares géolocalisées ──
-        $garesGeo = Gare::where('compagnie_id', $compagnieId)
-            ->whereNotNull('lat')
-            ->whereNotNull('lng')
-            ->with('ville:id,name')
-            ->get(['id', 'name', 'lat', 'lng', 'ville_id'])
-            ->map(fn($g) => [
-                'name'  => $g->name,
-                'ville' => $g->ville?->name ?? '',
-                'lat'   => (float) $g->lat,
-                'lng'   => (float) $g->lng,
-            ]);
-
-        return view('livewire.compagnie.dashboard', compact(
-            'ventesJour', 'recetteJour', 'tauxRemplissage', 'prochainsDeparts',
-            'caissesNonCloturees', 'departsSousRemplis', 'mesVentesJour', 'maCaisse',
-            'totalVoyages', 'totalGares', 'totalPosts', 'totalUsers',
-            'ticketsPayes', 'ticketsValides', 'ticketsBloques',
-            'recetteTickets', 'recetteManuelles', 'totalRecettes',
-            'totalDepenses', 'solde', 'depensesMois', 'recettesMois',
-            'chartLabels', 'chartRecettes', 'chartDepenses',
-            'doughnutLabels', 'doughnutData',
-            'garesGeo'
-        ));
+        return view('livewire.compagnie.dashboard', [
+            'actions' => $actions,
+            'roles' => $user->roles()->orderByDesc('rang')->get(['name', 'label']),
+        ]);
     }
 }

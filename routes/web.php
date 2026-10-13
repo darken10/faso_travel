@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Auth\AccountActivationController;
 use App\Http\Controllers\Auth\MyRegisterController;
 use App\Http\Controllers\Auth\PhonePasswordResetController;
@@ -28,7 +27,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         $user = auth()->user();
         $scheme = str_starts_with(config('app.url'), 'https') ? 'https' : 'http';
 
-        if (in_array($user->role, [UserRole::Admin, UserRole::Root])) {
+        if ($user->isPlatformUser()) {
             return redirect($scheme.'://admin.'.$domain.'/');
         }
         if ($user->compagnie_id) {

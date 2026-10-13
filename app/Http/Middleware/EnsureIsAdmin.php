@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,9 +15,7 @@ class EnsureIsAdmin
             return redirect($scheme.'://app.'.config('app.domain').'/login');
         }
 
-        $role = $request->user()->role;
-
-        if ($role !== UserRole::Admin && $role !== UserRole::Root) {
+        if (! $request->user()->isPlatformUser()) {
             abort(403, 'Accès réservé aux administrateurs.');
         }
 

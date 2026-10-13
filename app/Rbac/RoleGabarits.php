@@ -600,6 +600,7 @@ class RoleGabarits
                 'rang' => 20,
                 'description' => 'Contrôle et validation des tickets au quai, y compris hors connexion.',
                 'permissions' => [
+                    'compagnie.dashboard.view' => 'gare',
                     'compagnie.profil.view' => 'compagnie',
                     'embarquement.app.login' => 'compagnie',
                     'embarquement.bagage.register' => 'gare',
@@ -630,6 +631,7 @@ class RoleGabarits
                 'rang' => 20,
                 'description' => 'Enregistrement des bagages et du fret.',
                 'permissions' => [
+                    'compagnie.dashboard.view' => 'gare',
                     'compagnie.profil.view' => 'compagnie',
                     'embarquement.app.login' => 'compagnie',
                     'embarquement.bagage.register' => 'compagnie',
@@ -922,6 +924,7 @@ class RoleGabarits
                 'rang' => 10,
                 'description' => 'Accès restreint à ses propres affectations et à ses documents.',
                 'permissions' => [
+                    'compagnie.dashboard.view' => 'own',
                     'compagnie.profil.view' => 'compagnie',
                     'embarquement.manifeste.view' => 'own',
                     'reseau.document.view' => 'own',

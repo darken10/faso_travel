@@ -44,40 +44,14 @@
         />
     </div>
 
-    {{-- Quick links --}}
-    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <a href="{{ route('panel.admin.pays') }}" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-amber-400 hover:shadow-md transition-all group">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
-                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-800">Gérer les pays</p>
-                    <p class="text-xs text-gray-500">Pays, régions, villes</p>
-                </div>
-            </div>
-        </a>
-        <a href="{{ route('panel.admin.compagnies') }}" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-amber-400 hover:shadow-md transition-all group">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-800">Compagnies</p>
-                    <p class="text-xs text-gray-500">Gestion des compagnies</p>
-                </div>
-            </div>
-        </a>
-        <a href="{{ route('panel.admin.settings') }}" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-amber-400 hover:shadow-md transition-all group">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-gray-100 transition-colors">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35"/></svg>
-                </div>
-                <div>
-                    <p class="font-semibold text-gray-800">Paramètres</p>
-                    <p class="text-xs text-gray-500">Configuration compagnies</p>
-                </div>
-            </div>
-        </a>
-    </div>
+    @if($actions->isNotEmpty())
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            @foreach($actions as [, $route, $label, $description])
+                <a href="{{ route($route) }}" class="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-400 hover:shadow-md transition-all">
+                    <p class="font-semibold text-gray-800">{{ $label }}</p>
+                    <p class="mt-1 text-xs text-gray-500">{{ $description }}</p>
+                </a>
+            @endforeach
+        </div>
+    @endif
 </div>

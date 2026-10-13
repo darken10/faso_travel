@@ -82,13 +82,14 @@ trait HasPermissions
 
     public function isRoot(): bool
     {
-        return $this->role === UserRole::Root;
+        return $this->role === UserRole::Root || $this->roles->contains('name', 'root');
     }
 
     /** Compte de l'équipe LIPTRA, par opposition à un compte de compagnie ou de client. */
     public function isPlatformUser(): bool
     {
-        return in_array($this->role, [UserRole::Root, UserRole::Admin], true);
+        return in_array($this->role, [UserRole::Root, UserRole::Admin], true)
+            || $this->roles->pluck('name')->intersect(['root', 'platform_admin', 'platform_support'])->isNotEmpty();
     }
 
     /**
