@@ -48,6 +48,8 @@ class RouteAuthorizationTest extends TestCase
             'cares' => ['panel.compagnie.cares', 'reseau.vehicule.view'],
             'chauffeurs' => ['panel.compagnie.chauffeurs', 'reseau.chauffeur.view'],
             'users' => ['panel.compagnie.users', 'compagnie.user.view'],
+            'bulletins-paie' => ['panel.compagnie.bulletins-paie', 'rh.payroll.view'],
+            'absences-conges' => ['panel.compagnie.absences-conges', 'rh.leave.view'],
             'posts' => ['panel.compagnie.posts', 'contenu.article.view'],
             'posts.create' => ['panel.compagnie.posts.create', 'contenu.article.create'],
             'documents' => ['panel.compagnie.documents', 'reseau.document.view'],

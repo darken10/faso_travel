@@ -56,6 +56,10 @@ class PermissionCatalogue
             ['name' => 'compagnie.role.manage', 'domaine' => 'compagnie', 'label' => 'Gérer les rôles de la compagnie', 'scope' => 'compagnie'],
             ['name' => 'compagnie.gare.assignUser', 'domaine' => 'compagnie', 'label' => 'Affecter un collaborateur à une gare', 'scope' => 'compagnie'],
 
+            // ── ressources humaines ──────────────────────────────────────────
+            ['name' => 'rh.payroll.view', 'domaine' => 'rh', 'label' => 'Consulter les bulletins de paie', 'scope' => 'compagnie'],
+            ['name' => 'rh.leave.view', 'domaine' => 'rh', 'label' => 'Consulter les absences et congés', 'scope' => 'compagnie'],
+
             // ── reseau ────────────────────────────────────────────────────────
             ['name' => 'reseau.gare.view', 'domaine' => 'reseau', 'label' => 'Consulter les gares', 'scope' => 'compagnie'],
             ['name' => 'reseau.gare.create', 'domaine' => 'reseau', 'label' => 'Créer une gare', 'scope' => 'compagnie'],

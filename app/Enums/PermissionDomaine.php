@@ -19,6 +19,7 @@ enum PermissionDomaine: string
     case Embarquement = 'embarquement';
     case Caisse = 'caisse';
     case Finance = 'finance';
+    case RessourcesHumaines = 'rh';
     case Contenu = 'contenu';
     case Crm = 'crm';
     case Client = 'client';
@@ -34,6 +35,7 @@ enum PermissionDomaine: string
             self::Embarquement => 'Embarquement',
             self::Caisse => 'Caisse',
             self::Finance => 'Finance et comptabilité',
+            self::RessourcesHumaines => 'Ressources humaines',
             self::Contenu => 'Contenu et communication',
             self::Crm => 'Relation client',
             self::Client => 'Espace voyageur',

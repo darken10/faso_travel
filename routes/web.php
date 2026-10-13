@@ -223,6 +223,10 @@ Route::domain('compagnie.'.$domain)->name('panel.compagnie.')->middleware(['auth
     Route::get('/chauffeurs/{chauffeurId}', \App\Livewire\Compagnie\Compagnie\ChauffeurShow::class)->name('chauffeurs.show')->middleware('can.rbac:reseau.chauffeur.view');
     Route::get('/users', \App\Livewire\Compagnie\Compagnie\UserManager::class)->name('users')->middleware('can.rbac:compagnie.user.view');
 
+    // ─── Ressources humaines ──────────────────────────────────────────────
+    Route::get('/bulletins-paie', \App\Livewire\Compagnie\RessourcesHumaines\BulletinPaieManager::class)->name('bulletins-paie')->middleware('can.rbac:rh.payroll.view');
+    Route::get('/absences-conges', \App\Livewire\Compagnie\RessourcesHumaines\AbsenceCongeManager::class)->name('absences-conges')->middleware('can.rbac:rh.leave.view');
+
     // ─── Contenu ──────────────────────────────────────────────────────────
     Route::get('/posts', \App\Livewire\Compagnie\Post\PostManager::class)->name('posts')->middleware('can.rbac:contenu.article.view');
     Route::get('/posts/create', \App\Livewire\Compagnie\Post\PostForm::class)->name('posts.create')->middleware('can.rbac:contenu.article.create');
