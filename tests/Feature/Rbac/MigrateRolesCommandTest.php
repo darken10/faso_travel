@@ -207,6 +207,17 @@ class MigrateRolesCommandTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_un_compte_de_compagnie_deja_associe_a_un_role_gabarit_ne_recoit_pas_le_role_par_defaut(): void
+    {
+        $user = $this->compte(UserRole::User, true);
+        $role = Role::where('name', 'compagnie_dg')->whereNull('compagnie_id')->firstOrFail();
+        $user->roles()->attach($role->id, ['compagnie_id' => $user->compagnie_id]);
+
+        $this->lancer();
+
+        $this->assertSame(['compagnie_dg'], $user->fresh()->roles->pluck('name')->sort()->values()->all());
+    }
+
     private function lancer(): void
     {
         $this->artisan('rbac:migrate-roles', ['--force' => true])->assertSuccessful();

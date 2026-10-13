@@ -210,7 +210,11 @@ class RbacMigrateRoles extends Command
      */
     private function rolesCibles(User $user, array $rolesActuels): array
     {
-        $cibles = [];
+        // Un compte déjà relié à un rôle gabarit n'a rien à migrer. Sans cette
+        // initialisation, un compte moderne dont `users.role` vaut encore
+        // simplement « User » était pris à tort pour un compte sans métier et
+        // recevait le rôle guichetier par défaut à chaque exécution.
+        $cibles = array_values(array_intersect($rolesActuels, array_keys($this->gabarits)));
 
         $valeurRole = $user->role instanceof UserRole ? $user->role->value : (string) $user->role;
 
